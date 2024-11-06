@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, CheckCircle, XCircle, Trash2, ExternalLink } from 'lucide-react';
 import { useApplicationsStore, Application } from '../../stores/applicationsStore';
 
 export default function Applications() {
-  const { applications, updateStatus, deleteApplication } = useApplicationsStore();
+  const { applications, updateStatus, deleteApplication, initialize } = useApplicationsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   const filteredApplications = applications.filter(app => {
     const matchesSearch = app.playerName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -13,15 +17,23 @@ export default function Applications() {
     return matchesSearch && matchesFilter;
   });
 
-  const handleUpdateStatus = (id: string, status: Application['status']) => {
+  const handleUpdateStatus = async (id: string, status: Application['status']) => {
     if (window.confirm(`Êtes-vous sûr de vouloir ${status === 'accepted' ? 'accepter' : 'refuser'} cette candidature ?`)) {
-      updateStatus(id, status);
+      try {
+        await updateStatus(id, status);
+      } catch (error) {
+        alert('Erreur lors de la mise à jour du statut');
+      }
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette candidature ?')) {
-      deleteApplication(id);
+      try {
+        await deleteApplication(id);
+      } catch (error) {
+        alert('Erreur lors de la suppression');
+      }
     }
   };
 
@@ -117,10 +129,6 @@ export default function Applications() {
                     <span className="ml-2 text-wot-light">{application.discordTag}</span>
                   </div>
                   <div>
-                    <span className="text-wot-light/60">Email:</span>
-                    <span className="ml-2 text-wot-light">{application.email}</span>
-                  </div>
-                  <div>
                     <span className="text-wot-light/60">Disponibilités:</span>
                     <span className="ml-2 text-wot-light">{application.availability}</span>
                   </div>
@@ -140,32 +148,33 @@ export default function Applications() {
               </div>
 
               {/* Actions */}
-              {application.status === 'pending' && (
-                <div className="flex md:flex-col justify-end gap-2">
-                  <button
-                    onClick={() => handleUpdateStatus(application.id, 'accepted')}
-                    className="btn-secondary border-green-500/30 text-green-400 
-                             hover:border-green-500/50 hover:text-green-300"
-                  >
-                    <CheckCircle className="h-5 w-5" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(application.id, 'rejected')}
-                    className="btn-secondary border-red-500/30 text-red-400
-                             hover:border-red-500/50 hover:text-red-300"
-                  >
-                    <XCircle className="h-5 w-5" strokeWidth={1.5} />
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={() => handleDelete(application.id)}
-                className="btn-secondary border-red-500/30 text-red-400
-                         hover:border-red-500/50 hover:text-red-300"
-              >
-                <Trash2 className="h-5 w-5" strokeWidth={1.5} />
-              </button>
+              <div className="flex md:flex-col justify-end gap-2">
+                {application.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleUpdateStatus(application.id, 'accepted')}
+                      className="btn-secondary border-green-500/30 text-green-400 
+                               hover:border-green-500/50 hover:text-green-300"
+                    >
+                      <CheckCircle className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(application.id, 'rejected')}
+                      className="btn-secondary border-red-500/30 text-red-400
+                               hover:border-red-500/50 hover:text-red-300"
+                    >
+                      <XCircle className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => handleDelete(application.id)}
+                  className="btn-secondary border-red-500/30 text-red-400
+                           hover:border-red-500/50 hover:text-red-300"
+                >
+                  <Trash2 className="h-5 w-5" strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
           </div>
         ))}
