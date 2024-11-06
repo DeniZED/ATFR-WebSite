@@ -2,27 +2,30 @@ import React, { useState } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  Users,
-  Calendar,
   BarChart3,
+  Users,
+  History,
+  FileText,
+  Calendar,
   Settings,
   LogOut,
   Menu,
-  X,
-  History
+  X
 } from 'lucide-react';
 
+import Statistics from './Statistics';
 import Members from './Members';
 import MembersHistory from './MembersHistory';
+import Applications from './Applications';
 import Events from './Events';
-import Statistics from './Statistics';
 import SettingsPage from './Settings';
 
 const navigation = [
+  { name: 'Dashboard', href: '/dashboard/statistics', icon: BarChart3 },
   { name: 'Membres', href: '/dashboard/members', icon: Users },
   { name: 'Historique', href: '/dashboard/history', icon: History },
+  { name: 'Candidatures', href: '/dashboard/applications', icon: FileText },
   { name: 'Événements', href: '/dashboard/events', icon: Calendar },
-  { name: 'Statistiques', href: '/dashboard/statistics', icon: BarChart3 },
   { name: 'Paramètres', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -100,12 +103,13 @@ export default function Dashboard() {
       <div className="lg:pl-64">
         <main className="p-6">
           <Routes>
+            <Route path="statistics" element={<Statistics />} />
             <Route path="members" element={<Members />} />
             <Route path="history" element={<MembersHistory />} />
+            <Route path="applications" element={<Applications />} />
             <Route path="events" element={<Events />} />
-            <Route path="statistics" element={<Statistics />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Members />} />
+            <Route path="*" element={<Statistics />} />
           </Routes>
         </main>
       </div>

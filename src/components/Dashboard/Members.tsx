@@ -4,6 +4,36 @@ import { ClanMember, PlayerStats, MemberStats, SortConfig } from './types';
 import MemberCard from './MemberCard';
 import { fetchClanMembers, fetchPlayerStats } from './api';
 
+// Mapping des rôles avec leur ordre de priorité
+const ROLE_PRIORITY: Record<string, number> = {
+  "commander": 1,
+  "executive_officer": 2,
+  "personnel_officer": 3,
+  "combat_officer": 4,
+  "intelligence_officer": 5,
+  "quartermaster": 6,
+  "recruitment_officer": 7,
+  "junior_officer": 8,
+  "private": 9,
+  "recruit": 10,
+  "reservist": 11
+};
+
+// Traduction des rôles
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  "commander": "Commandant",
+  "executive_officer": "Commandant en second",
+  "personnel_officer": "Officier du personnel",
+  "combat_officer": "Officier de combat",
+  "intelligence_officer": "Officier du renseignement",
+  "quartermaster": "Quartier-maître",
+  "recruitment_officer": "Recruteur",
+  "junior_officer": "Officier subalterne",
+  "private": "Soldat",
+  "recruit": "Recrue",
+  "reservist": "Réserviste"
+};
+
 export default function Members() {
   const [members, setMembers] = useState<ClanMember[]>([]);
   const [memberStats, setMemberStats] = useState<MemberStats>({});
@@ -12,7 +42,7 @@ export default function Members() {
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ 
-    key: 'account_name', 
+    key: 'role', 
     direction: 'asc' 
   });
   const [filterDiscord, setFilterDiscord] = useState<'all' | 'linked' | 'unlinked'>('all');
@@ -23,7 +53,13 @@ export default function Members() {
       const result = await fetchClanMembers();
       
       if (result.success) {
-        setMembers(result.data);
+        // Traduire les rôles avant de stocker les membres
+        const translatedMembers = result.data.map(member => ({
+          ...member,
+          role_i18n: ROLE_TRANSLATIONS[member.role] || member.role_i18n
+        }));
+        setMembers(translatedMembers);
+        
         const statsResult = await fetchPlayerStats(result.data.map(m => m.account_id));
         if (statsResult.success) {
           setMemberStats(statsResult.data);
@@ -69,6 +105,8 @@ export default function Members() {
       const aHasDiscord = Boolean(a.discord_id);
       const bHasDiscord = Boolean(b.discord_id);
       comparison = Number(bHasDiscord) - Number(aHasDiscord);
+    } else if (key === 'role') {
+      comparison = (ROLE_PRIORITY[a.role] || 99) - (ROLE_PRIORITY[b.role] || 99);
     } else {
       comparison = String(a[key]).localeCompare(String(b[key]));
     }
@@ -144,9 +182,9 @@ export default function Members() {
             Nom
           </button>
           <button
-            onClick={() => handleSort('role_i18n')}
+            onClick={() => handleSort('role')}
             className={`btn-secondary flex items-center ${
-              sortConfig.key === 'role_i18n' ? 'text-wot-gold' : ''
+              sortConfig.key === 'role' ? 'text-wot-gold' : ''
             }`}
           >
             <SortAsc className="h-5 w-5 mr-2" strokeWidth={1.5} />
