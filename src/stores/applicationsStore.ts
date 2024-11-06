@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  onSnapshot, 
+  query, 
+  orderBy,
+  serverTimestamp,
+  Timestamp 
+} from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 export interface Application {
@@ -20,6 +31,7 @@ export interface Application {
 
 interface ApplicationsState {
   applications: Application[];
+  initialized: boolean;
   addApplication: (application: Omit<Application, 'id' | 'timestamp' | 'status'>) => Promise<void>;
   updateStatus: (id: string, status: Application['status']) => Promise<void>;
   deleteApplication: (id: string) => Promise<void>;
@@ -28,32 +40,51 @@ interface ApplicationsState {
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1303716498749264053/pss6pxCyqr7clvQsqAkQXVKXPQcpmi3SlA45kAQkALlSgauL44qVH37u4AQ2WFsrxzEq';
 
+let unsubscribe: (() => void) | null = null;
+
 export const useApplicationsStore = create<ApplicationsState>((set) => ({
   applications: [],
-  
+  initialized: false,
+
   initialize: () => {
+    // Éviter les doubles initialisations
+    if (unsubscribe) return;
+
     const q = query(collection(db, 'applications'), orderBy('timestamp', 'desc'));
     
-    onSnapshot(q, (snapshot) => {
-      const applications = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Application[];
+    unsubscribe = onSnapshot(q, (snapshot) => {
+      const applications = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Convertir le Timestamp Firebase en timestamp JavaScript
+        const timestamp = data.timestamp instanceof Timestamp 
+          ? data.timestamp.toMillis() 
+          : Date.now();
+        
+        return {
+          id: doc.id,
+          ...data,
+          timestamp
+        } as Application;
+      });
       
-      set({ applications });
+      set({ applications, initialized: true });
+    }, (error) => {
+      console.error('Erreur de synchronisation Firebase:', error);
+      set({ initialized: true });
     });
   },
 
   addApplication: async (application) => {
     const newApplication = {
       ...application,
-      timestamp: Date.now(),
+      timestamp: serverTimestamp(),
       status: 'pending' as const
     };
 
     try {
       // Ajouter à Firebase
-      await addDoc(collection(db, 'applications'), newApplication);
+      const docRef = await addDoc(collection(db, 'applications'), newApplication);
+      console.log('Application ajoutée avec ID:', docRef.id);
 
       // Notification Discord
       await fetch(DISCORD_WEBHOOK_URL, {
@@ -87,7 +118,10 @@ export const useApplicationsStore = create<ApplicationsState>((set) => ({
 
   updateStatus: async (id, status) => {
     try {
-      await updateDoc(doc(db, 'applications', id), { status });
+      await updateDoc(doc(db, 'applications', id), { 
+        status,
+        updateTimestamp: serverTimestamp()
+      });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
       throw error;

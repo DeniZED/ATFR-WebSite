@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Search, CheckCircle, XCircle, Trash2, ExternalLink } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { useApplicationsStore, Application } from '../../stores/applicationsStore';
 
 export default function Applications() {
-  const { applications, updateStatus, deleteApplication, initialize } = useApplicationsStore();
+  const { applications, updateStatus, deleteApplication, initialize, initialized } = useApplicationsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -19,20 +20,26 @@ export default function Applications() {
 
   const handleUpdateStatus = async (id: string, status: Application['status']) => {
     if (window.confirm(`Êtes-vous sûr de vouloir ${status === 'accepted' ? 'accepter' : 'refuser'} cette candidature ?`)) {
+      setLoading(true);
       try {
         await updateStatus(id, status);
       } catch (error) {
         alert('Erreur lors de la mise à jour du statut');
+      } finally {
+        setLoading(false);
       }
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette candidature ?')) {
+      setLoading(true);
       try {
         await deleteApplication(id);
       } catch (error) {
         alert('Erreur lors de la suppression');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -44,6 +51,14 @@ export default function Applications() {
       default: return 'text-yellow-400';
     }
   };
+
+  if (!initialized) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 text-wot-gold animate-spin" strokeWidth={1.5} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,6 +89,12 @@ export default function Applications() {
           <option value="rejected">Refusées</option>
         </select>
       </div>
+
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Loader2 className="h-8 w-8 text-wot-gold animate-spin" strokeWidth={1.5} />
+        </div>
+      )}
 
       <div className="space-y-4">
         {filteredApplications.map((application) => (
@@ -155,6 +176,7 @@ export default function Applications() {
                       onClick={() => handleUpdateStatus(application.id, 'accepted')}
                       className="btn-secondary border-green-500/30 text-green-400 
                                hover:border-green-500/50 hover:text-green-300"
+                      disabled={loading}
                     >
                       <CheckCircle className="h-5 w-5" strokeWidth={1.5} />
                     </button>
@@ -162,6 +184,7 @@ export default function Applications() {
                       onClick={() => handleUpdateStatus(application.id, 'rejected')}
                       className="btn-secondary border-red-500/30 text-red-400
                                hover:border-red-500/50 hover:text-red-300"
+                      disabled={loading}
                     >
                       <XCircle className="h-5 w-5" strokeWidth={1.5} />
                     </button>
@@ -171,6 +194,7 @@ export default function Applications() {
                   onClick={() => handleDelete(application.id)}
                   className="btn-secondary border-red-500/30 text-red-400
                            hover:border-red-500/50 hover:text-red-300"
+                  disabled={loading}
                 >
                   <Trash2 className="h-5 w-5" strokeWidth={1.5} />
                 </button>

@@ -1,14 +1,19 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDZR7Wd4BPOz1nQB3S9sol_YndL_f1vQhY",
-  authDomain: "atfr-clan.firebaseapp.com",
-  projectId: "atfr-clan",
-  storageBucket: "atfr-clan.appspot.com",
-  messagingSenderId: "500191501",
-  appId: "1:500191501:web:f4b223b78c2d500191501"
+  apiKey: "AIzaSyBKls4H_tQiAkcNmfYhpJLg9mr7mKWcx_s",
+  authDomain: "atfr-dashboard.firebaseapp.com",
+  projectId: "atfr-dashboard",
+  storageBucket: "atfr-dashboard.firebasestorage.app",
+  messagingSenderId: "325266859490",
+  appId: "1:325266859490:web:3256b0e4f9eb30a88a85bb"
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// Activer la persistence hors-ligne
+enableIndexedDbPersistence(db).catch((err) => {
+  console.error('Erreur de persistence Firebase:', err);
+});
