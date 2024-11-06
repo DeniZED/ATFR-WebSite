@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-wot-dark text-wot-light;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2 bg-wot-darker;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-wot-gold rounded-full;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-button-gradient text-wot-dark font-bold py-3 px-8 
+           uppercase tracking-wider text-sm
+           border-2 border-wot-goldDark/50 
+           shadow-wot hover:shadow-wot-hover
+           transition-all duration-300 
+           hover:brightness-110 hover:-translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply bg-wot-dark text-wot-gold font-bold py-3 px-8 
+           uppercase tracking-wider text-sm
+           border-2 border-wot-gold/30
+           hover:border-wot-gold/50 hover:text-wot-goldLight
+           transition-all duration-300;
+  }
+
+  .section-title {
+    @apply text-4xl font-bold mb-4 text-wot-gold uppercase tracking-wide;
+  }
+
+  .section-subtitle {
+    @apply text-xl text-wot-light/80 mb-12 max-w-2xl mx-auto text-center;
+  }
+
+  .card {
+    @apply bg-wot-gray border border-wot-gold/20 
+           hover:border-wot-gold/40 hover:shadow-wot
+           transition-all duration-300;
+  }
+}
+
+@layer utilities {
+  .text-shadow-gold {
+    text-shadow: 0 0 10px rgba(244, 178, 35, 0.5);
+  }
+  
+  .wot-overlay {
+    background: linear-gradient(to bottom,
+      rgba(10, 10, 10, 0.8),
+      rgba(10, 10, 10, 0.9)
+    );
+  }
+
+  .clip-diagonal {
+    clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
+  }
+}
