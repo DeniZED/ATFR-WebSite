@@ -1,16 +1,5 @@
 import { create } from 'zustand';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot, 
-  query, 
-  orderBy,
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
+import { ref, get, set, remove, onValue, push, getDatabase } from 'firebase/database';
 import { db } from '../services/firebase';
 
 export interface Application {
@@ -40,100 +29,99 @@ interface ApplicationsState {
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1303716498749264053/pss6pxCyqr7clvQsqAkQXVKXPQcpmi3SlA45kAQkALlSgauL44qVH37u4AQ2WFsrxzEq';
 
-let unsubscribe: (() => void) | null = null;
-
-export const useApplicationsStore = create<ApplicationsState>((set) => ({
+export const useApplicationsStore = create<ApplicationsState>((set, get) => ({
   applications: [],
   initialized: false,
 
   initialize: () => {
-    // Éviter les doubles initialisations
-    if (unsubscribe) return;
+    if (get().initialized) return;
 
-    const q = query(collection(db, 'applications'), orderBy('timestamp', 'desc'));
-    
-    unsubscribe = onSnapshot(q, (snapshot) => {
-      const applications = snapshot.docs.map(doc => {
-        const data = doc.data();
-        // Convertir le Timestamp Firebase en timestamp JavaScript
-        const timestamp = data.timestamp instanceof Timestamp 
-          ? data.timestamp.toMillis() 
-          : Date.now();
-        
-        return {
-          id: doc.id,
-          ...data,
-          timestamp
-        } as Application;
-      });
+    const applicationsRef = ref(db, 'applications');
+    onValue(applicationsRef, (snapshot) => {
+      const data = snapshot.val();
+      const applications = data ? Object.entries(data).map(([id, app]) => ({
+        id,
+        ...(app as Omit<Application, 'id'>)
+      })) : [];
       
-      set({ applications, initialized: true });
-    }, (error) => {
-      console.error('Erreur de synchronisation Firebase:', error);
-      set({ initialized: true });
+      set({ 
+        applications: applications.sort((a, b) => b.timestamp - a.timestamp),
+        initialized: true 
+      });
     });
   },
 
   addApplication: async (application) => {
-    const newApplication = {
-      ...application,
-      timestamp: serverTimestamp(),
-      status: 'pending' as const
-    };
-
     try {
-      // Ajouter à Firebase
-      const docRef = await addDoc(collection(db, 'applications'), newApplication);
-      console.log('Application ajoutée avec ID:', docRef.id);
+      const applicationsRef = ref(db, 'applications');
+      const newApplicationRef = push(applicationsRef);
+      
+      const newApplication = {
+        ...application,
+        timestamp: Date.now(),
+        status: 'pending' as const
+      };
 
-      // Notification Discord
-      await fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          embeds: [{
-            title: `📝 Nouvelle candidature ${application.targetClan}`,
-            color: 0xF4B223,
-            fields: [
-              { name: 'Joueur', value: application.playerName, inline: true },
-              { name: 'WN8', value: application.wn8, inline: true },
-              { name: 'Winrate', value: application.winRate, inline: true },
-              { name: 'Discord', value: application.discordTag, inline: true },
-              { name: 'Chars Tier X', value: application.tier10Count, inline: true },
-              { name: 'Batailles', value: application.battles, inline: true },
-              { name: 'Clan actuel', value: application.previousClans, inline: true },
-              { name: 'Disponibilités', value: application.availability },
-              { name: 'Motivation', value: application.motivation }
-            ],
-            timestamp: new Date().toISOString(),
-            url: `https://tomato.gg/stats/EU/${encodeURIComponent(application.playerName)}`
-          }]
-        })
-      });
+      await set(newApplicationRef, newApplication);
+
+      // Send Discord notification
+      try {
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            embeds: [{
+              title: `📝 Nouvelle candidature ${application.targetClan}`,
+              color: 0xF4B223,
+              fields: [
+                { name: 'Joueur', value: application.playerName, inline: true },
+                { name: 'WN8', value: application.wn8, inline: true },
+                { name: 'Winrate', value: application.winRate, inline: true },
+                { name: 'Discord', value: application.discordTag, inline: true },
+                { name: 'Chars Tier X', value: application.tier10Count, inline: true },
+                { name: 'Batailles', value: application.battles, inline: true },
+                { name: 'Clan actuel', value: application.previousClans, inline: true },
+                { name: 'Disponibilités', value: application.availability },
+                { name: 'Motivation', value: application.motivation }
+              ],
+              timestamp: new Date().toISOString(),
+              url: `https://tomato.gg/stats/EU/${encodeURIComponent(application.playerName)}`
+            }]
+          })
+        });
+      } catch (error) {
+        console.error('Erreur lors de l\'envoi de la notification Discord:', error);
+      }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la candidature:', error);
-      throw error;
+      throw new Error('Erreur lors de l\'ajout de la candidature');
     }
   },
 
-  updateStatus: async (id, status) => {
+  updateStatus: async (id: string, status: Application['status']) => {
     try {
-      await updateDoc(doc(db, 'applications', id), { 
-        status,
-        updateTimestamp: serverTimestamp()
-      });
+      const applicationRef = ref(db, `applications/${id}`);
+      const snapshot = await get(applicationRef);
+      
+      if (snapshot.exists()) {
+        await set(applicationRef, {
+          ...snapshot.val(),
+          status
+        });
+      }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
-      throw error;
+      throw new Error('Erreur lors de la mise à jour du statut');
     }
   },
 
-  deleteApplication: async (id) => {
+  deleteApplication: async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'applications', id));
+      const applicationRef = ref(db, `applications/${id}`);
+      await remove(applicationRef);
     } catch (error) {
       console.error('Erreur lors de la suppression de la candidature:', error);
-      throw error;
+      throw new Error('Erreur lors de la suppression de la candidature');
     }
   }
 }));

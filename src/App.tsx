@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Hero from './components/Hero';
 import Navbar from './components/Navbar';
@@ -13,7 +13,12 @@ import Login from './components/Dashboard/Login';
 import { useAuthStore } from './stores/authStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const { isAuthenticated, loading } = useAuthStore();
+  
+  if (loading) {
+    return <div>Chargement...</div>;
+  }
+  
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 }
 
@@ -33,6 +38,12 @@ function MainLayout() {
 }
 
 function App() {
+  const initialize = useAuthStore(state => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <Routes>
       <Route path="/" element={<MainLayout />} />

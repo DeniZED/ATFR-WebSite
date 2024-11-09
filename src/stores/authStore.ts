@@ -1,30 +1,72 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { auth } from '../services/firebase';
+import { 
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  type User 
+} from 'firebase/auth';
 
 interface AuthState {
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => void;
 }
 
-// Note: In production, use proper authentication with backend
-const ADMIN_PASSWORD = 'ATFR2024';
+export const useAuthStore = create<AuthState>((set) => ({
+  isAuthenticated: false,
+  user: null,
+  loading: true,
+  error: null,
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      isAuthenticated: false,
-      login: (password: string) => {
-        if (password === ADMIN_PASSWORD) {
-          set({ isAuthenticated: true });
-          return true;
-        }
-        return false;
-      },
-      logout: () => set({ isAuthenticated: false }),
-    }),
-    {
-      name: 'auth-storage',
+  login: async (email: string, password: string) => {
+    try {
+      set({ loading: true, error: null });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      set({ 
+        isAuthenticated: true, 
+        user: userCredential.user,
+        loading: false 
+      });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Erreur de connexion',
+        loading: false 
+      });
+      throw error;
     }
-  )
-);
+  },
+
+  logout: async () => {
+    try {
+      await signOut(auth);
+      set({ 
+        isAuthenticated: false, 
+        user: null,
+        error: null 
+      });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Erreur de déconnexion' 
+      });
+      throw error;
+    }
+  },
+
+  initialize: () => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      set({ 
+        isAuthenticated: !!user,
+        user,
+        loading: false 
+      });
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }
+}));

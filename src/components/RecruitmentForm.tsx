@@ -134,7 +134,7 @@ export default function RecruitmentForm({ onClose }: RecruitmentFormProps) {
               {playerId && (
                 <div className="p-4 bg-wot-dark rounded-lg border border-wot-gold/20">
                   <a
-                    href={`https://tomato.gg/stats/EU/${encodeURIComponent(playerName)}=${playerId}`}
+                    href={`https://tomato.gg/stats/${encodeURIComponent(playerName)}-${playerId}/EU`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-wot-gold hover:text-wot-goldLight transition-colors"

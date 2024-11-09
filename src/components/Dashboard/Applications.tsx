@@ -12,11 +12,12 @@ export default function Applications() {
     initialize();
   }, [initialize]);
 
-  const filteredApplications = applications.filter(app => {
+  // Don't filter until applications are initialized
+  const filteredApplications = initialized ? applications.filter(app => {
     const matchesSearch = app.playerName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || app.status === filter;
     return matchesSearch && matchesFilter;
-  });
+  }) : [];
 
   const handleUpdateStatus = async (id: string, status: Application['status']) => {
     if (window.confirm(`Êtes-vous sûr de vouloir ${status === 'accepted' ? 'accepter' : 'refuser'} cette candidature ?`)) {

@@ -1,87 +1,54 @@
-import React, { useEffect, useState } from 'react';
-import { Users, Trophy, Target, Swords, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { fetchDashboardStats, DashboardStats } from '../../services/dashboardApi';
+import React from 'react';
+import { Users, Trophy, Target, Swords } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-export default function Statistics() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+// Données statiques pour le graphique
+const sampleData = Array.from({ length: 30 }, (_, i) => ({
+  date: `${String(i + 1).padStart(2, '0')}/03`,
+  count: Math.floor(Math.random() * 50) + 20
+}));
 
-  const loadData = async () => {
-    try {
-      setError(null);
-      setRefreshing(true);
-      const data = await fetchDashboardStats();
-      setStats(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+// Données statiques pour les stats
+const clanStats = {
+  members_count: 72,
+  battles_avg: 35,
+  efficiency: 8750,
+  global_rating: 9200
+};
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  if (loading && !refreshing) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 text-wot-gold animate-spin" strokeWidth={1.5} />
-      </div>
-    );
+const statCards = [
+  {
+    id: 1,
+    name: "Membres",
+    value: clanStats.members_count,
+    icon: Users
+  },
+  {
+    id: 2,
+    name: "Batailles/Jour",
+    value: Math.round(clanStats.battles_avg),
+    icon: Trophy
+  },
+  {
+    id: 3,
+    name: "Efficacité",
+    value: Math.round(clanStats.efficiency).toLocaleString(),
+    icon: Target
+  },
+  {
+    id: 4,
+    name: "Rating Global",
+    value: Math.round(clanStats.global_rating).toLocaleString(),
+    icon: Swords
   }
+];
 
-  const statCards = [
-    {
-      id: 1,
-      name: "Membres",
-      value: stats?.members_count || 0,
-      icon: Users
-    },
-    {
-      id: 2,
-      name: "Batailles/Jour",
-      value: Math.round(stats?.battles_avg || 0),
-      icon: Trophy
-    },
-    {
-      id: 3,
-      name: "Efficacité",
-      value: Math.round(stats?.efficiency || 0).toLocaleString(),
-      icon: Target
-    },
-    {
-      id: 4,
-      name: "Rating Global",
-      value: Math.round(stats?.global_rating || 0).toLocaleString(),
-      icon: Swords
-    }
-  ];
-
+export default function Statistics() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-wot-gold">Dashboard</h1>
-        <button
-          onClick={loadData}
-          disabled={refreshing}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-          Actualiser
-        </button>
       </div>
-
-      {error && (
-        <div className="bg-red-900/30 border border-red-500/30 text-red-400 p-4 rounded-lg flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0" strokeWidth={1.5} />
-          <p className="flex-1">{error}</p>
-        </div>
-      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
@@ -106,7 +73,7 @@ export default function Statistics() {
         </h3>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={stats?.daily_battles || []}>
+            <LineChart data={sampleData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2D2D2D" />
               <XAxis 
                 dataKey="date" 
