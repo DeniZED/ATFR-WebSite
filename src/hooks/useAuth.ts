@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../services/firebase';
+
+interface User {
+  uid: string;
+  email: string | null;
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Simulation d'une vérification d'authentification
+    const timer = setTimeout(() => {
+      setUser(null);
       setLoading(false);
-    });
+    }, 1000);
 
-    return unsubscribe;
+    return () => clearTimeout(timer);
   }, []);
 
   return { user, loading };
