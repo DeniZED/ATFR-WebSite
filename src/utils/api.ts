@@ -1,4 +1,3 @@
-import { API_KEY, WOT_API } from '../constants';
 import type { ApiResponse } from '../types';
 
 export async function fetchWithTimeout<T>(
@@ -31,19 +30,28 @@ export async function fetchWithTimeout<T>(
   }
 }
 
-export function validateApiResponse<T>(response: any): T {
-  if (response.status !== 'ok') {
-    throw new Error(response.error?.message || 'API response status not OK');
+export function validateApiResponse<T>(response: unknown): T {
+  if (!response || typeof response !== 'object' || !('status' in response)) {
+    throw new Error('Invalid API response format');
   }
 
-  if (!response.data) {
+  const typedResponse = response as { status: string; error?: { message: string }; data?: T };
+
+  if (typedResponse.status !== 'ok') {
+    throw new Error(typedResponse.error?.message || 'API response status not OK');
+  }
+
+  if (!typedResponse.data) {
     throw new Error('No data in API response');
   }
 
-  return response.data;
+  return typedResponse.data;
 }
 
 export function buildApiUrl(endpoint: string, params: Record<string, string | number>): string {
+  const API_KEY = import.meta.env.VITE_WOT_APPLICATION_ID || '';
+  const WOT_API = 'https://api.worldoftanks.eu/wot/';
+  
   const searchParams = new URLSearchParams({
     application_id: API_KEY,
     ...params
