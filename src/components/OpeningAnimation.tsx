@@ -20,7 +20,7 @@ export default function OpeningAnimation() {
     >
       <div className="relative">
         <img 
-          src="https://eu.wargaming.net/clans/media/clans/emblems/cl_501/500191501/emblem_195x195.png"
+          src="/atfr-logo.png"
           alt="ATFR Logo"
           className="w-32 h-32 animate-scaleUp"
         />
