@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle, Shield, Trophy, Users, Target } from 'lucide-react';
+import { ArrowRight, Shield, Trophy, Users, Target } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
 import RecruitmentForm from './RecruitmentForm';
 
@@ -75,7 +75,7 @@ export default function Join() {
                       key={itemIndex}
                       className="flex items-center text-wot-light"
                     >
-                      <CheckCircle className="h-4 w-4 text-wot-goldLight mr-2" strokeWidth={1.5} />
+                      <Shield className="h-4 w-4 text-wot-goldLight mr-2" strokeWidth={1.5} />
                       {item}
                     </li>
                   ))}

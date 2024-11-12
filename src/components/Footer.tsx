@@ -18,7 +18,7 @@ export default function Footer() {
             className="h-12 w-12 mb-4"
           />
           <h3 className="text-2xl font-bold mb-2 text-wot-gold">- ATFR -</h3>
-          <p className="text-wot-light/80">Des valeurs partagées depuis 2021</p>
+          <p className="text-wot-light/80">Des valeurs partagées depuis 2020</p>
         </div>
         <div className="flex justify-center space-x-6 mb-8">
           {socialLinks.map((link, index) => (

@@ -8,7 +8,7 @@
   }
   
   body {
-    @apply bg-wot-dark text-wot-light;
+    @apply bg-wot-dark text-wot-light overflow-x-hidden;
   }
 
   ::-webkit-scrollbar {
@@ -26,8 +26,9 @@
            uppercase tracking-wider text-sm
            border-2 border-wot-goldDark/50 
            shadow-wot hover:shadow-wot-hover
-           transition-all duration-300 
-           hover:brightness-110 hover:-translate-y-0.5;
+           transition-all duration-300 ease-out
+           hover:brightness-110 hover:-translate-y-0.5
+           active:translate-y-0 active:shadow-wot;
   }
   
   .btn-secondary {
@@ -35,7 +36,8 @@
            uppercase tracking-wider text-sm
            border-2 border-wot-gold/30
            hover:border-wot-gold/50 hover:text-wot-goldLight
-           transition-all duration-300;
+           transition-all duration-300 ease-out
+           hover:-translate-y-0.5 active:translate-y-0;
   }
 
   .section-title {
@@ -49,7 +51,48 @@
   .card {
     @apply bg-wot-gray border border-wot-gold/20 
            hover:border-wot-gold/40 hover:shadow-wot
-           transition-all duration-300;
+           transition-all duration-500 ease-out;
+  }
+
+  /* Nouvelles classes d'animation */
+  .fade-up {
+    @apply opacity-0 translate-y-8 transition-all duration-700 ease-out;
+  }
+
+  .fade-up.in-view {
+    @apply opacity-100 translate-y-0;
+  }
+
+  .fade-left {
+    @apply opacity-0 -translate-x-8 transition-all duration-700 ease-out;
+  }
+
+  .fade-left.in-view {
+    @apply opacity-100 translate-x-0;
+  }
+
+  .fade-right {
+    @apply opacity-0 translate-x-8 transition-all duration-700 ease-out;
+  }
+
+  .fade-right.in-view {
+    @apply opacity-100 translate-x-0;
+  }
+
+  .scale-up {
+    @apply opacity-0 scale-95 transition-all duration-700 ease-out;
+  }
+
+  .scale-up.in-view {
+    @apply opacity-100 scale-100;
+  }
+
+  .rotate-in {
+    @apply opacity-0 -rotate-12 transition-all duration-700 ease-out;
+  }
+
+  .rotate-in.in-view {
+    @apply opacity-100 rotate-0;
   }
 }
 
@@ -67,5 +110,19 @@
 
   .clip-diagonal {
     clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
+  }
+
+  .hover-lift {
+    @apply transition-transform duration-300 ease-out hover:-translate-y-1;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 ease-out hover:shadow-wot hover:brightness-110;
+  }
+
+  .parallax {
+    @apply transition-transform duration-[1.2s] ease-out;
+    transform: translateZ(0);
+    will-change: transform;
   }
 }

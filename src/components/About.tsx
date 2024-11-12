@@ -1,6 +1,7 @@
-import React from 'react';
-import { Trophy, Users, Target, Award, Swords, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Users, Target, Award, Swords, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { useInView } from '../hooks/useInView';
+import Timeline from './Timeline';
 
 const features = [
   {
@@ -31,12 +32,13 @@ const features = [
   {
     icon: Shield,
     title: "Valeurs",
-    description: "Le respect, l'engagement et l'esprit d'équipe sont nos fondements. Ces valeurs guident chacune de nos actions et font la force de notre communauté depuis 2021."
+    description: "Le respect, l'engagement et l'esprit d'équipe sont nos fondements. Ces valeurs guident chacune de nos actions et font la force de notre communauté depuis 2020."
   }
 ];
 
 export default function About() {
   const [ref, isInView] = useInView();
+  const [showTimeline, setShowTimeline] = useState(false);
 
   return (
     <section className="py-20 px-4 bg-wot-gradient" id="about">
@@ -44,12 +46,12 @@ export default function About() {
         <div className="text-center mb-16">
           <h2 className="section-title">Notre Clan</h2>
           <p className="section-subtitle">
-            Fondé en 2021, ATFR s'est rapidement imposé comme l'un des clans les plus actifs et respectés de la scène World of Tanks française. Notre engagement envers l'excellence et notre esprit communautaire nous distinguent.
+            Fondé en 2020, ATFR s'est rapidement imposé comme l'un des clans les plus actifs et respectés de la scène World of Tanks française. Notre engagement envers l'excellence et notre esprit communautaire nous distinguent.
           </p>
         </div>
         <div 
           ref={ref}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16"
         >
           {features.map((feature, index) => (
             <div 
@@ -64,6 +66,26 @@ export default function About() {
             </div>
           ))}
         </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => setShowTimeline(!showTimeline)}
+            className="btn-secondary inline-flex items-center gap-2 group"
+          >
+            {showTimeline ? 'Masquer notre histoire' : 'Découvrir notre histoire'}
+            {showTimeline ? (
+              <ChevronUp className="h-5 w-5 transition-transform group-hover:-translate-y-1" />
+            ) : (
+              <ChevronDown className="h-5 w-5 transition-transform group-hover:translate-y-1" />
+            )}
+          </button>
+        </div>
+
+        {showTimeline && (
+          <div className="mt-20 animate-slideDown">
+            <Timeline />
+          </div>
+        )}
       </div>
     </section>
   );

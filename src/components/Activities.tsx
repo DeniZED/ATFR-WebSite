@@ -1,17 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useInView } from '../hooks/useInView';
-import { useEventsStore } from '../stores/eventsStore';
 import { 
   Swords, 
   Target, 
   Castle, 
   Trophy,
-  Gamepad2,
   Calendar,
   Users,
   Timer,
-  CalendarDays
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+import PlannedEvents from './PlannedEvents';
 
 const defaultActivities = [
   {
@@ -39,12 +39,10 @@ const defaultActivities = [
 
 export default function Activities() {
   const [ref, isInView] = useInView();
-  const { events } = useEventsStore();
-  const publicEvents = events.filter(event => event.isPublic);
+  const [showEvents, setShowEvents] = useState(false);
 
   return (
     <section className="py-20 bg-wot-darker relative overflow-hidden" id="activities">
-      {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0 grid grid-cols-6 gap-px">
           {[...Array(42)].map((_, i) => (
@@ -63,7 +61,7 @@ export default function Activities() {
 
         <div 
           ref={ref}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
         >
           {defaultActivities.map((activity, index) => (
             <div
@@ -102,46 +100,27 @@ export default function Activities() {
               </div>
             </div>
           ))}
-
-          {publicEvents.map((event, index) => (
-            <div
-              key={event.id}
-              className={`card group p-6 relative overflow-hidden
-                transform transition-all duration-700
-                ${isInView 
-                  ? 'opacity-100 translate-y-0' 
-                  : 'opacity-0 translate-y-20'}`}
-              style={{ transitionDelay: `${(index + defaultActivities.length) * 100}ms` }}
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-wot-gold/5 rounded-bl-full 
-                            transform group-hover:scale-150 transition-transform duration-500" />
-              
-              <div className="flex items-start gap-4">
-                <CalendarDays
-                  className="h-8 w-8 text-wot-gold shrink-0" 
-                  strokeWidth={1.5} 
-                />
-                <div>
-                  <h3 className="text-xl font-bold text-wot-goldLight mb-1">
-                    {event.title}
-                  </h3>
-                  <p className="text-sm text-wot-gold/80 mb-3 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" strokeWidth={1.5} />
-                    {event.date} à {event.time}
-                  </p>
-                  <p className="text-wot-light/80 mb-3">
-                    {event.description}
-                  </p>
-                  <p className="text-sm text-wot-light/60">
-                    <span className="px-2 py-1 text-xs rounded-full bg-wot-gold/20 text-wot-gold">
-                      {event.type}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => setShowEvents(!showEvents)}
+            className="btn-secondary inline-flex items-center gap-2 group"
+          >
+            {showEvents ? 'Masquer les événements' : 'Voir les événements planifiés'}
+            {showEvents ? (
+              <ChevronUp className="h-5 w-5 transition-transform group-hover:-translate-y-1" />
+            ) : (
+              <ChevronDown className="h-5 w-5 transition-transform group-hover:translate-y-1" />
+            )}
+          </button>
+        </div>
+
+        {showEvents && (
+          <div className="mt-20 animate-slideDown">
+            <PlannedEvents />
+          </div>
+        )}
       </div>
     </section>
   );

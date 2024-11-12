@@ -1,62 +1,25 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
 import Hero from './components/Hero';
 import Navbar from './components/Navbar';
 import About from './components/About';
 import Achievements from './components/Achievements';
 import Activities from './components/Activities';
-import PlannedEvents from './components/PlannedEvents';
 import Join from './components/Join';
 import Footer from './components/Footer';
-import Dashboard from './components/Dashboard/Dashboard';
-import Login from './components/Dashboard/Login';
-import { useAuthStore } from './stores/authStore';
+import OpeningAnimation from './components/OpeningAnimation';
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuthStore();
-  
-  if (loading) {
-    return <div>Chargement...</div>;
-  }
-  
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
-}
-
-function MainLayout() {
+function App() {
   return (
     <div className="bg-wot-dark text-wot-light">
+      <OpeningAnimation />
       <Navbar />
       <Hero />
       <About />
       <Achievements />
       <Activities />
-      <PlannedEvents />
       <Join />
       <Footer />
     </div>
-  );
-}
-
-function App() {
-  const initialize = useAuthStore(state => state.initialize);
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  return (
-    <Routes>
-      <Route path="/" element={<MainLayout />} />
-      <Route path="/login" element={<Login />} />
-      <Route 
-        path="/dashboard/*" 
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } 
-      />
-    </Routes>
   );
 }
 
