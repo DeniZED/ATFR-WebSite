@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Crown } from 'lucide-react';
 import { Badge, Card, CardBody, Section, Spinner } from '@/components/ui';
 import { useClanStats } from '@/features/stats/queries';
@@ -22,13 +23,22 @@ export function TopPlayers() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {data.topPlayers.map((p, idx) => (
-            <a
+            <motion.a
               key={p.accountId}
               href={tomatoProfileUrl(p.nickname)}
               target="_blank"
               rel="noreferrer"
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{
+                duration: 0.4,
+                delay: idx * 0.05,
+                ease: [0.2, 0.8, 0.2, 1],
+              }}
+              whileHover={{ y: -3 }}
             >
-              <Card className="hover:-translate-y-0.5 transition-transform">
+              <Card className="transition-colors hover:border-atfr-gold/40">
                 <CardBody className="flex items-center gap-4 p-4">
                   <div
                     className={
@@ -64,7 +74,7 @@ export function TopPlayers() {
                   </Badge>
                 </CardBody>
               </Card>
-            </a>
+            </motion.a>
           ))}
         </div>
       )}

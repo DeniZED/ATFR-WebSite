@@ -5,9 +5,6 @@ import { useClanStats } from '@/features/stats/queries';
 export function LiveStats() {
   const { data, isLoading } = useClanStats();
 
-  const format = (n: number | null | undefined, digits = 0, suffix = '') =>
-    n == null ? '—' : `${n.toFixed(digits)}${suffix}`;
-
   return (
     <Section
       eyebrow="Le clan en temps réel"
@@ -17,26 +14,32 @@ export function LiveStats() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Membres"
-          value={data?.membersCount ?? '—'}
+          value="—"
+          animateTo={data?.membersCount ?? null}
           loading={isLoading}
           icon={<Users size={20} />}
         />
         <StatCard
           label="Winrate moyen"
-          value={format(data?.avgWinRate ?? null, 2, '%')}
+          value="—"
+          animateTo={data?.avgWinRate ?? null}
+          decimals={2}
+          suffix="%"
           loading={isLoading}
           icon={<Trophy size={20} />}
         />
         <StatCard
           label="WN8 moyen"
-          value={format(data?.avgWn8 ?? null, 0)}
+          value="—"
+          animateTo={data?.avgWn8 ?? null}
           loading={isLoading}
           icon={<Crosshair size={20} />}
           hint="Échantillon top 20 membres"
         />
         <StatCard
           label="Personal rating"
-          value={format(data?.avgGlobalRating ?? null, 0)}
+          value="—"
+          animateTo={data?.avgGlobalRating ?? null}
           loading={isLoading}
           icon={<Activity size={20} />}
         />
