@@ -4,10 +4,15 @@ import {
   Calendar,
   FileText,
   Gauge,
+  Image as ImageIcon,
   LogOut,
   Menu,
   Settings,
   Shield,
+  Sparkles,
+  Star,
+  Trophy,
+  Type,
   Users,
   X,
 } from 'lucide-react';
@@ -21,6 +26,11 @@ const nav = [
   { to: '/admin/candidatures', label: 'Candidatures', icon: FileText },
   { to: '/admin/membres', label: 'Membres', icon: Users },
   { to: '/admin/evenements', label: 'Événements', icon: Calendar },
+  { to: '/admin/contenu', label: 'Contenu', icon: Type },
+  { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon },
+  { to: '/admin/moments', label: 'Moments forts', icon: Star },
+  { to: '/admin/palmares', label: 'Palmarès', icon: Trophy },
+  { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles },
   { to: '/admin/parametres', label: 'Paramètres', icon: Settings },
 ];
 
@@ -40,10 +50,11 @@ export function AdminLayout() {
         className={cn(
           'fixed inset-y-0 left-0 z-40 w-64 bg-atfr-carbon border-r border-atfr-gold/10',
           'transition-transform duration-300 ease-emphasized lg:translate-x-0',
+          'flex flex-col',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-atfr-gold/10">
+        <div className="h-16 shrink-0 flex items-center gap-3 px-6 border-b border-atfr-gold/10">
           <Shield className="text-atfr-gold" size={22} />
           <div>
             <p className="font-display text-lg text-atfr-bone leading-none">
@@ -55,7 +66,7 @@ export function AdminLayout() {
           </div>
         </div>
 
-        <nav className="px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {nav.map((item) => (
             <NavLink
               key={item.to}
@@ -77,7 +88,7 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <div className="absolute inset-x-0 bottom-0 p-4 border-t border-atfr-gold/10">
+        <div className="shrink-0 p-4 border-t border-atfr-gold/10">
           <p className="text-xs text-atfr-fog/80 mb-2 truncate">{user?.email}</p>
           <Button
             variant="ghost"

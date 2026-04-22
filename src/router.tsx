@@ -17,6 +17,11 @@ const AdminHome = lazy(() => import('@/pages/admin/AdminHome'));
 const AdminApplications = lazy(() => import('@/pages/admin/AdminApplications'));
 const AdminMembers = lazy(() => import('@/pages/admin/AdminMembers'));
 const AdminEvents = lazy(() => import('@/pages/admin/AdminEvents'));
+const AdminContent = lazy(() => import('@/pages/admin/AdminContent'));
+const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
+const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
+const AdminAchievements = lazy(() => import('@/pages/admin/AdminAchievements'));
+const AdminTestimonials = lazy(() => import('@/pages/admin/AdminTestimonials'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
 function Loading() {
@@ -59,6 +64,11 @@ export const router = createBrowserRouter([
           { path: 'candidatures', element: <AdminApplications /> },
           { path: 'membres', element: <AdminMembers /> },
           { path: 'evenements', element: <AdminEvents /> },
+          { path: 'contenu', element: <AdminContent /> },
+          { path: 'galerie', element: <AdminGallery /> },
+          { path: 'moments', element: <AdminHighlights /> },
+          { path: 'palmares', element: <AdminAchievements /> },
+          { path: 'temoignages', element: <AdminTestimonials /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },
         ],
