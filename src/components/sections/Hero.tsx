@@ -1,17 +1,53 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Star, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Star, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { env } from '@/lib/env';
 import { useClanInfo } from '@/features/clan/queries';
+import { useContent } from '@/hooks/useContent';
 
 export function Hero() {
   const { data: clan } = useClanInfo();
+  const { get } = useContent();
+
+  const videoUrl = get('hero_video_url');
+  const posterUrl = get('hero_poster_url');
 
   return (
-    <section className="relative min-h-[88vh] flex items-center overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-hero" aria-hidden />
-      <div className="absolute inset-0 bg-grid bg-[size:42px_42px] opacity-30" aria-hidden />
+    <section className="relative min-h-[100svh] flex items-center overflow-hidden">
+      {videoUrl ? (
+        <video
+          key={videoUrl}
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          poster={posterUrl || undefined}
+          aria-hidden
+        >
+          <source src={videoUrl} />
+        </video>
+      ) : posterUrl ? (
+        <img
+          src={posterUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          aria-hidden
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-hero" aria-hidden />
+      )}
+
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-atfr-ink/60 via-atfr-ink/70 to-atfr-ink"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 bg-grid bg-[size:42px_42px] opacity-20"
+        aria-hidden
+      />
       <div
         className="absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[520px] rounded-full blur-[120px] bg-atfr-gold/20"
         aria-hidden
@@ -26,33 +62,33 @@ export function Hero() {
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-atfr-gold/30 bg-atfr-gold/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-atfr-gold mb-6">
-              <Star size={12} /> Clan FR actif
+              <Star size={12} /> {get('hero_eyebrow')}
             </div>
 
             <h1 className="font-display text-6xl sm:text-7xl lg:text-8xl font-semibold leading-none tracking-tight">
-              <span className="text-gradient-gold">{env.clanTag}</span>
-              <span className="block text-atfr-bone mt-2 text-3xl sm:text-4xl lg:text-5xl">
-                Jouer sérieusement, sans se prendre au sérieux.
+              <span className="text-gradient-gold">
+                {get('hero_title') || env.clanTag}
+              </span>
+              <span className="block text-atfr-bone mt-3 text-2xl sm:text-3xl lg:text-4xl font-normal tracking-normal">
+                {get('hero_subtitle')}
               </span>
             </h1>
-
-            <p className="mt-6 max-w-2xl mx-auto lg:mx-0 text-lg text-atfr-fog leading-relaxed">
-              Rejoignez {env.clanTag} et son clan frère A-T-O : entraînements,
-              soirées en escadron, opérations globales, et une communauté
-              francophone qui joue pour gagner — et pour s'amuser.
-            </p>
 
             <div className="mt-10 flex flex-wrap gap-4 justify-center lg:justify-start">
               <Link to="/recrutement">
                 <Button size="lg" trailingIcon={<ArrowRight size={16} />}>
-                  Nous rejoindre
+                  {get('hero_cta_primary') || 'Nous rejoindre'}
                 </Button>
               </Link>
-              <Link to="/membres">
-                <Button variant="outline" size="lg" leadingIcon={<Users size={16} />}>
-                  Voir les membres
+              <a href="#about">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  leadingIcon={<Users size={16} />}
+                >
+                  {get('hero_cta_secondary') || 'Découvrir le clan'}
                 </Button>
-              </Link>
+              </a>
             </div>
           </motion.div>
 
@@ -79,7 +115,19 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-b from-transparent to-atfr-ink" />
+      <motion.a
+        href="#about"
+        aria-label="Découvrir"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-atfr-gold/70 hover:text-atfr-gold"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, y: [0, 6, 0] }}
+        transition={{
+          opacity: { delay: 1, duration: 0.5 },
+          y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+        }}
+      >
+        <ChevronDown size={26} />
+      </motion.a>
     </section>
   );
 }

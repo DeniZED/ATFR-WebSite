@@ -6,6 +6,8 @@ export type EventType =
   | 'meeting'
   | 'special';
 export type TargetClan = 'ATFR' | 'A-T-O';
+export type MediaKind = 'image' | 'video';
+export type ContentKind = 'text' | 'longtext' | 'url' | 'image' | 'video';
 
 export interface Database {
   __InternalSupabase: {
@@ -211,6 +213,195 @@ export interface Database {
           kind?: string;
           target_id?: string | null;
           payload?: Record<string, unknown> | null;
+        };
+        Relationships: [];
+      };
+      site_content: {
+        Row: {
+          key: string;
+          value: string;
+          kind: ContentKind;
+          label: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value?: string;
+          kind?: ContentKind;
+          label?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          key?: string;
+          value?: string;
+          kind?: ContentKind;
+          label?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      media_assets: {
+        Row: {
+          id: string;
+          created_at: string;
+          created_by: string | null;
+          path: string;
+          public_url: string;
+          kind: MediaKind;
+          mime: string | null;
+          size_bytes: number | null;
+          width: number | null;
+          height: number | null;
+          caption: string | null;
+          tags: string[];
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          path: string;
+          public_url: string;
+          kind: MediaKind;
+          mime?: string | null;
+          size_bytes?: number | null;
+          width?: number | null;
+          height?: number | null;
+          caption?: string | null;
+          tags?: string[];
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          path?: string;
+          public_url?: string;
+          kind?: MediaKind;
+          mime?: string | null;
+          size_bytes?: number | null;
+          width?: number | null;
+          height?: number | null;
+          caption?: string | null;
+          tags?: string[];
+        };
+        Relationships: [];
+      };
+      highlights: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          title: string;
+          description: string | null;
+          image_url: string | null;
+          occurred_on: string | null;
+          sort_order: number;
+          is_visible: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title: string;
+          description?: string | null;
+          image_url?: string | null;
+          occurred_on?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title?: string;
+          description?: string | null;
+          image_url?: string | null;
+          occurred_on?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Relationships: [];
+      };
+      achievements: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          title: string;
+          subtitle: string | null;
+          description: string | null;
+          rank: string | null;
+          competition: string | null;
+          earned_on: string | null;
+          image_url: string | null;
+          sort_order: number;
+          is_visible: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title: string;
+          subtitle?: string | null;
+          description?: string | null;
+          rank?: string | null;
+          competition?: string | null;
+          earned_on?: string | null;
+          image_url?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title?: string;
+          subtitle?: string | null;
+          description?: string | null;
+          rank?: string | null;
+          competition?: string | null;
+          earned_on?: string | null;
+          image_url?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Relationships: [];
+      };
+      testimonials: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          author_name: string;
+          author_role: string | null;
+          avatar_url: string | null;
+          quote: string;
+          sort_order: number;
+          is_visible: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          author_name: string;
+          author_role?: string | null;
+          avatar_url?: string | null;
+          quote: string;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          author_name?: string;
+          author_role?: string | null;
+          avatar_url?: string | null;
+          quote?: string;
+          sort_order?: number;
+          is_visible?: boolean;
         };
         Relationships: [];
       };
