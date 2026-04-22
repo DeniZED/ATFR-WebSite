@@ -46,7 +46,7 @@ export default function Recruitment() {
     },
   });
 
-  const { handleSubmit, control, register, watch, setValue, formState } = form;
+  const { handleSubmit, control, register, watch, formState } = form;
   const errors = formState.errors;
 
   const playerName = watch('playerName');

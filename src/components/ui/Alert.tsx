@@ -28,7 +28,7 @@ const iconFor = {
 } as const;
 
 interface AlertProps
-  extends HTMLAttributes<HTMLDivElement>,
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'title'>,
     VariantProps<typeof alert> {
   title?: ReactNode;
 }
