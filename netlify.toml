@@ -9,12 +9,8 @@
 [functions]
   node_bundler = "esbuild"
 
-# Les requêtes vers les Functions doivent précéder la redirection SPA.
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
+# SPA fallback — Netlify route /.netlify/functions/* nativement avant
+# cette règle, pas besoin de redirect explicite.
 [[redirects]]
   from = "/*"
   to = "/index.html"
