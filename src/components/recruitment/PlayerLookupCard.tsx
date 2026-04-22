@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react';
-import { Alert, Badge, Card, CardBody, Spinner } from '@/components/ui';
+import { Alert, Card, CardBody, Spinner } from '@/components/ui';
 import { wn8Color, wn8Label } from '@/lib/tomato-api';
 import type { usePlayerLookup } from '@/features/stats/queries';
 
@@ -40,7 +40,7 @@ export function PlayerLookupCard({
     );
   }
 
-  const { player, info, tomato } = data;
+  const { player, stats } = data;
 
   return (
     <Card>
@@ -54,48 +54,51 @@ export function PlayerLookupCard({
               Account ID · {player.account_id}
             </p>
           </div>
-          <a
-            href={tomato.profileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-atfr-gold hover:text-atfr-gold-light"
-          >
-            Voir sur tomato.gg
-            <ExternalLink size={14} />
-          </a>
+          {stats && (
+            <a
+              href={stats.profileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-atfr-gold hover:text-atfr-gold-light"
+            >
+              Voir sur tomato.gg
+              <ExternalLink size={14} />
+            </a>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Stat label="Batailles" value={info?.battles.toLocaleString('fr-FR') ?? '—'} />
-          <Stat
-            label="Winrate"
-            value={info ? `${info.win_rate.toFixed(2)}%` : '—'}
-          />
-          <Stat
-            label="WN8"
-            value={tomato.wn8 != null ? Math.round(tomato.wn8).toString() : '—'}
-            valueClass={wn8Color(tomato.wn8)}
-            hint={wn8Label(tomato.wn8)}
-          />
-          <Stat
-            label="Tier X"
-            value={tomato.tier10Count != null ? String(tomato.tier10Count) : '—'}
-          />
-        </div>
-
-        {tomato.recentWn8 != null && (
-          <div className="flex items-center gap-2 text-xs text-atfr-fog">
-            <Badge variant="outline">60 jours</Badge>
-            <span>
-              WN8 récent :{' '}
-              <span className={wn8Color(tomato.recentWn8)}>
-                {Math.round(tomato.recentWn8)}
-              </span>
-            </span>
-            {tomato.recentWinRate != null && (
-              <span>· {tomato.recentWinRate.toFixed(1)}% WR</span>
+        {stats ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Stat label="Batailles" value={stats.battles.toLocaleString('fr-FR')} />
+              <Stat
+                label="Winrate"
+                value={stats.winRate != null ? `${stats.winRate.toFixed(2)}%` : '—'}
+              />
+              <Stat
+                label="WN8"
+                value={stats.wn8 != null ? Math.round(stats.wn8).toString() : '—'}
+                valueClass={wn8Color(stats.wn8)}
+                hint={wn8Label(stats.wn8)}
+              />
+              <Stat label="Tier X" value={String(stats.tier10Count)} />
+            </div>
+            {stats.damagePerBattle != null && (
+              <p className="text-xs text-atfr-fog">
+                Dégâts moyens :{' '}
+                <span className="text-atfr-bone">
+                  {Math.round(stats.damagePerBattle)}
+                </span>{' '}
+                · Rating WG :{' '}
+                <span className="text-atfr-bone">{stats.globalRating}</span>
+              </p>
             )}
-          </div>
+          </>
+        ) : (
+          <Alert tone="warning">
+            Stats détaillées indisponibles (API limitée), les infos de base ont
+            été récupérées.
+          </Alert>
         )}
       </CardBody>
     </Card>

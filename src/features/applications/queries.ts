@@ -40,10 +40,10 @@ export function useSubmitApplication() {
         wn8: input.wn8 ?? null,
         winRate: input.win_rate ?? null,
         battles: input.battles ?? null,
-        tier10Count: input.tier10_count ?? null,
         availability: input.availability,
         motivation: input.motivation,
         previousClans: input.previous_clans,
+        accountId: input.account_id,
       });
 
       return data as ApplicationRow;

@@ -15,6 +15,5 @@ export const env = {
   wotApplicationId: required('VITE_WOT_APPLICATION_ID'),
   clanId: import.meta.env.VITE_CLAN_ID || '500191501',
   clanTag: import.meta.env.VITE_CLAN_TAG || 'ATFR',
-  discordWebhookUrl: import.meta.env.VITE_DISCORD_WEBHOOK_URL || '',
   siteUrl: import.meta.env.VITE_SITE_URL || 'https://atfr-clan.netlify.app',
 };

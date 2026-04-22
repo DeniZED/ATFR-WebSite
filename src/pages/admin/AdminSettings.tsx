@@ -38,7 +38,7 @@ export default function AdminSettings() {
           />
           <Row
             label="Discord webhook"
-            value={env.discordWebhookUrl ? 'Configuré' : 'Manquant'}
+            value="Géré côté serveur (Netlify Function)"
           />
         </CardBody>
       </Card>

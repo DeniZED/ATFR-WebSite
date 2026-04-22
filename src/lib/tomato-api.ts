@@ -1,15 +1,20 @@
-// Wrapper autour des stats étendues disponibles sur tomato.gg (WN8, recents).
-// L'API publique de tomato.gg n'est pas toujours garantie — on tente un appel
-// et on retombe proprement sur null si elle est indisponible ou change de
-// format. Le lien direct reste toujours fonctionnel en CTA externe.
+// Fallback-friendly player stats accessor.
+//
+// The old tomato.gg dev API is now allowlisted and blocks third parties with
+// a 403. We now compute WN8 ourselves in a Netlify Function using the
+// Wargaming API plus the XVM expected-values table. See
+// `netlify/functions/player-stats.mts`.
 
-const BASE = 'https://api.tomato.gg';
-
-export interface TomatoStats {
+export interface PlayerExtendedStats {
+  accountId: number;
+  nickname: string;
   wn8: number | null;
-  recentWn8: number | null;
-  recentWinRate: number | null;
-  tier10Count: number | null;
+  winRate: number | null;
+  battles: number;
+  damagePerBattle: number | null;
+  tier10Count: number;
+  globalRating: number;
+  lastBattleTime: number;
   profileUrl: string;
 }
 
@@ -17,51 +22,20 @@ export function tomatoProfileUrl(nickname: string): string {
   return `https://tomato.gg/stats/EU/${encodeURIComponent(nickname)}`;
 }
 
-export async function getTomatoStats(
+export async function getPlayerExtendedStats(
   accountId: number,
   nickname: string,
-): Promise<TomatoStats> {
-  const profileUrl = tomatoProfileUrl(nickname);
+): Promise<PlayerExtendedStats | null> {
   try {
-    const res = await fetch(`${BASE}/dev/api-v2/player/${accountId}/EU`, {
-      headers: { accept: 'application/json' },
-    });
-    if (!res.ok) return emptyStats(profileUrl);
-    const json = (await res.json()) as {
-      overallStats?: { wn8?: number; winrate?: number };
-      recents?: {
-        '60days'?: { wn8?: number; winrate?: number };
-        '30days'?: { wn8?: number; winrate?: number };
-      };
-      tankStats?: Array<{ tier?: number }>;
-    };
-
-    const tier10Count = json.tankStats
-      ? json.tankStats.filter((t) => t.tier === 10).length
-      : null;
-
-    const recent = json.recents?.['60days'] ?? json.recents?.['30days'];
-
-    return {
-      wn8: json.overallStats?.wn8 ?? null,
-      recentWn8: recent?.wn8 ?? null,
-      recentWinRate: recent?.winrate ?? null,
-      tier10Count,
-      profileUrl,
-    };
+    const res = await fetch(
+      `/.netlify/functions/player-stats?account_id=${accountId}`,
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as Omit<PlayerExtendedStats, 'profileUrl'>;
+    return { ...data, profileUrl: tomatoProfileUrl(nickname) };
   } catch {
-    return emptyStats(profileUrl);
+    return null;
   }
-}
-
-function emptyStats(profileUrl: string): TomatoStats {
-  return {
-    wn8: null,
-    recentWn8: null,
-    recentWinRate: null,
-    tier10Count: null,
-    profileUrl,
-  };
 }
 
 export function wn8Color(wn8: number | null): string {
