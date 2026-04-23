@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui';
 const Home = lazy(() => import('@/pages/Home'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
+const Gallery = lazy(() => import('@/pages/Gallery'));
 const Recruitment = lazy(() => import('@/pages/Recruitment'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: '/', element: <Home /> },
           { path: '/membres', element: <Members /> },
           { path: '/evenements', element: <Events /> },
+          { path: '/galerie', element: <Gallery /> },
           { path: '/recrutement', element: <Recruitment /> },
         ],
       },
