@@ -72,9 +72,17 @@ async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   const qs = new URLSearchParams({ application_id: APP_ID, ...params });
   const res = await fetch(`${WG_BASE}${path}?${qs}`);
   if (!res.ok) throw new Error(`WG ${path} ${res.status}`);
-  const json = (await res.json()) as { status: string; error?: { message: string }; data: T };
+  const json = (await res.json()) as {
+    status: string;
+    error?: { message: string; field?: string };
+    data: T;
+  };
   if (json.status !== 'ok') {
-    throw new Error(`WG error: ${json.error?.message ?? 'unknown'}`);
+    const msg = json.error?.message ?? 'unknown';
+    const field = json.error?.field;
+    throw new Error(
+      `WG error ${path}: ${msg}${field ? ` (field=${field})` : ''}`,
+    );
   }
   return json.data;
 }
