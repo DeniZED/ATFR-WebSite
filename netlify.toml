@@ -1,10 +1,16 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
 
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback — Netlify route /.netlify/functions/* nativement avant
+# cette règle, pas besoin de redirect explicite.
 [[redirects]]
   from = "/*"
   to = "/index.html"
