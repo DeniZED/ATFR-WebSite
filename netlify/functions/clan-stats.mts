@@ -37,7 +37,11 @@ async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   if (!res.ok) throw new Error(`WG ${path} ${res.status}`);
   const json = (await res.json()) as { status: string; error?: { message: string }; data: T };
   if (json.status !== 'ok') {
-    throw new Error(`WG error: ${json.error?.message ?? 'unknown'}`);
+    const msg = json.error?.message ?? 'unknown';
+    const field = (json.error as { field?: string } | undefined)?.field;
+    throw new Error(
+      `WG error ${path}: ${msg}${field ? ` (field=${field})` : ''}`,
+    );
   }
   return json.data;
 }
@@ -177,7 +181,42 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     const clan = clanMap?.[String(clanId)];
     if (!clan) return new Response('Clan not found', { status: 404 });
 
-    const sample = clan.members.slice(0, SAMPLE_SIZE);
+    const members = Array.isArray(clan.members) ? clan.members : [];
+    const sample = members
+      .filter(
+        (m) =>
+          m &&
+          typeof m.account_id === 'number' &&
+          Number.isFinite(m.account_id) &&
+          m.account_id > 0,
+      )
+      .slice(0, SAMPLE_SIZE);
+
+    if (sample.length === 0) {
+      const payload: ClanStatsPayload = {
+        clanId: clan.clan_id,
+        name: clan.name,
+        tag: clan.tag,
+        membersCount: clan.members_count ?? 0,
+        active24h: 0,
+        active7d: 0,
+        avgWinRate: null,
+        avgWn8: null,
+        avgGlobalRating: null,
+        avgDamagePerBattle: null,
+        totalBattles: 0,
+        topPlayers: [],
+        computedAt: new Date().toISOString(),
+      };
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, max-age=300, s-maxage=300',
+        },
+      });
+    }
+
     const ids = sample.map((m) => m.account_id).join(',');
 
     const [accountMap, tankStats, expected] = await Promise.all([
