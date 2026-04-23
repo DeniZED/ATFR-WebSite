@@ -33,16 +33,19 @@ async function getExpected(): Promise<Map<number, ExpectedValue>> {
   return map;
 }
 
+interface TankStatBlock {
+  battles: number;
+  wins: number;
+  damage_dealt: number;
+  frags: number;
+  spotted: number;
+  dropped_capture_points: number;
+}
+
 interface TankStats {
   tank_id: number;
-  all: {
-    battles: number;
-    wins: number;
-    damage_dealt: number;
-    frags: number;
-    spotted: number;
-    dropped_capture_points: number;
-  };
+  random?: TankStatBlock;
+  all?: TankStatBlock;
 }
 
 interface TankInfo {
@@ -56,13 +59,15 @@ interface AccountInfo {
   last_battle_time: number;
   global_rating: number;
   statistics: {
+    random?: {
+      battles: number;
+      wins: number;
+      damage_dealt: number;
+    };
     all: {
       battles: number;
       wins: number;
       damage_dealt: number;
-      frags: number;
-      spotted: number;
-      dropped_capture_points: number;
     };
   };
 }
@@ -104,19 +109,21 @@ function computeWn8(tanks: TankStats[], expected: Map<number, ExpectedValue>): n
 
   for (const t of tanks) {
     const exp = expected.get(t.tank_id);
-    if (!exp || t.all.battles <= 0) continue;
+    // Prefer random-battle stats (matches tomato.gg). Fall back to `all`.
+    const stats = t.random && t.random.battles > 0 ? t.random : t.all;
+    if (!exp || !stats || stats.battles <= 0) continue;
     n++;
-    battles += t.all.battles;
-    d += t.all.damage_dealt;
-    s += t.all.spotted;
-    f += t.all.frags;
-    def += t.all.dropped_capture_points;
-    win += t.all.wins;
-    expDmg += exp.expDamage * t.all.battles;
-    expSpot += exp.expSpot * t.all.battles;
-    expFrag += exp.expFrag * t.all.battles;
-    expDef += exp.expDef * t.all.battles;
-    expWin += exp.expWinRate * t.all.battles;
+    battles += stats.battles;
+    d += stats.damage_dealt;
+    s += stats.spotted;
+    f += stats.frags;
+    def += stats.dropped_capture_points;
+    win += stats.wins;
+    expDmg += exp.expDamage * stats.battles;
+    expSpot += exp.expSpot * stats.battles;
+    expFrag += exp.expFrag * stats.battles;
+    expDef += exp.expDef * stats.battles;
+    expWin += exp.expWinRate * stats.battles;
   }
 
   if (n === 0 || battles === 0 || expDmg === 0) return null;
@@ -180,12 +187,16 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       wg<Record<string, AccountInfo>>('/account/info/', {
         account_id: String(accountId),
         fields:
-          'account_id,nickname,last_battle_time,global_rating,statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt',
+          'account_id,nickname,last_battle_time,global_rating,' +
+          'statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt,' +
+          'statistics.random.battles,statistics.random.wins,statistics.random.damage_dealt',
       }),
       wg<Record<string, TankStats[]>>('/tanks/stats/', {
         account_id: String(accountId),
         fields:
-          'tank_id,all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
+          'tank_id,' +
+          'random.battles,random.wins,random.damage_dealt,random.frags,random.spotted,random.dropped_capture_points,' +
+          'all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
       }),
       getExpected(),
       getTierMap(),
@@ -195,20 +206,23 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     const tanks = tankStats?.[String(accountId)] ?? [];
     if (!account) return new Response('Player not found', { status: 404 });
 
-    const a = account.statistics.all;
-    const winRate = a.battles > 0 ? (a.wins / a.battles) * 100 : null;
-    const damagePerBattle = a.battles > 0 ? a.damage_dealt / a.battles : null;
+    // Prefer random-battle totals (matches tomato / WN8 convention).
+    const s = account.statistics.random ?? account.statistics.all;
+    const battles = s.battles ?? 0;
+    const winRate = battles > 0 ? (s.wins / battles) * 100 : null;
+    const damagePerBattle = battles > 0 ? s.damage_dealt / battles : null;
     const wn8 = computeWn8(tanks, expected);
     let tier10Count = 0;
     for (const t of tanks) {
-      if (tierMap.get(t.tank_id) === 10 && t.all.battles > 0) tier10Count++;
+      const b = (t.random?.battles ?? t.all?.battles ?? 0);
+      if (tierMap.get(t.tank_id) === 10 && b > 0) tier10Count++;
     }
 
     const payload: PlayerStatsPayload = {
       accountId: account.account_id,
       nickname: account.nickname,
       winRate,
-      battles: a.battles,
+      battles,
       damagePerBattle,
       wn8,
       tier10Count,
