@@ -9,13 +9,18 @@ export interface ClanStats {
   tag: string | null;
   membersCount: number;
   sampledMembers: number;
+  onlineNow: number;
   active24h: number;
   active7d: number;
   avgWinRate: number | null;
   avgWn8: number | null;
   avgGlobalRating: number | null;
   avgDamagePerBattle: number | null;
+  avgFragsPerBattle: number | null;
+  avgSpotsPerBattle: number | null;
   totalBattles: number;
+  maxWn8: number | null;
+  maxWn8Nickname: string | null;
   topPlayers: Array<{
     accountId: number;
     nickname: string;

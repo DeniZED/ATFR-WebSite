@@ -5,7 +5,6 @@ import { Activities } from '@/components/sections/Activities';
 import { Highlights } from '@/components/sections/Highlights';
 import { Achievements } from '@/components/sections/Achievements';
 import { Testimonials } from '@/components/sections/Testimonials';
-import { TopPlayers } from '@/components/sections/TopPlayers';
 import { JoinCta } from '@/components/sections/JoinCta';
 
 export default function Home() {
@@ -17,7 +16,6 @@ export default function Home() {
       <Activities />
       <Highlights />
       <Achievements />
-      <TopPlayers />
       <Testimonials />
       <JoinCta />
     </>
