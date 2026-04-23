@@ -219,19 +219,34 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
 
     const ids = sample.map((m) => m.account_id).join(',');
 
-    const [accountMap, tankStats, expected] = await Promise.all([
+    // /account/info/ accepts a CSV of account_ids (up to 100). /tanks/stats/
+    // only accepts ONE account_id per request — we fan out in parallel.
+    const [accountMap, tankResults, expected] = await Promise.all([
       wg<Record<string, AccountInfo>>('/account/info/', {
         account_id: ids,
         fields:
           'account_id,nickname,last_battle_time,global_rating,statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt',
       }),
-      wg<Record<string, TankStatsRow[]>>('/tanks/stats/', {
-        account_id: ids,
-        fields:
-          'tank_id,all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
-      }),
+      Promise.allSettled(
+        sample.map((m) =>
+          wg<Record<string, TankStatsRow[]>>('/tanks/stats/', {
+            account_id: String(m.account_id),
+            fields:
+              'tank_id,all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
+          }),
+        ),
+      ),
       getExpected(),
     ]);
+
+    const tankStats: Record<string, TankStatsRow[]> = {};
+    sample.forEach((m, i) => {
+      const r = tankResults[i];
+      if (r.status === 'fulfilled') {
+        const rows = r.value?.[String(m.account_id)];
+        if (Array.isArray(rows)) tankStats[String(m.account_id)] = rows;
+      }
+    });
 
     const now = Math.floor(Date.now() / 1000);
     const DAY = 86400;
