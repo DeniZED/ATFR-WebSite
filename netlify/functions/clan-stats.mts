@@ -91,17 +91,22 @@ interface AccountInfo {
   account_id: number;
   nickname: string;
   last_battle_time: number;
+  logout_at: number;
   global_rating: number;
   statistics: {
     random?: {
       battles: number;
       wins: number;
       damage_dealt: number;
+      frags: number;
+      spotted: number;
     };
     all: {
       battles: number;
       wins: number;
       damage_dealt: number;
+      frags: number;
+      spotted: number;
     };
   };
 }
@@ -172,9 +177,11 @@ async function fetchAccountsInfo(
     const res = await wg<Record<string, AccountInfo>>('/account/info/', {
       account_id: ids,
       fields:
-        'account_id,nickname,last_battle_time,global_rating,' +
+        'account_id,nickname,last_battle_time,logout_at,global_rating,' +
         'statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt,' +
-        'statistics.random.battles,statistics.random.wins,statistics.random.damage_dealt',
+        'statistics.all.frags,statistics.all.spotted,' +
+        'statistics.random.battles,statistics.random.wins,statistics.random.damage_dealt,' +
+        'statistics.random.frags,statistics.random.spotted',
     });
     Object.assign(out, res);
   }
@@ -214,13 +221,18 @@ export interface ClanStatsPayload {
   tag: string | null;
   membersCount: number;
   sampledMembers: number;
+  onlineNow: number;
   active24h: number;
   active7d: number;
   avgWinRate: number | null;
   avgWn8: number | null;
   avgGlobalRating: number | null;
   avgDamagePerBattle: number | null;
+  avgFragsPerBattle: number | null;
+  avgSpotsPerBattle: number | null;
   totalBattles: number;
+  maxWn8: number | null;
+  maxWn8Nickname: string | null;
   topPlayers: Array<{
     accountId: number;
     nickname: string;
@@ -268,13 +280,18 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
           tag: clan.tag,
           membersCount: clan.members_count ?? 0,
           sampledMembers: 0,
+          onlineNow: 0,
           active24h: 0,
           active7d: 0,
           avgWinRate: null,
           avgWn8: null,
           avgGlobalRating: null,
           avgDamagePerBattle: null,
+          avgFragsPerBattle: null,
+          avgSpotsPerBattle: null,
           totalBattles: 0,
+          maxWn8: null,
+          maxWn8Nickname: null,
           topPlayers: [],
           computedAt: new Date().toISOString(),
         } satisfies ClanStatsPayload),
@@ -296,7 +313,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
 
     const now = Math.floor(Date.now() / 1000);
     const DAY = 86400;
+    const ONLINE_WINDOW = 1800; // 30 min — proxy for "currently in-game"
 
+    let onlineNow = 0;
     let active24h = 0;
     let active7d = 0;
     let sumWin = 0;
@@ -307,8 +326,13 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     let sumGrCount = 0;
     let sumDmg = 0;
     let sumDmgCount = 0;
+    let sumFrags = 0;
+    let sumSpots = 0;
+    let sumFragsSpotsBattles = 0;
     let totalBattles = 0;
     let sampledMembers = 0;
+    let maxWn8: number | null = null;
+    let maxWn8Nickname: string | null = null;
 
     const perPlayer: ClanStatsPayload['topPlayers'] = [];
 
@@ -333,6 +357,10 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       if (wn8 != null) {
         sumWn8 += wn8;
         sumWn8Count++;
+        if (maxWn8 == null || wn8 > maxWn8) {
+          maxWn8 = wn8;
+          maxWn8Nickname = acc.nickname;
+        }
       }
       if (acc.global_rating) {
         sumGr += acc.global_rating;
@@ -342,9 +370,24 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         sumDmg += dpb;
         sumDmgCount++;
       }
+      if (battles > 0) {
+        sumFrags += s.frags ?? 0;
+        sumSpots += s.spotted ?? 0;
+        sumFragsSpotsBattles += battles;
+      }
       totalBattles += battles;
 
       const lastBattle = acc.last_battle_time ?? 0;
+      const logout = acc.logout_at ?? 0;
+      // "Online" = very recent battle AND the last-known state wasn't a
+      // logout after that battle. Still an approximation: WG doesn't expose
+      // a real online flag.
+      if (
+        now - lastBattle < ONLINE_WINDOW &&
+        (logout === 0 || lastBattle >= logout)
+      ) {
+        onlineNow++;
+      }
       if (now - lastBattle < DAY) active24h++;
       if (now - lastBattle < 7 * DAY) active7d++;
 
@@ -371,13 +414,20 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       tag: clan.tag,
       membersCount: clan.members_count ?? members.length,
       sampledMembers,
+      onlineNow,
       active24h,
       active7d,
       avgWinRate: sumWinCount ? sumWin / sumWinCount : null,
       avgWn8: sumWn8Count ? sumWn8 / sumWn8Count : null,
       avgGlobalRating: sumGrCount ? sumGr / sumGrCount : null,
       avgDamagePerBattle: sumDmgCount ? sumDmg / sumDmgCount : null,
+      avgFragsPerBattle:
+        sumFragsSpotsBattles > 0 ? sumFrags / sumFragsSpotsBattles : null,
+      avgSpotsPerBattle:
+        sumFragsSpotsBattles > 0 ? sumSpots / sumFragsSpotsBattles : null,
       totalBattles,
+      maxWn8,
+      maxWn8Nickname,
       topPlayers,
       computedAt: new Date().toISOString(),
     };
