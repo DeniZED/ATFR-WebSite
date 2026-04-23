@@ -8,6 +8,7 @@ export interface ClanStats {
   name: string | null;
   tag: string | null;
   membersCount: number;
+  sampledMembers: number;
   active24h: number;
   active7d: number;
   avgWinRate: number | null;

@@ -34,10 +34,13 @@ export function LiveStats() {
   const { data, isLoading } = useClanStats();
   const [scope, setScope] = useState<Scope>('overview');
 
+  const sampled = data?.sampledMembers ?? 0;
   const engagementPct =
-    data && data.membersCount > 0
-      ? (data.active7d / Math.min(data.membersCount, 20)) * 100
-      : null;
+    sampled > 0 && data ? (data.active7d / sampled) * 100 : null;
+  const sampleHint =
+    sampled > 0 && data && sampled < data.membersCount
+      ? `sur ${sampled}/${data.membersCount} joueurs`
+      : undefined;
 
   const cards: Record<Scope, CardSpec[]> = {
     overview: [
@@ -58,9 +61,10 @@ export function LiveStats() {
         icon: <Flame size={20} />,
       },
       {
-        label: 'Batailles (top 20)',
+        label: 'Batailles cumulées',
         animateTo: data?.totalBattles ?? null,
         icon: <Swords size={20} />,
+        hint: sampleHint,
       },
     ],
     combat: [
@@ -70,22 +74,25 @@ export function LiveStats() {
         decimals: 2,
         suffix: '%',
         icon: <Trophy size={20} />,
+        hint: sampleHint,
       },
       {
         label: 'WN8 moyen',
         animateTo: data?.avgWn8 ?? null,
         icon: <Crosshair size={20} />,
-        hint: 'Calculé sur le top 20',
+        hint: sampleHint ?? 'Calculé sur random battles',
       },
       {
         label: 'Dégâts / bataille',
         animateTo: data?.avgDamagePerBattle ?? null,
         icon: <Zap size={20} />,
+        hint: sampleHint,
       },
       {
         label: 'Personal rating',
         animateTo: data?.avgGlobalRating ?? null,
         icon: <Activity size={20} />,
+        hint: sampleHint,
       },
     ],
     activity: [
@@ -98,6 +105,7 @@ export function LiveStats() {
         label: 'Actifs 24h',
         animateTo: data?.active24h ?? null,
         icon: <Radio size={20} />,
+        hint: 'Bataille jouée dans les 24h',
       },
       {
         label: 'Actifs 7 jours',
@@ -109,7 +117,7 @@ export function LiveStats() {
         animateTo: engagementPct,
         decimals: 0,
         suffix: '%',
-        hint: 'sur échantillon top 20',
+        hint: sampleHint ?? undefined,
         icon: <Activity size={20} />,
       },
     ],
@@ -119,7 +127,7 @@ export function LiveStats() {
     <Section
       eyebrow="Le clan en temps réel"
       title="Stats live"
-      description="Données agrégées depuis l'API Wargaming. Winrate, WN8 et dégâts moyens sont calculés sur un échantillon des 20 premiers membres."
+      description="Données agrégées depuis l'API Wargaming sur l'ensemble des membres du clan. WN8, winrate et dégâts moyens sont calculés sur les random battles."
     >
       <div className="mb-8 flex flex-wrap justify-center gap-2">
         {SCOPES.map((s) => (

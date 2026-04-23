@@ -4,7 +4,13 @@ const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATIO
 const CLAN_ID = process.env.CLAN_ID || process.env.VITE_CLAN_ID;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
 const EXP_URL = 'https://static.modxvm.com/wn8-data-exp/json/wn8exp.json';
-const SAMPLE_SIZE = 20;
+
+// Wargaming server-app rate limit is 10 req/s. We fan out /tanks/stats/ one
+// request per player, so keep parallel concurrency comfortably below the cap.
+const TANKS_CONCURRENCY = 5;
+// /account/info/ and /clans/info/ accept up to 100 IDs per call. Chunk just
+// in case a clan is ever ≥ 100 members.
+const ACCOUNT_INFO_CHUNK = 100;
 
 interface ExpectedValue {
   IDNum: number;
@@ -35,10 +41,14 @@ async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   const qs = new URLSearchParams({ application_id: APP_ID, ...params });
   const res = await fetch(`${WG_BASE}${path}?${qs}`);
   if (!res.ok) throw new Error(`WG ${path} ${res.status}`);
-  const json = (await res.json()) as { status: string; error?: { message: string }; data: T };
+  const json = (await res.json()) as {
+    status: string;
+    error?: { message: string; field?: string };
+    data: T;
+  };
   if (json.status !== 'ok') {
     const msg = json.error?.message ?? 'unknown';
-    const field = (json.error as { field?: string } | undefined)?.field;
+    const field = json.error?.field;
     throw new Error(
       `WG error ${path}: ${msg}${field ? ` (field=${field})` : ''}`,
     );
@@ -60,16 +70,21 @@ interface ClanInfo {
   tag: string;
 }
 
+// /tanks/stats/ exposes per-mode stat blocks. `random` = random battles only —
+// the canonical scope for WN8 / tomato.gg.
+interface TankStatBlock {
+  battles: number;
+  wins: number;
+  damage_dealt: number;
+  frags: number;
+  spotted: number;
+  dropped_capture_points: number;
+}
+
 interface TankStatsRow {
   tank_id: number;
-  all: {
-    battles: number;
-    wins: number;
-    damage_dealt: number;
-    frags: number;
-    spotted: number;
-    dropped_capture_points: number;
-  };
+  random?: TankStatBlock;
+  all?: TankStatBlock;
 }
 
 interface AccountInfo {
@@ -78,6 +93,11 @@ interface AccountInfo {
   last_battle_time: number;
   global_rating: number;
   statistics: {
+    random?: {
+      battles: number;
+      wins: number;
+      damage_dealt: number;
+    };
     all: {
       battles: number;
       wins: number;
@@ -104,18 +124,20 @@ function computeWn8(
 
   for (const t of tanks) {
     const exp = expected.get(t.tank_id);
-    if (!exp || t.all.battles <= 0) continue;
-    battles += t.all.battles;
-    d += t.all.damage_dealt;
-    s += t.all.spotted;
-    f += t.all.frags;
-    def += t.all.dropped_capture_points;
-    win += t.all.wins;
-    expDmg += exp.expDamage * t.all.battles;
-    expSpot += exp.expSpot * t.all.battles;
-    expFrag += exp.expFrag * t.all.battles;
-    expDef += exp.expDef * t.all.battles;
-    expWin += exp.expWinRate * t.all.battles;
+    // Prefer random-battle stats (matches tomato.gg). Fall back to `all`.
+    const stats = t.random && t.random.battles > 0 ? t.random : t.all;
+    if (!exp || !stats || stats.battles <= 0) continue;
+    battles += stats.battles;
+    d += stats.damage_dealt;
+    s += stats.spotted;
+    f += stats.frags;
+    def += stats.dropped_capture_points;
+    win += stats.wins;
+    expDmg += exp.expDamage * stats.battles;
+    expSpot += exp.expSpot * stats.battles;
+    expFrag += exp.expFrag * stats.battles;
+    expDef += exp.expDef * stats.battles;
+    expWin += exp.expWinRate * stats.battles;
   }
 
   if (battles === 0 || expDmg === 0) return null;
@@ -140,11 +162,58 @@ function computeWn8(
   );
 }
 
+async function fetchAccountsInfo(
+  members: ClanMember[],
+): Promise<Record<string, AccountInfo>> {
+  const out: Record<string, AccountInfo> = {};
+  for (let i = 0; i < members.length; i += ACCOUNT_INFO_CHUNK) {
+    const chunk = members.slice(i, i + ACCOUNT_INFO_CHUNK);
+    const ids = chunk.map((m) => m.account_id).join(',');
+    const res = await wg<Record<string, AccountInfo>>('/account/info/', {
+      account_id: ids,
+      fields:
+        'account_id,nickname,last_battle_time,global_rating,' +
+        'statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt,' +
+        'statistics.random.battles,statistics.random.wins,statistics.random.damage_dealt',
+    });
+    Object.assign(out, res);
+  }
+  return out;
+}
+
+async function fetchTanksForMembers(
+  members: ClanMember[],
+): Promise<Map<number, TankStatsRow[]>> {
+  const map = new Map<number, TankStatsRow[]>();
+  for (let i = 0; i < members.length; i += TANKS_CONCURRENCY) {
+    const batch = members.slice(i, i + TANKS_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((m) =>
+        wg<Record<string, TankStatsRow[]>>('/tanks/stats/', {
+          account_id: String(m.account_id),
+          fields:
+            'tank_id,' +
+            'random.battles,random.wins,random.damage_dealt,random.frags,random.spotted,random.dropped_capture_points,' +
+            'all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
+        }),
+      ),
+    );
+    results.forEach((r, idx) => {
+      if (r.status === 'fulfilled') {
+        const rows = r.value?.[String(batch[idx].account_id)];
+        if (Array.isArray(rows)) map.set(batch[idx].account_id, rows);
+      }
+    });
+  }
+  return map;
+}
+
 export interface ClanStatsPayload {
   clanId: number | null;
   name: string | null;
   tag: string | null;
   membersCount: number;
+  sampledMembers: number;
   active24h: number;
   active7d: number;
   avgWinRate: number | null;
@@ -176,60 +245,52 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   try {
     const clanMap = await wg<Record<string, ClanInfo>>('/clans/info/', {
       clan_id: String(clanId),
-      fields: 'clan_id,members_count,members.account_id,members.account_name,members.role,name,tag',
+      fields:
+        'clan_id,members_count,members.account_id,members.account_name,members.role,name,tag',
     });
     const clan = clanMap?.[String(clanId)];
     if (!clan) return new Response('Clan not found', { status: 404 });
 
-    const members = Array.isArray(clan.members) ? clan.members : [];
-    const sample = members
-      .filter(
-        (m) =>
-          m &&
-          typeof m.account_id === 'number' &&
-          Number.isFinite(m.account_id) &&
-          m.account_id > 0,
-      )
-      .slice(0, SAMPLE_SIZE);
+    const rawMembers = Array.isArray(clan.members) ? clan.members : [];
+    const members = rawMembers.filter(
+      (m): m is ClanMember =>
+        !!m &&
+        typeof m.account_id === 'number' &&
+        Number.isFinite(m.account_id) &&
+        m.account_id > 0,
+    );
 
-    if (sample.length === 0) {
-      const payload: ClanStatsPayload = {
-        clanId: clan.clan_id,
-        name: clan.name,
-        tag: clan.tag,
-        membersCount: clan.members_count ?? 0,
-        active24h: 0,
-        active7d: 0,
-        avgWinRate: null,
-        avgWn8: null,
-        avgGlobalRating: null,
-        avgDamagePerBattle: null,
-        totalBattles: 0,
-        topPlayers: [],
-        computedAt: new Date().toISOString(),
-      };
-      return new Response(JSON.stringify(payload), {
-        status: 200,
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'public, max-age=300, s-maxage=300',
+    if (members.length === 0) {
+      return new Response(
+        JSON.stringify({
+          clanId: clan.clan_id,
+          name: clan.name,
+          tag: clan.tag,
+          membersCount: clan.members_count ?? 0,
+          sampledMembers: 0,
+          active24h: 0,
+          active7d: 0,
+          avgWinRate: null,
+          avgWn8: null,
+          avgGlobalRating: null,
+          avgDamagePerBattle: null,
+          totalBattles: 0,
+          topPlayers: [],
+          computedAt: new Date().toISOString(),
+        } satisfies ClanStatsPayload),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': 'public, max-age=300, s-maxage=300',
+          },
         },
-      });
+      );
     }
 
-    const ids = sample.map((m) => m.account_id).join(',');
-
-    const [accountMap, tankStats, expected] = await Promise.all([
-      wg<Record<string, AccountInfo>>('/account/info/', {
-        account_id: ids,
-        fields:
-          'account_id,nickname,last_battle_time,global_rating,statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt',
-      }),
-      wg<Record<string, TankStatsRow[]>>('/tanks/stats/', {
-        account_id: ids,
-        fields:
-          'tank_id,all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
-      }),
+    const [accountMap, tanksMap, expected] = await Promise.all([
+      fetchAccountsInfo(members),
+      fetchTanksForMembers(members),
       getExpected(),
     ]);
 
@@ -247,16 +308,22 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     let sumDmg = 0;
     let sumDmgCount = 0;
     let totalBattles = 0;
+    let sampledMembers = 0;
 
     const perPlayer: ClanStatsPayload['topPlayers'] = [];
 
-    for (const m of sample) {
+    for (const m of members) {
       const acc = accountMap?.[String(m.account_id)];
       if (!acc) continue;
-      const a = acc.statistics.all;
-      const wr = a.battles > 0 ? (a.wins / a.battles) * 100 : null;
-      const dpb = a.battles > 0 ? a.damage_dealt / a.battles : null;
-      const tanks = tankStats?.[String(m.account_id)] ?? [];
+      sampledMembers++;
+
+      // Prefer random-battle totals (matches tomato / WN8 convention).
+      const s = acc.statistics.random ?? acc.statistics.all;
+      const battles = s.battles ?? 0;
+      const wr = battles > 0 ? (s.wins / battles) * 100 : null;
+      const dpb = battles > 0 ? s.damage_dealt / battles : null;
+
+      const tanks = tanksMap.get(m.account_id) ?? [];
       const wn8 = computeWn8(tanks, expected);
 
       if (wr != null) {
@@ -275,7 +342,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         sumDmg += dpb;
         sumDmgCount++;
       }
-      totalBattles += a.battles;
+      totalBattles += battles;
 
       const lastBattle = acc.last_battle_time ?? 0;
       if (now - lastBattle < DAY) active24h++;
@@ -287,13 +354,14 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         role: m.role,
         wn8,
         winRate: wr,
-        battles: a.battles,
+        battles,
         globalRating: acc.global_rating,
         lastBattleTime: lastBattle,
       });
     }
 
     const topPlayers = perPlayer
+      .filter((p) => p.wn8 != null)
       .sort((a, b) => (b.wn8 ?? 0) - (a.wn8 ?? 0))
       .slice(0, 8);
 
@@ -301,7 +369,8 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       clanId: clan.clan_id,
       name: clan.name,
       tag: clan.tag,
-      membersCount: clan.members_count,
+      membersCount: clan.members_count ?? members.length,
+      sampledMembers,
       active24h,
       active7d,
       avgWinRate: sumWinCount ? sumWin / sumWinCount : null,
