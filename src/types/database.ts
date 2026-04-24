@@ -487,6 +487,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: UserRole | null;
       };
+      count_pending_applications: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
