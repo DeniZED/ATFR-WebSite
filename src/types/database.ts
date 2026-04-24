@@ -8,6 +8,51 @@ export type EventType =
 export type TargetClan = 'ATFR' | 'A-T-O';
 export type MediaKind = 'image' | 'video';
 export type ContentKind = 'text' | 'longtext' | 'url' | 'image' | 'video';
+export type UserRole = 'super_admin' | 'admin' | 'moderator' | 'editor';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  moderator: 'Modérateur',
+  editor: 'Éditeur',
+};
+
+export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  super_admin: 'Contrôle total + gestion des rôles',
+  admin: 'Gestion complète sauf les rôles',
+  moderator: 'Candidatures, événements, membres',
+  editor: 'Contenu éditorial, galerie, palmarès',
+};
+
+const ROLE_RANK: Record<UserRole, number> = {
+  super_admin: 4,
+  admin: 3,
+  moderator: 2,
+  editor: 1,
+};
+
+export function hasRole(current: UserRole | null, min: UserRole): boolean {
+  if (!current) return false;
+  return ROLE_RANK[current] >= ROLE_RANK[min];
+}
+
+export function canManageAdmin(role: UserRole | null, area: 'applications' | 'events' | 'members' | 'content' | 'media' | 'users'): boolean {
+  if (!role) return false;
+  switch (area) {
+    case 'applications':
+      return hasRole(role, 'moderator');
+    case 'events':
+    case 'members':
+      return hasRole(role, 'admin');
+    case 'content':
+    case 'media':
+      return hasRole(role, 'editor') || hasRole(role, 'admin');
+    case 'users':
+      return role === 'super_admin';
+    default:
+      return false;
+  }
+}
 
 export interface Database {
   __InternalSupabase: {
@@ -405,9 +450,44 @@ export interface Database {
         };
         Relationships: [];
       };
+      user_roles: {
+        Row: {
+          user_id: string;
+          role: UserRole;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          user_id: string;
+          role: UserRole;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          user_id?: string;
+          role?: UserRole;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
-    Functions: Record<never, never>;
+    Functions: {
+      list_users_with_roles: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          user_id: string;
+          email: string;
+          created_at: string;
+          role: UserRole | null;
+        }>;
+      };
+      current_user_role: {
+        Args: Record<string, never>;
+        Returns: UserRole | null;
+      };
+    };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
   };

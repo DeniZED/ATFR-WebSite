@@ -15,6 +15,7 @@ import {
   useDeleteApplication,
   useUpdateApplicationStatus,
 } from '@/features/applications/queries';
+import { useRole } from '@/hooks/useRole';
 import { tomatoProfileUrl, wn8Color } from '@/lib/tomato-api';
 import type { ApplicationStatus } from '@/types/database';
 
@@ -40,6 +41,7 @@ export default function AdminApplications() {
   const list = useApplications(filter === 'all' ? undefined : filter);
   const update = useUpdateApplicationStatus();
   const remove = useDeleteApplication();
+  const { isAdmin } = useRole();
 
   return (
     <div className="space-y-6">
@@ -184,19 +186,21 @@ export default function AdminApplications() {
                   >
                     Archiver
                   </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer définitivement ?')) {
-                        remove.mutate(app.id);
-                      }
-                    }}
-                    disabled={remove.isPending}
-                  >
-                    Supprimer
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      leadingIcon={<Trash2 size={14} />}
+                      onClick={() => {
+                        if (confirm('Supprimer définitivement ?')) {
+                          remove.mutate(app.id);
+                        }
+                      }}
+                      disabled={remove.isPending}
+                    >
+                      Supprimer
+                    </Button>
+                  )}
                 </div>
               </CardBody>
             </Card>

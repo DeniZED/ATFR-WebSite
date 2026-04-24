@@ -1,9 +1,12 @@
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
+import { ROLE_LABELS } from '@/types/database';
 
 export default function AdminSettings() {
   const { user } = useAuth();
+  const { role } = useRole();
 
   return (
     <div className="space-y-6">
@@ -20,6 +23,7 @@ export default function AdminSettings() {
         </CardHeader>
         <CardBody className="space-y-2 text-sm">
           <Row label="Email" value={user?.email ?? '—'} />
+          <Row label="Rôle" value={role ? ROLE_LABELS[role] : 'Aucun'} />
           <Row label="User ID" value={user?.id ?? '—'} />
         </CardBody>
       </Card>
