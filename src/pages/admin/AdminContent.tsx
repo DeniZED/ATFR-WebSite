@@ -57,6 +57,10 @@ const GROUPS: Array<{ title: string; keys: string[] }> = [
     ],
   },
   {
+    title: 'Discord',
+    keys: ['discord_server_id', 'discord_invite_url'],
+  },
+  {
     title: 'Appel à l’action',
     keys: ['cta_title', 'cta_text'],
   },
@@ -96,6 +100,15 @@ export default function AdminContent() {
     );
   }
 
+  // Any key present in DB but missing from GROUPS falls back into "Autres"
+  // so newly-seeded keys are editable without code change.
+  const known = new Set(GROUPS.flatMap((g) => g.keys));
+  const extras = Object.keys(content).filter((k) => !known.has(k));
+  const effectiveGroups =
+    extras.length > 0
+      ? [...GROUPS, { title: 'Autres', keys: extras }]
+      : GROUPS;
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap sticky top-0 z-20 -mx-6 lg:-mx-10 px-6 lg:px-10 py-4 bg-atfr-ink/85 backdrop-blur border-b border-atfr-gold/10">
@@ -130,7 +143,7 @@ export default function AdminContent() {
         <Alert tone="success">Contenu mis à jour.</Alert>
       )}
 
-      {GROUPS.map((group) => (
+      {effectiveGroups.map((group) => (
         <Card key={group.title}>
           <CardBody className="p-5 space-y-4">
             <h2 className="font-display text-lg text-atfr-bone">{group.title}</h2>
