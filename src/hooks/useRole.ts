@@ -5,11 +5,11 @@ import type { UserRole } from '@/types/database';
 import { canManageAdmin, hasRole } from '@/types/database';
 
 export function useRole() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const query = useQuery<UserRole | null>({
     queryKey: ['user_role', user?.id ?? 'anon'],
-    enabled: !!user,
+    enabled: !!user && !authLoading,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
@@ -23,9 +23,14 @@ export function useRole() {
   });
 
   const role = query.data ?? null;
+  // While auth is still resolving OR the role query is in-flight, we're
+  // "loading". Components that gate on the role should wait for this flag
+  // before deciding to redirect.
+  const isLoading = authLoading || (!!user && query.isLoading);
+
   return {
     role,
-    isLoading: query.isLoading,
+    isLoading,
     isSuperAdmin: role === 'super_admin',
     isAdmin: hasRole(role, 'admin'),
     isModerator: hasRole(role, 'moderator'),
