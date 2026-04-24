@@ -23,6 +23,7 @@ const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
 const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
 const AdminAchievements = lazy(() => import('@/pages/admin/AdminAchievements'));
 const AdminTestimonials = lazy(() => import('@/pages/admin/AdminTestimonials'));
+const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
 function Loading() {
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
           { path: 'moments', element: <AdminHighlights /> },
           { path: 'palmares', element: <AdminAchievements /> },
           { path: 'temoignages', element: <AdminTestimonials /> },
+          { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },
         ],

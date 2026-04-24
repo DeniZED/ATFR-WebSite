@@ -5,6 +5,7 @@ import {
   FileText,
   Gauge,
   Image as ImageIcon,
+  KeyRound,
   LogOut,
   Menu,
   Settings,
@@ -19,30 +20,46 @@ import {
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
+import { ROLE_LABELS } from '@/types/database';
 
-const nav = [
+type Area = 'applications' | 'events' | 'members' | 'content' | 'media' | 'users';
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: typeof Gauge;
+  end?: boolean;
+  area?: Area;
+}
+
+const nav: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: Gauge, end: true },
-  { to: '/admin/candidatures', label: 'Candidatures', icon: FileText },
-  { to: '/admin/membres', label: 'Membres', icon: Users },
-  { to: '/admin/evenements', label: 'Événements', icon: Calendar },
-  { to: '/admin/contenu', label: 'Contenu', icon: Type },
-  { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon },
-  { to: '/admin/moments', label: 'Moments forts', icon: Star },
-  { to: '/admin/palmares', label: 'Palmarès', icon: Trophy },
-  { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles },
+  { to: '/admin/candidatures', label: 'Candidatures', icon: FileText, area: 'applications' },
+  { to: '/admin/membres', label: 'Membres', icon: Users, area: 'members' },
+  { to: '/admin/evenements', label: 'Événements', icon: Calendar, area: 'events' },
+  { to: '/admin/contenu', label: 'Contenu', icon: Type, area: 'content' },
+  { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, area: 'media' },
+  { to: '/admin/moments', label: 'Moments forts', icon: Star, area: 'content' },
+  { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, area: 'content' },
+  { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, area: 'content' },
+  { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, area: 'users' },
   { to: '/admin/parametres', label: 'Paramètres', icon: Settings },
 ];
 
 export function AdminLayout() {
   const [open, setOpen] = useState(false);
   const { signOut, user } = useAuth();
+  const { role, can } = useRole();
   const navigate = useNavigate();
 
   async function handleLogout() {
     await signOut();
     navigate('/admin/login');
   }
+
+  const visibleNav = nav.filter((item) => !item.area || can(item.area));
 
   return (
     <div className="min-h-screen bg-atfr-ink">
@@ -67,7 +84,7 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {nav.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -89,7 +106,12 @@ export function AdminLayout() {
         </nav>
 
         <div className="shrink-0 p-4 border-t border-atfr-gold/10">
-          <p className="text-xs text-atfr-fog/80 mb-2 truncate">{user?.email}</p>
+          <p className="text-xs text-atfr-fog/80 truncate">{user?.email}</p>
+          {role && (
+            <p className="text-[10px] uppercase tracking-[0.25em] text-atfr-gold/80 mb-2">
+              {ROLE_LABELS[role]}
+            </p>
+          )}
           <Button
             variant="ghost"
             size="sm"
