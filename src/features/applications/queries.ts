@@ -87,3 +87,15 @@ export function useDeleteApplication() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['applications'] }),
   });
 }
+
+export function usePendingApplicationsCount() {
+  return useQuery({
+    queryKey: ['applications', 'pending_count'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('count_pending_applications');
+      if (error) throw error;
+      return (data as number | null) ?? 0;
+    },
+    staleTime: 60_000,
+  });
+}

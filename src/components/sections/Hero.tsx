@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ChevronDown, Star, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Radio, Star, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { env } from '@/lib/env';
 import { useClanInfo } from '@/features/clan/queries';
 import { useContent } from '@/hooks/useContent';
+import { usePendingApplicationsCount } from '@/features/applications/queries';
 
 export function Hero() {
   const { data: clan } = useClanInfo();
   const { get } = useContent();
+  const { data: pendingCount = 0 } = usePendingApplicationsCount();
 
   const videoUrl = get('hero_video_url');
   const posterUrl = get('hero_poster_url');
@@ -61,8 +63,29 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-atfr-gold/30 bg-atfr-gold/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-atfr-gold mb-6">
-              <Star size={12} /> {get('hero_eyebrow')}
+            <div className="mb-6 flex flex-wrap gap-2 justify-center lg:justify-start">
+              <div className="inline-flex items-center gap-2 rounded-full border border-atfr-gold/30 bg-atfr-gold/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-atfr-gold">
+                <Star size={12} /> {get('hero_eyebrow')}
+              </div>
+              {pendingCount > 0 && (
+                <Link
+                  to="/recrutement"
+                  className="group inline-flex items-center gap-2 rounded-full border border-atfr-success/40 bg-atfr-success/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-atfr-success hover:border-atfr-success hover:bg-atfr-success/15 transition-colors"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inset-0 rounded-full bg-atfr-success animate-ping opacity-75" />
+                    <span className="relative rounded-full h-2 w-2 bg-atfr-success" />
+                  </span>
+                  <Radio size={10} />
+                  <span>
+                    {pendingCount} candidature{pendingCount > 1 ? 's' : ''} en attente
+                  </span>
+                  <ArrowRight
+                    size={10}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                </Link>
+              )}
             </div>
 
             <h1 className="font-display text-6xl sm:text-7xl lg:text-8xl font-semibold leading-none tracking-tight">
