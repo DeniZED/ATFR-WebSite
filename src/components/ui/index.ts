@@ -7,3 +7,4 @@ export { Section } from './Section';
 export { Select } from './Select';
 export { Spinner } from './Spinner';
 export { StatCard } from './StatCard';
+export { Switch } from './Switch';
