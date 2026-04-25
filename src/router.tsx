@@ -12,6 +12,7 @@ const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
 const Modules = lazy(() => import('@/pages/Modules'));
 const ModuleStub = lazy(() => import('@/pages/ModuleStub'));
+const GuideBots = lazy(() => import('@/pages/modules/GuideBots'));
 const Recruitment = lazy(() => import('@/pages/Recruitment'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: '/evenements', element: <Events /> },
           { path: '/galerie', element: <Gallery /> },
           { path: '/modules', element: <Modules /> },
+          { path: '/modules/guide-bots', element: <GuideBots /> },
           { path: '/modules/:slug', element: <ModuleStub /> },
           { path: '/recrutement', element: <Recruitment /> },
         ],

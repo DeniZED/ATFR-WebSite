@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Database } from '@/types/database';
+import type { Database, QuizMode } from '@/types/database';
 
 type CategoryRow = Database['public']['Tables']['quiz_categories']['Row'];
 type CategoryInsert = Database['public']['Tables']['quiz_categories']['Insert'];
@@ -229,5 +229,88 @@ export function useDuplicateQuizQuestion() {
       return newRow.id;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz_questions'] }),
+  });
+}
+
+// ----------------------------------------------------------------------
+// Public quiz: published questions + session logging
+// ----------------------------------------------------------------------
+export function usePublicQuiz(opts: { categoryId?: string | null } = {}) {
+  return useQuery({
+    queryKey: ['quiz_questions', 'public', opts.categoryId ?? 'all'],
+    queryFn: async (): Promise<QuestionWithAnswers[]> => {
+      let q = supabase
+        .from('quiz_questions')
+        .select('*, answers:quiz_answers(*), category:quiz_categories(*)')
+        .eq('is_published', true);
+      if (opts.categoryId) q = q.eq('category_id', opts.categoryId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []).map((row) => ({
+        ...row,
+        answers: [...(row.answers ?? [])].sort(
+          (a, b) => a.sort_order - b.sort_order,
+        ),
+      })) as QuestionWithAnswers[];
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+interface CreateSessionArgs {
+  mode: QuizMode;
+  categoryId: string | null;
+  total: number;
+}
+
+export function useCreateQuizSession() {
+  return useMutation({
+    mutationFn: async (args: CreateSessionArgs): Promise<string> => {
+      const { data, error } = await supabase
+        .from('quiz_sessions')
+        .insert({
+          mode: args.mode,
+          category_id: args.categoryId,
+          total: args.total,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id;
+    },
+  });
+}
+
+export function useLogQuizAnswer() {
+  return useMutation({
+    mutationFn: async (args: {
+      sessionId: string;
+      questionId: string;
+      answerId: string | null;
+      isCorrect: boolean;
+    }) => {
+      const { error } = await supabase.from('quiz_session_answers').insert({
+        session_id: args.sessionId,
+        question_id: args.questionId,
+        answer_id: args.answerId,
+        is_correct: args.isCorrect,
+      });
+      if (error) throw error;
+    },
+  });
+}
+
+export function useFinishQuizSession() {
+  return useMutation({
+    mutationFn: async (args: { sessionId: string; score: number }) => {
+      const { error } = await supabase
+        .from('quiz_sessions')
+        .update({
+          finished_at: new Date().toISOString(),
+          score: args.score,
+        })
+        .eq('id', args.sessionId);
+      if (error) throw error;
+    },
   });
 }
