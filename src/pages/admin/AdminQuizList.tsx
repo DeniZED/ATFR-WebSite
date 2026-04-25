@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  BarChart3,
   Copy,
   Eye,
   EyeOff,
@@ -76,7 +77,12 @@ export default function AdminQuizList() {
             {list.data ? `${list.data.length} question(s) au total` : '—'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Link to="/admin/quiz/stats">
+            <Button variant="outline" leadingIcon={<BarChart3 size={14} />}>
+              Statistiques
+            </Button>
+          </Link>
           <Link to="/admin/quiz/categories">
             <Button variant="outline" leadingIcon={<Folder size={14} />}>
               Catégories

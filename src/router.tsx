@@ -30,6 +30,7 @@ const AdminModules = lazy(() => import('@/pages/admin/AdminModules'));
 const AdminQuizList = lazy(() => import('@/pages/admin/AdminQuizList'));
 const AdminQuizEdit = lazy(() => import('@/pages/admin/AdminQuizEdit'));
 const AdminQuizCategories = lazy(() => import('@/pages/admin/AdminQuizCategories'));
+const AdminQuizStats = lazy(() => import('@/pages/admin/AdminQuizStats'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
           { path: 'modules', element: <AdminModules /> },
           { path: 'quiz', element: <AdminQuizList /> },
           { path: 'quiz/categories', element: <AdminQuizCategories /> },
+          { path: 'quiz/stats', element: <AdminQuizStats /> },
           { path: 'quiz/new', element: <AdminQuizEdit /> },
           { path: 'quiz/:id', element: <AdminQuizEdit /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
