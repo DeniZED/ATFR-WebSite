@@ -11,9 +11,11 @@ interface SwitchProps {
 }
 
 /**
- * Toggle switch sized for touch (44px target). Use it instead of a
- * raw <input type="checkbox"> for any "publish / visible / enabled"
- * flag in admin forms.
+ * Toggle switch sized for touch (44px target). The button itself and the
+ * adjacent label area are both clickable, so a tap anywhere along the
+ * row toggles the state. We deliberately don't wrap the button in a
+ * <label> — nesting interactive elements inside a <label> creates
+ * inconsistent behavior on mobile.
  */
 export function Switch({
   checked,
@@ -23,11 +25,16 @@ export function Switch({
   disabled,
   className,
 }: SwitchProps) {
+  function toggle() {
+    if (disabled) return;
+    onChange(!checked);
+  }
+
   return (
-    <label
+    <div
       className={cn(
         'flex items-start gap-3 select-none',
-        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+        disabled && 'opacity-50',
         className,
       )}
     >
@@ -36,11 +43,12 @@ export function Switch({
         role="switch"
         aria-checked={checked}
         disabled={disabled}
-        onClick={() => onChange(!checked)}
+        onClick={toggle}
         className={cn(
           'relative inline-flex h-6 w-11 shrink-0 mt-0.5 items-center rounded-full transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-atfr-gold/60',
           checked ? 'bg-atfr-gold' : 'bg-atfr-graphite border border-atfr-gold/20',
+          disabled ? 'cursor-not-allowed' : 'cursor-pointer',
         )}
       >
         <span
@@ -51,11 +59,19 @@ export function Switch({
         />
       </button>
       {(label || hint) && (
-        <div className="text-sm text-atfr-bone leading-snug">
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={disabled}
+          className={cn(
+            'text-left text-sm text-atfr-bone leading-snug min-w-0',
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          )}
+        >
           {label && <p>{label}</p>}
           {hint && <p className="text-xs text-atfr-fog mt-0.5">{hint}</p>}
-        </div>
+        </button>
       )}
-    </label>
+    </div>
   );
 }

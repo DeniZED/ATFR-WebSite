@@ -75,6 +75,19 @@ export default function AdminModules() {
     }));
   }
 
+  async function togglePublish(slug: string, next: boolean) {
+    update(slug, { is_published: next });
+    const d = { ...(drafts[slug] ?? empty), is_published: next };
+    await upsert.mutateAsync({
+      slug,
+      is_published: d.is_published,
+      sort_order: d.sort_order,
+      badge_label: d.badge_label || null,
+      custom_title: d.custom_title || null,
+      custom_description: d.custom_description || null,
+    });
+  }
+
   async function save() {
     if (!data) return;
     for (const slug of dirtySlugs) {
@@ -174,12 +187,18 @@ export default function AdminModules() {
                     <div className="sm:col-span-2">
                       <Switch
                         checked={d.is_published}
-                        onChange={(next) =>
-                          update(registry.slug, { is_published: next })
-                        }
+                        disabled={upsert.isPending}
+                        onChange={(next) => {
+                          void togglePublish(registry.slug, next);
+                        }}
                         label={
                           <>
                             Publier sur la page <code>/modules</code>
+                            {upsert.isPending && (
+                              <span className="ml-2 text-xs text-atfr-gold/80">
+                                Enregistrement…
+                              </span>
+                            )}
                           </>
                         }
                         hint={
