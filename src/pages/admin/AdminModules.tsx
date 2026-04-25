@@ -8,6 +8,7 @@ import {
   CardBody,
   Input,
   Spinner,
+  Switch,
   Textarea,
 } from '@/components/ui';
 import { useAdminModules, useUpsertModule } from '@/features/modules/queries';
@@ -170,17 +171,24 @@ export default function AdminModules() {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="flex items-center gap-2 text-sm text-atfr-bone sm:col-span-2">
-                      <input
-                        type="checkbox"
+                    <div className="sm:col-span-2">
+                      <Switch
                         checked={d.is_published}
-                        onChange={(e) =>
-                          update(registry.slug, { is_published: e.target.checked })
+                        onChange={(next) =>
+                          update(registry.slug, { is_published: next })
                         }
-                        className="h-4 w-4 accent-atfr-gold"
+                        label={
+                          <>
+                            Publier sur la page <code>/modules</code>
+                          </>
+                        }
+                        hint={
+                          d.is_published
+                            ? 'Visible publiquement.'
+                            : 'Masqué — visible uniquement par les admins.'
+                        }
                       />
-                      Publier sur la page <code>/modules</code>
-                    </label>
+                    </div>
 
                     <Input
                       label="Ordre d'affichage"
