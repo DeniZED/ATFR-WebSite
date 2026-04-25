@@ -9,6 +9,15 @@ export type TargetClan = 'ATFR' | 'A-T-O';
 export type MediaKind = 'image' | 'video';
 export type ContentKind = 'text' | 'longtext' | 'url' | 'image' | 'video';
 export type UserRole = 'super_admin' | 'admin' | 'moderator' | 'editor';
+export type QuizDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+export type QuizMode = 'test' | 'training' | 'category';
+
+export const DIFFICULTY_LABELS: Record<QuizDifficulty, string> = {
+  easy: 'Facile',
+  medium: 'Moyen',
+  hard: 'Difficile',
+  expert: 'Expert',
+};
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super admin',
@@ -501,6 +510,193 @@ export interface Database {
           custom_description?: string | null;
           updated_at?: string;
           updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      quiz_categories: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string | null;
+          color: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          color?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string | null;
+          color?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      quiz_questions: {
+        Row: {
+          id: string;
+          category_id: string | null;
+          difficulty: QuizDifficulty;
+          title: string;
+          context: string | null;
+          image_url: string | null;
+          question: string;
+          explanation: string | null;
+          is_published: boolean;
+          is_featured: boolean;
+          sort_order: number;
+          success_count: number;
+          attempt_count: number;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          category_id?: string | null;
+          difficulty?: QuizDifficulty;
+          title: string;
+          context?: string | null;
+          image_url?: string | null;
+          question: string;
+          explanation?: string | null;
+          is_published?: boolean;
+          is_featured?: boolean;
+          sort_order?: number;
+          success_count?: number;
+          attempt_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          category_id?: string | null;
+          difficulty?: QuizDifficulty;
+          title?: string;
+          context?: string | null;
+          image_url?: string | null;
+          question?: string;
+          explanation?: string | null;
+          is_published?: boolean;
+          is_featured?: boolean;
+          sort_order?: number;
+          success_count?: number;
+          attempt_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'quiz_questions_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'quiz_categories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      quiz_answers: {
+        Row: {
+          id: string;
+          question_id: string;
+          label: string;
+          is_correct: boolean;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          label: string;
+          is_correct?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          id?: string;
+          question_id?: string;
+          label?: string;
+          is_correct?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'quiz_answers_question_id_fkey';
+            columns: ['question_id'];
+            isOneToOne: false;
+            referencedRelation: 'quiz_questions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      quiz_sessions: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          mode: QuizMode;
+          category_id: string | null;
+          started_at: string;
+          finished_at: string | null;
+          score: number | null;
+          total: number | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          mode: QuizMode;
+          category_id?: string | null;
+          started_at?: string;
+          finished_at?: string | null;
+          score?: number | null;
+          total?: number | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          mode?: QuizMode;
+          category_id?: string | null;
+          started_at?: string;
+          finished_at?: string | null;
+          score?: number | null;
+          total?: number | null;
+        };
+        Relationships: [];
+      };
+      quiz_session_answers: {
+        Row: {
+          id: string;
+          session_id: string;
+          question_id: string;
+          answer_id: string | null;
+          is_correct: boolean;
+          answered_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          question_id: string;
+          answer_id?: string | null;
+          is_correct: boolean;
+          answered_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          question_id?: string;
+          answer_id?: string | null;
+          is_correct?: boolean;
+          answered_at?: string;
         };
         Relationships: [];
       };

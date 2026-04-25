@@ -26,6 +26,9 @@ const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
 const AdminAchievements = lazy(() => import('@/pages/admin/AdminAchievements'));
 const AdminTestimonials = lazy(() => import('@/pages/admin/AdminTestimonials'));
 const AdminModules = lazy(() => import('@/pages/admin/AdminModules'));
+const AdminQuizList = lazy(() => import('@/pages/admin/AdminQuizList'));
+const AdminQuizEdit = lazy(() => import('@/pages/admin/AdminQuizEdit'));
+const AdminQuizCategories = lazy(() => import('@/pages/admin/AdminQuizCategories'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
@@ -78,6 +81,10 @@ export const router = createBrowserRouter([
           { path: 'palmares', element: <AdminAchievements /> },
           { path: 'temoignages', element: <AdminTestimonials /> },
           { path: 'modules', element: <AdminModules /> },
+          { path: 'quiz', element: <AdminQuizList /> },
+          { path: 'quiz/categories', element: <AdminQuizCategories /> },
+          { path: 'quiz/new', element: <AdminQuizEdit /> },
+          { path: 'quiz/:id', element: <AdminQuizEdit /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },
