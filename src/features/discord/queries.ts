@@ -1,11 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 
+export interface DiscordChannel {
+  id: string;
+  name: string;
+  position: number;
+}
+
 export interface DiscordWidgetMember {
   id: string;
   username: string;
   discriminator?: string;
   avatar_url?: string | null;
   status: 'online' | 'idle' | 'dnd';
+  /** Set when the member is currently in a voice channel. */
+  channel_id?: string | null;
   activity?: { name: string };
 }
 
@@ -14,6 +22,7 @@ export interface DiscordWidget {
   name: string;
   instant_invite: string | null;
   presence_count: number;
+  channels: DiscordChannel[];
   members: DiscordWidgetMember[];
 }
 
@@ -32,7 +41,11 @@ export function useDiscordWidget(serverId: string | null | undefined) {
       }
       return (await res.json()) as DiscordWidget;
     },
-    staleTime: 5 * 60_000,
+    // Refresh every 30s while the home is open — voice channel
+    // composition changes constantly. Stale-while-revalidate keeps the
+    // UI snappy.
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: false,
   });
 }
