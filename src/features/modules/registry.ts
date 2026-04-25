@@ -38,7 +38,6 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     accentGradient: 'from-atfr-gold/30 to-transparent',
     category: 'pédagogie',
     cta: 'Commencer le test',
-    comingSoon: true,
   },
   {
     slug: 'wot-geoguesser',
