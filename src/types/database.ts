@@ -471,6 +471,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      learning_modules: {
+        Row: {
+          slug: string;
+          is_published: boolean;
+          sort_order: number;
+          badge_label: string | null;
+          custom_title: string | null;
+          custom_description: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          slug: string;
+          is_published?: boolean;
+          sort_order?: number;
+          badge_label?: string | null;
+          custom_title?: string | null;
+          custom_description?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          slug?: string;
+          is_published?: boolean;
+          sort_order?: number;
+          badge_label?: string | null;
+          custom_title?: string | null;
+          custom_description?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

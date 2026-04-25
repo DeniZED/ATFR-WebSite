@@ -10,6 +10,7 @@ const links = [
   { to: '/membres', label: 'Membres' },
   { to: '/evenements', label: 'Événements' },
   { to: '/galerie', label: 'Galerie' },
+  { to: '/modules', label: 'Académie' },
   { to: '/recrutement', label: 'Recrutement' },
 ];
 

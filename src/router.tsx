@@ -10,6 +10,8 @@ const Home = lazy(() => import('@/pages/Home'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
+const Modules = lazy(() => import('@/pages/Modules'));
+const ModuleStub = lazy(() => import('@/pages/ModuleStub'));
 const Recruitment = lazy(() => import('@/pages/Recruitment'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -23,6 +25,7 @@ const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
 const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
 const AdminAchievements = lazy(() => import('@/pages/admin/AdminAchievements'));
 const AdminTestimonials = lazy(() => import('@/pages/admin/AdminTestimonials'));
+const AdminModules = lazy(() => import('@/pages/admin/AdminModules'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
@@ -51,6 +54,8 @@ export const router = createBrowserRouter([
           { path: '/membres', element: <Members /> },
           { path: '/evenements', element: <Events /> },
           { path: '/galerie', element: <Gallery /> },
+          { path: '/modules', element: <Modules /> },
+          { path: '/modules/:slug', element: <ModuleStub /> },
           { path: '/recrutement', element: <Recruitment /> },
         ],
       },
@@ -72,6 +77,7 @@ export const router = createBrowserRouter([
           { path: 'moments', element: <AdminHighlights /> },
           { path: 'palmares', element: <AdminAchievements /> },
           { path: 'temoignages', element: <AdminTestimonials /> },
+          { path: 'modules', element: <AdminModules /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },
