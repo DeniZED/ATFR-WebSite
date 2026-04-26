@@ -32,6 +32,10 @@ const AdminQuizList = lazy(() => import('@/pages/admin/AdminQuizList'));
 const AdminQuizEdit = lazy(() => import('@/pages/admin/AdminQuizEdit'));
 const AdminQuizCategories = lazy(() => import('@/pages/admin/AdminQuizCategories'));
 const AdminQuizStats = lazy(() => import('@/pages/admin/AdminQuizStats'));
+const AdminGeoHome = lazy(() => import('@/pages/admin/AdminGeoHome'));
+const AdminGeoMaps = lazy(() => import('@/pages/admin/AdminGeoMaps'));
+const AdminGeoShots = lazy(() => import('@/pages/admin/AdminGeoShots'));
+const AdminGeoShotEdit = lazy(() => import('@/pages/admin/AdminGeoShotEdit'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 
@@ -91,6 +95,11 @@ export const router = createBrowserRouter([
           { path: 'quiz/stats', element: <AdminQuizStats /> },
           { path: 'quiz/new', element: <AdminQuizEdit /> },
           { path: 'quiz/:id', element: <AdminQuizEdit /> },
+          { path: 'geoguesser', element: <AdminGeoHome /> },
+          { path: 'geoguesser/maps', element: <AdminGeoMaps /> },
+          { path: 'geoguesser/shots', element: <AdminGeoShots /> },
+          { path: 'geoguesser/shots/new', element: <AdminGeoShotEdit /> },
+          { path: 'geoguesser/shots/:id', element: <AdminGeoShotEdit /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },

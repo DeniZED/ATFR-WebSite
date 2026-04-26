@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   KeyRound,
   LogOut,
+  Map,
   Menu,
   Settings,
   Shield,
@@ -48,6 +49,7 @@ const nav: NavItem[] = [
   { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, area: 'content' },
   { to: '/admin/modules', label: 'Académie', icon: GraduationCap, area: 'content' },
   { to: '/admin/quiz', label: 'Guide pour les bots', icon: BookOpen, area: 'content' },
+  { to: '/admin/geoguesser', label: 'GeoGuesser', icon: Map, area: 'content' },
   { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, area: 'users' },
   { to: '/admin/parametres', label: 'Paramètres', icon: Settings },
 ];
