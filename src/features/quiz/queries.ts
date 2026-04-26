@@ -314,3 +314,24 @@ export function useFinishQuizSession() {
     },
   });
 }
+
+// ----------------------------------------------------------------------
+// Admin analytics
+// ----------------------------------------------------------------------
+type SessionRow = Database['public']['Tables']['quiz_sessions']['Row'];
+
+export function useQuizSessions(limit = 200) {
+  return useQuery({
+    queryKey: ['quiz_sessions', 'list', limit],
+    queryFn: async (): Promise<SessionRow[]> => {
+      const { data, error } = await supabase
+        .from('quiz_sessions')
+        .select('*')
+        .order('started_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+}
