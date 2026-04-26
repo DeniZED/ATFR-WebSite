@@ -700,6 +700,48 @@ export interface Database {
         };
         Relationships: [];
       };
+      module_scores: {
+        Row: {
+          id: string;
+          module_slug: string;
+          submode: string;
+          player_anon_id: string;
+          player_nickname: string;
+          player_account_id: number | null;
+          is_verified: boolean;
+          score: number;
+          max_score: number;
+          meta: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          module_slug: string;
+          submode?: string;
+          player_anon_id: string;
+          player_nickname: string;
+          player_account_id?: number | null;
+          is_verified?: boolean;
+          score: number;
+          max_score: number;
+          meta?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          module_slug?: string;
+          submode?: string;
+          player_anon_id?: string;
+          player_nickname?: string;
+          player_account_id?: number | null;
+          is_verified?: boolean;
+          score?: number;
+          max_score?: number;
+          meta?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
