@@ -700,6 +700,110 @@ export interface Database {
         };
         Relationships: [];
       };
+      wot_maps: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          image_url: string;
+          width: number | null;
+          height: number | null;
+          source: 'wg' | 'manual';
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          description?: string | null;
+          image_url: string;
+          width?: number | null;
+          height?: number | null;
+          source?: 'wg' | 'manual';
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          image_url?: string;
+          width?: number | null;
+          height?: number | null;
+          source?: 'wg' | 'manual';
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      geoguesser_shots: {
+        Row: {
+          id: string;
+          map_id: string;
+          image_url: string;
+          x_pct: number;
+          y_pct: number;
+          difficulty: QuizDifficulty;
+          caption: string | null;
+          tags: string[];
+          is_published: boolean;
+          sort_order: number;
+          attempt_count: number;
+          success_score_sum: number;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          map_id: string;
+          image_url: string;
+          x_pct: number;
+          y_pct: number;
+          difficulty?: QuizDifficulty;
+          caption?: string | null;
+          tags?: string[];
+          is_published?: boolean;
+          sort_order?: number;
+          attempt_count?: number;
+          success_score_sum?: number;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          map_id?: string;
+          image_url?: string;
+          x_pct?: number;
+          y_pct?: number;
+          difficulty?: QuizDifficulty;
+          caption?: string | null;
+          tags?: string[];
+          is_published?: boolean;
+          sort_order?: number;
+          attempt_count?: number;
+          success_score_sum?: number;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'geoguesser_shots_map_id_fkey';
+            columns: ['map_id'];
+            isOneToOne: false;
+            referencedRelation: 'wot_maps';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       module_scores: {
         Row: {
           id: string;
