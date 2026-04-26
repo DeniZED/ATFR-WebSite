@@ -28,7 +28,13 @@ import {
   useQuizCategories,
   type QuestionWithAnswers,
 } from '@/features/quiz/queries';
+import { useSubmitScore } from '@/features/leaderboard/queries';
+import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
+import { IdentityBar } from '@/components/quiz/IdentityBar';
+import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import { DIFFICULTY_LABELS } from '@/types/database';
+
+const MODULE_SLUG = 'guide-bots';
 
 type Stage = 'intro' | 'playing' | 'result';
 type Mode = 'random' | 'ordered';
@@ -58,6 +64,8 @@ export default function GuideBots() {
   const createSession = useCreateQuizSession();
   const logAnswer = useLogQuizAnswer();
   const finishSession = useFinishQuizSession();
+  const submitScore = useSubmitScore();
+  const identity = usePlayerIdentity();
 
   const totalQuestions = questionsForSession.length;
   const current = questionsForSession[index];
@@ -131,6 +139,25 @@ export default function GuideBots() {
         // Ignored — display the result regardless.
       }
     }
+    // Push to the leaderboard if we have a nickname. Failures are
+    // non-blocking — the result screen is shown either way.
+    if (identity.nickname && totalQuestions > 0) {
+      try {
+        await submitScore.mutateAsync({
+          module_slug: MODULE_SLUG,
+          submode: categoryId ? `cat:${categoryId}` : 'default',
+          player_anon_id: identity.id,
+          player_nickname: identity.nickname,
+          player_account_id: identity.accountId,
+          is_verified: identity.isVerified,
+          score: finalScore,
+          max_score: totalQuestions,
+          meta: { mode },
+        });
+      } catch {
+        // Leaderboard best-effort.
+      }
+    }
     setStage('result');
   }
 
@@ -157,13 +184,15 @@ export default function GuideBots() {
         title="Le code de la route WoT"
         description="Une situation de bataille, plusieurs réponses crédibles, une seule bonne. Pédagogique, parodique, utile."
       >
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto space-y-6">
           <Link
             to="/modules"
-            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold mb-4"
+            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
           >
             <ArrowLeft size={12} /> Retour à l'académie
           </Link>
+
+          <IdentityBar />
 
           {quiz.isLoading ? (
             <div className="flex justify-center py-20">
@@ -233,14 +262,25 @@ export default function GuideBots() {
                   size="lg"
                   className="w-full"
                   onClick={startQuiz}
-                  disabled={createSession.isPending}
+                  disabled={
+                    createSession.isPending || !identity.nickname
+                  }
                   trailingIcon={<ArrowRight size={16} />}
                 >
-                  {createSession.isPending ? 'Préparation…' : 'Commencer le test'}
+                  {!identity.nickname
+                    ? 'Choisis d’abord un pseudo'
+                    : createSession.isPending
+                      ? 'Préparation…'
+                      : 'Commencer le test'}
                 </Button>
               </CardBody>
             </Card>
           )}
+
+          <LeaderboardPanel
+            moduleSlug={MODULE_SLUG}
+            submode={categoryId ? `cat:${categoryId}` : 'default'}
+          />
         </div>
       </Section>
     );
@@ -410,6 +450,14 @@ export default function GuideBots() {
             </div>
           </CardBody>
         </Card>
+
+        <div className="mt-8">
+          <LeaderboardPanel
+            moduleSlug={MODULE_SLUG}
+            submode={categoryId ? `cat:${categoryId}` : 'default'}
+            limit={10}
+          />
+        </div>
 
         {/* Récap des questions ratées */}
         {(() => {

@@ -13,6 +13,7 @@ const Gallery = lazy(() => import('@/pages/Gallery'));
 const Modules = lazy(() => import('@/pages/Modules'));
 const ModuleStub = lazy(() => import('@/pages/ModuleStub'));
 const GuideBots = lazy(() => import('@/pages/modules/GuideBots'));
+const AuthWgCallback = lazy(() => import('@/pages/AuthWgCallback'));
 const Recruitment = lazy(() => import('@/pages/Recruitment'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: '/modules/guide-bots', element: <GuideBots /> },
           { path: '/modules/:slug', element: <ModuleStub /> },
           { path: '/recrutement', element: <Recruitment /> },
+          { path: '/auth/wg/callback', element: <AuthWgCallback /> },
         ],
       },
       { path: '/admin/login', element: <Login /> },
