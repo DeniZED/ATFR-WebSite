@@ -55,3 +55,35 @@ export function useSubmitScore() {
     },
   });
 }
+
+export function useScoreCount(moduleSlug: string) {
+  return useQuery({
+    queryKey: ['module_scores', 'count', moduleSlug],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from('module_scores')
+        .select('*', { count: 'exact', head: true })
+        .eq('module_slug', moduleSlug);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useResetLeaderboard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (moduleSlug: string) => {
+      const { error } = await supabase
+        .from('module_scores')
+        .delete()
+        .eq('module_slug', moduleSlug);
+      if (error) throw error;
+    },
+    onSuccess: (_, slug) => {
+      qc.invalidateQueries({ queryKey: ['module_scores', slug] });
+      qc.invalidateQueries({ queryKey: ['module_scores', 'count', slug] });
+    },
+  });
+}

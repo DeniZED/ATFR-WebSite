@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Save } from 'lucide-react';
+import { ExternalLink, RotateCcw, Save } from 'lucide-react';
 import {
   Alert,
   Badge,
@@ -12,6 +12,10 @@ import {
   Textarea,
 } from '@/components/ui';
 import { useAdminModules, useUpsertModule } from '@/features/modules/queries';
+import {
+  useResetLeaderboard,
+  useScoreCount,
+} from '@/features/leaderboard/queries';
 
 interface DraftRow {
   is_published: boolean;
@@ -248,6 +252,10 @@ export default function AdminModules() {
                       rows={3}
                       className="sm:col-span-2"
                     />
+
+                    <div className="sm:col-span-2 border-t border-atfr-gold/10 pt-4">
+                      <LeaderboardResetRow slug={registry.slug} />
+                    </div>
                   </div>
                 </CardBody>
               </Card>
@@ -255,6 +263,49 @@ export default function AdminModules() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function LeaderboardResetRow({ slug }: { slug: string }) {
+  const count = useScoreCount(slug);
+  const reset = useResetLeaderboard();
+
+  async function onReset() {
+    if (
+      !confirm(
+        `Vider le classement de ce module ? Tous les scores enregistrés seront supprimés (irréversible).`,
+      )
+    )
+      return;
+    await reset.mutateAsync(slug);
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-atfr-fog">
+          Classement
+        </p>
+        <p className="text-sm text-atfr-bone mt-0.5">
+          {count.isLoading
+            ? '—'
+            : count.data === 0
+              ? 'Aucun score enregistré'
+              : `${count.data} score${count.data && count.data > 1 ? 's' : ''} enregistré${count.data && count.data > 1 ? 's' : ''}`}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="danger"
+        leadingIcon={<RotateCcw size={14} />}
+        onClick={onReset}
+        disabled={
+          reset.isPending || count.isLoading || (count.data ?? 0) === 0
+        }
+      >
+        {reset.isPending ? 'Reset…' : 'Vider le classement'}
+      </Button>
     </div>
   );
 }
