@@ -5,6 +5,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Layers,
   Pencil,
   Plus,
   Trash2,
@@ -84,9 +85,20 @@ export default function AdminGeoShots() {
             {shots.data ? `${shots.data.length} screenshot(s)` : '—'}
           </p>
         </div>
-        <Link to="/admin/geoguesser/shots/new">
-          <Button leadingIcon={<Plus size={14} />}>Nouveau screenshot</Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/admin/geoguesser/shots/bulk${
+              mapFilter !== 'all' ? `?map=${encodeURIComponent(mapFilter)}` : ''
+            }`}
+          >
+            <Button variant="outline" leadingIcon={<Layers size={14} />}>
+              Ajout en lot
+            </Button>
+          </Link>
+          <Link to="/admin/geoguesser/shots/new">
+            <Button leadingIcon={<Plus size={14} />}>Nouveau screenshot</Button>
+          </Link>
+        </div>
       </div>
 
       <Card>

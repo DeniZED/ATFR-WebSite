@@ -18,6 +18,7 @@ import {
   useDuplicateShot,
   useGeoMaps,
   useGeoShot,
+  useGeoShots,
   useUpsertShot,
 } from '@/features/geoguesser/queries';
 import {
@@ -42,7 +43,7 @@ const empty: Draft = {
   image_url: '',
   x_pct: null,
   y_pct: null,
-  difficulty: 'medium',
+  difficulty: 'easy',
   caption: '',
   tags: '',
   is_published: false,
@@ -86,6 +87,14 @@ export default function AdminGeoShotEdit() {
     () => maps.data?.find((m) => m.id === draft.map_id) ?? null,
     [maps.data, draft.map_id],
   );
+
+  const sameMapShots = useGeoShots({ mapId: draft.map_id || undefined });
+  const ghostPoints = useMemo(() => {
+    if (!draft.map_id || !sameMapShots.data) return [];
+    return sameMapShots.data
+      .filter((s) => s.id !== id)
+      .map((s) => ({ x: s.x_pct, y: s.y_pct }));
+  }, [draft.map_id, sameMapShots.data, id]);
 
   const validation = useMemo(() => {
     const errs: string[] = [];
@@ -293,6 +302,7 @@ export default function AdminGeoShotEdit() {
             imageUrl={selectedMap?.image_url ?? ''}
             x={draft.x_pct}
             y={draft.y_pct}
+            ghostPoints={ghostPoints}
             onPlace={(x, y) => {
               setField('x_pct', x);
               setField('y_pct', y);

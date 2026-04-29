@@ -28,13 +28,18 @@ import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import {
   useGeoMaps,
   usePublicGeoShots,
+  useRecordShotAttempt,
   type ShotWithMap,
 } from '@/features/geoguesser/queries';
 import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import {
-  distance,
+  DEFAULT_MAP_SIZE_M,
+  ROUND_MAX,
+  WRONG_MAP_MALUS,
+  formatDistance,
   maxScoreFor,
+  realDistanceM,
   roundScore,
   scoreTier,
 } from '@/features/geoguesser/scoring';
@@ -55,8 +60,9 @@ interface RoundResult {
   selectedX: number | null;
   selectedY: number | null;
   correctMap: boolean;
-  /** Normalized 0..√2; null when wrong map. */
-  distance: number | null;
+  /** Distance réelle entre le pick joueur et le shot, en mètres.
+   * `null` quand le joueur a choisi la mauvaise map. */
+  distanceM: number | null;
   score: number;
 }
 
@@ -67,6 +73,7 @@ export default function Geoguesser() {
   const maps = useGeoMaps({ activeOnly: true });
   const shots = usePublicGeoShots({ difficulty });
   const submitScore = useSubmitScore();
+  const recordAttempt = useRecordShotAttempt();
   const identity = usePlayerIdentity();
 
   const [pool, setPool] = useState<ShotWithMap[]>([]);
@@ -80,7 +87,7 @@ export default function Geoguesser() {
   const current = pool[index];
   const total = pool.length;
   const totalScore = useMemo(
-    () => results.reduce((acc, r) => acc + r.score, 0),
+    () => Math.max(0, results.reduce((acc, r) => acc + r.score, 0)),
     [results],
   );
 
@@ -114,16 +121,19 @@ export default function Geoguesser() {
     const hasPick = pickX != null && pickY != null;
     const hasMap = !!selectedMapId;
     const correctMap = selectedMapId === current.map_id;
+    const sizeM = current.map?.size_m ?? DEFAULT_MAP_SIZE_M;
     let d: number | null = null;
     if (correctMap && hasPick) {
-      d = distance(
+      d = realDistanceM(
         { x: pickX!, y: pickY! },
         { x: current.x_pct, y: current.y_pct },
+        sizeM,
       );
     }
     const s = roundScore({
       correctMap,
-      distance: d ?? 0,
+      distanceM: d ?? 0,
+      mapSizeM: sizeM,
       difficulty: current.difficulty,
     });
     setResults((prev) => [
@@ -134,10 +144,21 @@ export default function Geoguesser() {
         selectedX: hasPick ? pickX : null,
         selectedY: hasPick ? pickY : null,
         correctMap,
-        distance: d,
+        distanceM: d,
         score: s,
       },
     ]);
+    // Record attempt for adaptive difficulty (best-effort, never blocks UX).
+    const maxRound = Math.round(ROUND_MAX * 1.5); // expert ceiling
+    recordAttempt.mutate(
+      {
+        shot_id: current.id,
+        correct_map: correctMap,
+        round_score: s,
+        max_round_score: maxRound,
+      },
+      { onError: () => undefined },
+    );
     setStage('reveal');
   }
 
@@ -254,10 +275,11 @@ export default function Geoguesser() {
                   <p>
                     <strong className="text-atfr-bone">Score :</strong> jusqu'à{' '}
                     5 000 points par manche selon la précision (× difficulté).
+                    La distance est calculée en mètres sur la map réelle.
                   </p>
                   <p>
-                    <strong className="text-atfr-bone">Mauvaise map :</strong> 200
-                    points × difficulté seulement.
+                    <strong className="text-atfr-bone">Mauvaise map :</strong> 0
+                    point + malus de {WRONG_MAP_MALUS} × difficulté.
                   </p>
                 </div>
 
@@ -369,11 +391,13 @@ export default function Geoguesser() {
               <CardBody className="p-5">
                 <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                   <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-                    {showReveal ? 'Révélation' : `Place ton point sur ${selectedMap?.name}`}
+                    {showReveal
+                      ? 'Révélation'
+                      : `Place ton point sur ${selectedMap?.name}`}
                   </p>
-                  {showReveal && lastResult.distance != null && (
+                  {showReveal && lastResult.distanceM != null && (
                     <Badge variant="outline">
-                      Distance : {(lastResult.distance * 100).toFixed(1)}%
+                      Distance : {formatDistance(lastResult.distanceM)}
                     </Badge>
                   )}
                 </div>
@@ -385,7 +409,9 @@ export default function Geoguesser() {
                   }
                   player={
                     showReveal
-                      ? lastResult.selectedX != null && lastResult.selectedY != null
+                      ? lastResult.correctMap &&
+                        lastResult.selectedX != null &&
+                        lastResult.selectedY != null
                         ? { x: lastResult.selectedX, y: lastResult.selectedY }
                         : null
                       : pickX != null && pickY != null
@@ -513,10 +539,8 @@ export default function Geoguesser() {
                           <XCircle size={12} /> Mauvaise map
                         </span>
                       )}
-                      {r.distance != null && (
-                        <span>
-                          · Distance {(r.distance * 100).toFixed(1)}%
-                        </span>
+                      {r.distanceM != null && (
+                        <span>· Distance {formatDistance(r.distanceM)}</span>
                       )}
                       <Badge variant="outline">
                         {DIFFICULTY_LABELS[r.shot.difficulty]}
@@ -524,11 +548,17 @@ export default function Geoguesser() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-display text-xl text-atfr-bone">
+                    <p
+                      className={cn(
+                        'font-display text-xl',
+                        r.score < 0 ? 'text-atfr-danger' : 'text-atfr-bone',
+                      )}
+                    >
+                      {r.score > 0 ? '+' : ''}
                       {r.score.toLocaleString('fr-FR')}
                     </p>
                     <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-                      points
+                      {r.score < 0 ? 'malus' : 'points'}
                     </p>
                   </div>
                 </CardBody>
@@ -596,6 +626,8 @@ function ProgressBar({
 }
 
 function RevealBanner({ result }: { result: RoundResult }) {
+  const closeHit =
+    result.correctMap && result.distanceM != null && result.distanceM < 50;
   return (
     <Card>
       <CardBody className="p-5 flex items-center gap-4 flex-wrap">
@@ -612,14 +644,14 @@ function RevealBanner({ result }: { result: RoundResult }) {
         <div className="flex-1">
           <p className="font-display text-lg text-atfr-bone">
             {result.correctMap
-              ? result.distance != null && result.distance < 0.05
+              ? closeHit
                 ? 'Pile au bon endroit !'
                 : 'Bonne map'
-              : 'Mauvaise map'}
+              : `Mauvaise map — 0 point + malus de ${WRONG_MAP_MALUS}`}
           </p>
           <p className="text-xs text-atfr-fog mt-0.5 flex items-center gap-2 flex-wrap">
-            {result.correctMap && result.distance != null && (
-              <span>Distance : {(result.distance * 100).toFixed(1)}%</span>
+            {result.correctMap && result.distanceM != null && (
+              <span>Distance : {formatDistance(result.distanceM)}</span>
             )}
             <span>
               <Camera size={12} className="inline mr-1" />
@@ -628,11 +660,17 @@ function RevealBanner({ result }: { result: RoundResult }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="font-display text-3xl text-atfr-bone">
-            +{result.score.toLocaleString('fr-FR')}
+          <p
+            className={cn(
+              'font-display text-3xl',
+              result.score < 0 ? 'text-atfr-danger' : 'text-atfr-bone',
+            )}
+          >
+            {result.score > 0 ? '+' : ''}
+            {result.score.toLocaleString('fr-FR')}
           </p>
           <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            points
+            {result.score < 0 ? 'malus' : 'points'}
           </p>
         </div>
       </CardBody>

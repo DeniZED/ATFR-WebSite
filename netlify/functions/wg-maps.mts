@@ -4,13 +4,19 @@ const APP_ID =
   process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
 
+// Fallback CDN pour reconstruire l'URL d'une minimap quand WG ne renvoie
+// pas de champ `minimap` exploitable (ou renvoie un chemin relatif).
+const WG_CDN_BASE =
+  'https://glossary-eu-static.gcdn.co/icons/wot/current/maps/minimap_normal';
+
 interface WgArena {
   arena_id: string;
-  name_i18n: string;
+  name_i18n?: string | null;
   description?: string | null;
-  // The minimap field is exposed as a relative path in some WG envs.
-  // We keep both for safety; the client can pick the absolute URL.
+  /** Champ historiquement renvoyé par WG : URL absolue ou chemin relatif. */
   minimap?: string | null;
+  /** Côté de la map en mètres (souvent renvoyé sous forme "1000x1000"). */
+  area_size?: string | null;
 }
 
 export interface WgMapPayload {
@@ -18,6 +24,30 @@ export interface WgMapPayload {
   name: string;
   description: string | null;
   image_url: string;
+  size_m: number;
+}
+
+function resolveMinimapUrl(
+  raw: string | null | undefined,
+  arenaId: string,
+): string {
+  if (raw) {
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (raw.startsWith('//')) return `https:${raw}`;
+    if (raw.startsWith('/')) return `https://glossary-eu-static.gcdn.co${raw}`;
+  }
+  return `${WG_CDN_BASE}/${arenaId}.png`;
+}
+
+function parseAreaSize(value: string | null | undefined): number {
+  if (!value) return 1000;
+  const m = /(\d+)\s*[x×*]\s*(\d+)/i.exec(value);
+  if (!m) return 1000;
+  const w = Number(m[1]);
+  const h = Number(m[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(h)) return 1000;
+  // Maps WoT carrées ; on prend le max au cas où.
+  return Math.max(w, h);
 }
 
 export default async (req: Request, _ctx: Context): Promise<Response> => {
@@ -34,7 +64,8 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   try {
     const qs = new URLSearchParams({
       application_id: APP_ID,
-      fields: 'arena_id,name_i18n,description,minimap',
+      fields: 'arena_id,name_i18n,description,minimap,area_size',
+      language: 'fr',
     });
     const res = await fetch(`${WG_BASE}/encyclopedia/arenas/?${qs}`);
     if (!res.ok) throw new Error(`WG /encyclopedia/arenas/ ${res.status}`);
@@ -48,17 +79,14 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     }
 
     const maps: WgMapPayload[] = Object.values(json.data ?? {})
-      .filter((a) => a.arena_id && a.name_i18n)
+      .filter((a) => a.arena_id)
       .map((a) => ({
         id: a.arena_id,
-        name: a.name_i18n,
-        description: a.description ?? null,
-        // WG returns a relative path; we leave it raw and let the client
-        // pick a sensible CDN base. Most clients render the field as-is
-        // since it's also exposed by other WG endpoints.
-        image_url: a.minimap ?? '',
-      }))
-      .filter((m) => m.image_url);
+        name: a.name_i18n?.trim() || a.arena_id,
+        description: a.description?.trim() || null,
+        image_url: resolveMinimapUrl(a.minimap, a.arena_id),
+        size_m: parseAreaSize(a.area_size),
+      }));
 
     return new Response(JSON.stringify({ maps }), {
       status: 200,
