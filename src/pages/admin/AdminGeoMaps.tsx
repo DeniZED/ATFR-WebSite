@@ -14,6 +14,7 @@ import {
   Camera,
   Download,
   Image as ImageIcon,
+  Layers,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ export default function AdminGeoMaps() {
         name: m.name,
         description: m.description,
         image_url: m.image_url,
+        size_m: m.size_m,
         source: 'wg' as const,
         is_active: true,
         sort_order: i,
@@ -206,6 +208,12 @@ export default function AdminGeoMaps() {
                     >
                       <Camera size={12} /> screenshots
                     </Link>
+                    <Link
+                      to={`/admin/geoguesser/shots/bulk?map=${encodeURIComponent(m.id)}`}
+                      className="inline-flex items-center gap-1 text-xs text-atfr-gold hover:underline self-center"
+                    >
+                      <Layers size={12} /> ajout en lot
+                    </Link>
                   </div>
                 </div>
               </CardBody>
@@ -241,6 +249,7 @@ function MapForm({
   const [description, setDescription] = useState(existing?.description ?? '');
   const [imageUrl, setImageUrl] = useState(existing?.image_url ?? '');
   const [sortOrder, setSortOrder] = useState<number>(existing?.sort_order ?? 0);
+  const [sizeM, setSizeM] = useState<number>(existing?.size_m ?? 1000);
   const [isActive, setIsActive] = useState(existing?.is_active ?? true);
 
   async function save(e: React.FormEvent) {
@@ -251,6 +260,7 @@ function MapForm({
       name: name.trim(),
       description: description || null,
       image_url: imageUrl,
+      size_m: sizeM,
       source: existing?.source ?? 'manual',
       sort_order: sortOrder,
       is_active: isActive,
@@ -321,7 +331,25 @@ function MapForm({
             className="w-full rounded-md border border-atfr-gold/20 bg-atfr-ink px-3 py-2 text-sm text-atfr-bone"
           />
         </div>
-        <div className="flex items-center">
+        <div>
+          <label className="text-xs uppercase tracking-wider text-atfr-fog mb-1 block">
+            Taille réelle (m)
+          </label>
+          <input
+            type="number"
+            min={100}
+            max={5000}
+            step={50}
+            value={sizeM}
+            onChange={(e) => setSizeM(Number(e.target.value))}
+            className="w-full rounded-md border border-atfr-gold/20 bg-atfr-ink px-3 py-2 text-sm text-atfr-bone"
+          />
+          <p className="mt-1 text-[11px] text-atfr-fog">
+            Côté de la map en mètres (1000 par défaut). Sert au calcul de la
+            distance réelle entre le point joueur et le screen.
+          </p>
+        </div>
+        <div className="flex items-center md:col-span-2">
           <Switch
             checked={isActive}
             onChange={setIsActive}

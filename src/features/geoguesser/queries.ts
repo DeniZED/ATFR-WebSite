@@ -79,6 +79,7 @@ export interface WgMapPayload {
   name: string;
   description: string | null;
   image_url: string;
+  size_m: number;
 }
 
 export async function fetchWgMaps(): Promise<WgMapPayload[]> {
@@ -224,5 +225,30 @@ export function usePublicGeoShots(opts: { difficulty?: string } = {}) {
       ) as ShotWithMap[];
     },
     staleTime: 60_000,
+  });
+}
+
+// ----------------------------------------------------------------------
+// Adaptive difficulty — RPC enregistrant chaque tentative et réajustant
+// la difficulté toutes les 10 manches côté serveur.
+// ----------------------------------------------------------------------
+export interface ShotAttemptInput {
+  shot_id: string;
+  correct_map: boolean;
+  round_score: number;
+  max_round_score: number;
+}
+
+export function useRecordShotAttempt() {
+  return useMutation({
+    mutationFn: async (input: ShotAttemptInput) => {
+      const { error } = await supabase.rpc('record_shot_attempt', {
+        p_shot_id: input.shot_id,
+        p_correct_map: input.correct_map,
+        p_round_score: input.round_score,
+        p_max_round_score: input.max_round_score,
+      });
+      if (error) throw error;
+    },
   });
 }

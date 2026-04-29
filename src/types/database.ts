@@ -708,6 +708,7 @@ export interface Database {
           image_url: string;
           width: number | null;
           height: number | null;
+          size_m: number;
           source: 'wg' | 'manual';
           is_active: boolean;
           sort_order: number;
@@ -721,6 +722,7 @@ export interface Database {
           image_url: string;
           width?: number | null;
           height?: number | null;
+          size_m?: number;
           source?: 'wg' | 'manual';
           is_active?: boolean;
           sort_order?: number;
@@ -734,6 +736,7 @@ export interface Database {
           image_url?: string;
           width?: number | null;
           height?: number | null;
+          size_m?: number;
           source?: 'wg' | 'manual';
           is_active?: boolean;
           sort_order?: number;
@@ -755,6 +758,7 @@ export interface Database {
           is_published: boolean;
           sort_order: number;
           attempt_count: number;
+          correct_map_count: number;
           success_score_sum: number;
           created_at: string;
           updated_at: string;
@@ -772,6 +776,7 @@ export interface Database {
           is_published?: boolean;
           sort_order?: number;
           attempt_count?: number;
+          correct_map_count?: number;
           success_score_sum?: number;
           created_at?: string;
           updated_at?: string;
@@ -789,6 +794,7 @@ export interface Database {
           is_published?: boolean;
           sort_order?: number;
           attempt_count?: number;
+          correct_map_count?: number;
           success_score_sum?: number;
           created_at?: string;
           updated_at?: string;
@@ -865,6 +871,15 @@ export interface Database {
       count_pending_applications: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      record_shot_attempt: {
+        Args: {
+          p_shot_id: string;
+          p_correct_map: boolean;
+          p_round_score: number;
+          p_max_round_score: number;
+        };
+        Returns: void;
       };
     };
     Enums: Record<never, never>;
