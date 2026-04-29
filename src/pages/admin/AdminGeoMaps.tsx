@@ -42,7 +42,10 @@ export default function AdminGeoMaps() {
     try {
       const wg = await fetchWgMaps();
       if (wg.length === 0) {
-        setSyncMessage('Wargaming n’a renvoyé aucune map.');
+        setSyncMessage(
+          "L'API Wargaming ne renvoie actuellement aucune map (count: 0). " +
+            'Pas de blocage : ajoute / édite tes maps à la main ci-dessous.',
+        );
         return;
       }
       const rows = wg.map((m, i) => ({
@@ -51,6 +54,8 @@ export default function AdminGeoMaps() {
         description: m.description,
         image_url: m.image_url,
         size_m: m.size_m,
+        width_m: m.size_m,
+        height_m: m.size_m,
         source: 'wg' as const,
         is_active: true,
         sort_order: i,
@@ -105,7 +110,15 @@ export default function AdminGeoMaps() {
       </Card>
 
       {syncMessage && (
-        <Alert tone={syncMessage.startsWith('✅') ? 'success' : 'danger'}>
+        <Alert
+          tone={
+            syncMessage.startsWith('✅')
+              ? 'success'
+              : syncMessage.startsWith('Erreur')
+                ? 'danger'
+                : 'info'
+          }
+        >
           {syncMessage}
         </Alert>
       )}
@@ -249,7 +262,13 @@ function MapForm({
   const [description, setDescription] = useState(existing?.description ?? '');
   const [imageUrl, setImageUrl] = useState(existing?.image_url ?? '');
   const [sortOrder, setSortOrder] = useState<number>(existing?.sort_order ?? 0);
-  const [sizeM, setSizeM] = useState<number>(existing?.size_m ?? 1000);
+  const [widthM, setWidthM] = useState<number>(
+    existing?.width_m ?? existing?.size_m ?? 1000,
+  );
+  const [heightM, setHeightM] = useState<number>(
+    existing?.height_m ?? existing?.size_m ?? 1000,
+  );
+  const [kind, setKind] = useState<string>(existing?.kind ?? 'standard');
   const [isActive, setIsActive] = useState(existing?.is_active ?? true);
 
   async function save(e: React.FormEvent) {
@@ -260,7 +279,10 @@ function MapForm({
       name: name.trim(),
       description: description || null,
       image_url: imageUrl,
-      size_m: sizeM,
+      width_m: widthM,
+      height_m: heightM,
+      size_m: Math.max(widthM, heightM),
+      kind,
       source: existing?.source ?? 'manual',
       sort_order: sortOrder,
       is_active: isActive,
@@ -333,20 +355,53 @@ function MapForm({
         </div>
         <div>
           <label className="text-xs uppercase tracking-wider text-atfr-fog mb-1 block">
-            Taille réelle (m)
+            Largeur (m)
           </label>
           <input
             type="number"
             min={100}
             max={5000}
             step={50}
-            value={sizeM}
-            onChange={(e) => setSizeM(Number(e.target.value))}
+            value={widthM}
+            onChange={(e) => setWidthM(Number(e.target.value))}
             className="w-full rounded-md border border-atfr-gold/20 bg-atfr-ink px-3 py-2 text-sm text-atfr-bone"
           />
-          <p className="mt-1 text-[11px] text-atfr-fog">
-            Côté de la map en mètres (1000 par défaut). Sert au calcul de la
-            distance réelle entre le point joueur et le screen.
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-wider text-atfr-fog mb-1 block">
+            Hauteur (m)
+          </label>
+          <input
+            type="number"
+            min={100}
+            max={5000}
+            step={50}
+            value={heightM}
+            onChange={(e) => setHeightM(Number(e.target.value))}
+            className="w-full rounded-md border border-atfr-gold/20 bg-atfr-ink px-3 py-2 text-sm text-atfr-bone"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-wider text-atfr-fog mb-1 block">
+            Type
+          </label>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+            className="w-full rounded-md border border-atfr-gold/20 bg-atfr-ink px-3 py-2 text-sm text-atfr-bone"
+          >
+            <option value="standard">Standard</option>
+            <option value="urban">Urbaine</option>
+            <option value="open">Ouverte</option>
+            <option value="winter">Enneigée</option>
+            <option value="desert">Désertique</option>
+            <option value="other">Autre</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <p className="text-[11px] text-atfr-fog">
+            Largeur × hauteur en mètres (1000 × 1000 par défaut) servent au
+            calcul de la distance réelle entre le point joueur et le shot.
           </p>
         </div>
         <div className="flex items-center md:col-span-2">

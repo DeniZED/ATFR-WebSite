@@ -1,7 +1,39 @@
 import { useRef, type MouseEvent } from 'react';
 import { motion } from 'framer-motion';
-import { Crosshair, Target } from 'lucide-react';
+import { Crosshair } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+/** Symmetric pin: outer ring + inner dot, both centered on (0,0). The
+ *  parent div is responsible for translate(-50%,-50%) so the dot lands
+ *  exactly on the click coordinates. */
+function Pin({ tone }: { tone: 'gold' | 'emerald' }) {
+  const ring = tone === 'gold' ? 'border-atfr-gold' : 'border-emerald-400';
+  const halo =
+    tone === 'gold' ? 'bg-atfr-gold/30' : 'bg-emerald-400/40';
+  const dot = tone === 'gold' ? 'bg-atfr-gold' : 'bg-emerald-400';
+  return (
+    <div className="relative h-6 w-6">
+      <div
+        className={cn(
+          'absolute inset-0 -m-2 rounded-full blur-md opacity-80',
+          halo,
+        )}
+      />
+      <div
+        className={cn(
+          'absolute inset-0 rounded-full border-2 bg-atfr-ink/40 shadow-lg',
+          ring,
+        )}
+      />
+      <div
+        className={cn(
+          'absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full',
+          dot,
+        )}
+      />
+    </div>
+  );
+}
 
 interface Point {
   x: number;
@@ -107,40 +139,45 @@ export function Minimap({
           </svg>
         )}
 
-        {/* Player marker — symmetric so the click is the visual center. */}
+        {/* Player marker — wrap motion in a static positioning div so
+            framer-motion's transform doesn't override the centering. */}
         {player && (
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.25 }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ left: `${player.x * 100}%`, top: `${player.y * 100}%` }}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${player.x * 100}%`,
+              top: `${player.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
           >
-            <div className="relative">
-              <div className="absolute inset-0 -m-3 rounded-full bg-atfr-gold/30 blur-md" />
-              <div className="relative h-7 w-7 rounded-full border-2 border-atfr-ink bg-atfr-gold flex items-center justify-center text-atfr-ink shadow-lg">
-                <Crosshair size={14} strokeWidth={2.5} />
-              </div>
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Pin tone="gold" />
+            </motion.div>
+          </div>
         )}
 
         {/* Correct marker (reveal only). */}
         {correct && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.45, delay: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ left: `${correct.x * 100}%`, top: `${correct.y * 100}%` }}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${correct.x * 100}%`,
+              top: `${correct.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
           >
-            <div className="relative">
-              <div className="absolute inset-0 -m-3 rounded-full bg-emerald-400/40 blur-md" />
-              <div className="relative h-7 w-7 rounded-full border-2 border-atfr-ink bg-emerald-400 flex items-center justify-center text-atfr-ink shadow-lg">
-                <Target size={14} strokeWidth={2.5} />
-              </div>
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+              <Pin tone="emerald" />
+            </motion.div>
+          </div>
         )}
       </div>
 

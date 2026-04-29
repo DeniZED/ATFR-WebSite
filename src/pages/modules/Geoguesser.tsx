@@ -22,7 +22,8 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Minimap } from '@/components/geoguesser/Minimap';
-import { MapCarousel } from '@/components/geoguesser/MapCarousel';
+import { FloatingMapPicker } from '@/components/geoguesser/FloatingMapPicker';
+import { RoundTimer } from '@/components/geoguesser/RoundTimer';
 import { IdentityBar } from '@/components/quiz/IdentityBar';
 import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import {
@@ -34,9 +35,9 @@ import {
 import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import {
-  DEFAULT_MAP_SIZE_M,
   ROUND_MAX,
   WRONG_MAP_MALUS,
+  diagonalM,
   formatDistance,
   maxScoreFor,
   realDistanceM,
@@ -50,6 +51,7 @@ import {
 
 const MODULE_SLUG = 'wot-geoguesser';
 const ROUNDS_PER_GAME = 5;
+const ROUND_TIME_S = 30;
 type DifficultyFilter = QuizDifficulty | 'all';
 
 type Stage = 'intro' | 'playing' | 'reveal' | 'result';
@@ -83,6 +85,7 @@ export default function Geoguesser() {
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [pickX, setPickX] = useState<number | null>(null);
   const [pickY, setPickY] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(ROUND_TIME_S);
 
   const current = pool[index];
   const total = pool.length;
@@ -91,12 +94,22 @@ export default function Geoguesser() {
     [results],
   );
 
-  // When advancing, reset per-round picks.
+  // When advancing, reset per-round picks + timer.
   useEffect(() => {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
+    setSecondsLeft(ROUND_TIME_S);
   }, [index, stage]);
+
+  // 1Hz countdown only while playing.
+  useEffect(() => {
+    if (stage !== 'playing') return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [stage, index]);
 
   const selectedMap = useMemo(
     () => (maps.data ?? []).find((m) => m.id === selectedMapId) ?? null,
@@ -105,8 +118,25 @@ export default function Geoguesser() {
 
   function startGame() {
     if (!shots.data || shots.data.length === 0) return;
-    const shuffled = [...shots.data].sort(() => Math.random() - 0.5);
-    const subset = shuffled.slice(0, Math.min(ROUNDS_PER_GAME, shuffled.length));
+    // Fisher-Yates + dedup by id and image_url so the same photo never
+    // appears twice in the same game.
+    const arr = [...shots.data];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    const seenIds = new Set<string>();
+    const seenImgs = new Set<string>();
+    const subset: ShotWithMap[] = [];
+    for (const s of arr) {
+      if (seenIds.has(s.id)) continue;
+      if (seenImgs.has(s.image_url)) continue;
+      seenIds.add(s.id);
+      seenImgs.add(s.image_url);
+      subset.push(s);
+      if (subset.length >= ROUNDS_PER_GAME) break;
+    }
+    if (subset.length === 0) return;
     setPool(subset);
     setIndex(0);
     setResults([]);
@@ -121,19 +151,27 @@ export default function Geoguesser() {
     const hasPick = pickX != null && pickY != null;
     const hasMap = !!selectedMapId;
     const correctMap = selectedMapId === current.map_id;
-    const sizeM = current.map?.size_m ?? DEFAULT_MAP_SIZE_M;
+    const widthM = current.map?.width_m ?? current.map?.size_m ?? 1000;
+    const heightM = current.map?.height_m ?? current.map?.size_m ?? 1000;
+    const diag = diagonalM(widthM, heightM);
     let d: number | null = null;
-    if (correctMap && hasPick) {
-      d = realDistanceM(
-        { x: pickX!, y: pickY! },
-        { x: current.x_pct, y: current.y_pct },
-        sizeM,
-      );
+    if (correctMap) {
+      if (hasPick) {
+        d = realDistanceM(
+          { x: pickX!, y: pickY! },
+          { x: current.x_pct, y: current.y_pct },
+          widthM,
+          heightM,
+        );
+      } else {
+        // Time ran out without a pick: max distance → 0 points.
+        d = diag;
+      }
     }
     const s = roundScore({
       correctMap,
       distanceM: d ?? 0,
-      mapSizeM: sizeM,
+      diagonalM: diag,
       difficulty: current.difficulty,
     });
     setResults((prev) => [
@@ -161,6 +199,14 @@ export default function Geoguesser() {
     );
     setStage('reveal');
   }
+
+  // Auto-validate when the timer expires.
+  useEffect(() => {
+    if (stage === 'playing' && secondsLeft === 0) {
+      validate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, secondsLeft]);
 
   async function nextRound() {
     if (index < total - 1) {
@@ -323,14 +369,36 @@ export default function Geoguesser() {
         <div className="max-w-5xl mx-auto space-y-5">
           <ProgressBar total={total} currentIndex={index} results={results} />
 
-          {/* Screenshot */}
+          {/* Screenshot — relative container hosts the floating picker
+              (bottom-right) and the round timer (top-right) overlays. */}
           <Card className="overflow-hidden">
             <CardBody className="p-0">
-              <div className="aspect-video bg-atfr-graphite">
+              <div className="relative aspect-video bg-atfr-graphite">
                 <img
                   src={current.image_url}
                   alt=""
                   className="h-full w-full object-cover"
+                />
+                {!showReveal && (
+                  <div className="absolute top-3 right-3 z-20">
+                    <RoundTimer
+                      secondsLeft={secondsLeft}
+                      total={ROUND_TIME_S}
+                    />
+                  </div>
+                )}
+                <FloatingMapPicker
+                  maps={maps.data ?? []}
+                  selectedId={
+                    showReveal ? lastResult.shot.map_id : selectedMapId
+                  }
+                  onSelect={(id) => {
+                    if (showReveal) return;
+                    setSelectedMapId(id);
+                    setPickX(null);
+                    setPickY(null);
+                  }}
+                  disabled={!!showReveal}
                 />
               </div>
               {current.caption && (
@@ -355,35 +423,18 @@ export default function Geoguesser() {
             )}
           </AnimatePresence>
 
-          {/* Map carousel */}
-          <Card>
-            <CardBody className="p-4">
-              <MapCarousel
-                maps={maps.data ?? []}
-                selectedId={
-                  showReveal ? lastResult.shot.map_id : selectedMapId
-                }
-                onSelect={(id) => {
-                  if (showReveal) return;
-                  setSelectedMapId(id);
-                  setPickX(null);
-                  setPickY(null);
-                }}
-                disabled={!!showReveal}
-              />
-              {showReveal && lastResult.selectedMapId !== lastResult.shot.map_id && (
-                <p className="mt-2 text-xs text-atfr-danger">
-                  Mauvaise map :{' '}
-                  <strong>
-                    {(maps.data ?? []).find(
-                      (m) => m.id === lastResult.selectedMapId,
-                    )?.name ?? '—'}
-                  </strong>{' '}
-                  · Bonne map : <strong>{correctMap?.name ?? '—'}</strong>
-                </p>
-              )}
-            </CardBody>
-          </Card>
+          {/* Wrong-map note (shown only on reveal). */}
+          {showReveal && lastResult.selectedMapId !== lastResult.shot.map_id && (
+            <Alert tone="danger">
+              Mauvaise map :{' '}
+              <strong>
+                {(maps.data ?? []).find(
+                  (m) => m.id === lastResult.selectedMapId,
+                )?.name ?? '—'}
+              </strong>{' '}
+              · Bonne map : <strong>{correctMap?.name ?? '—'}</strong>
+            </Alert>
+          )}
 
           {/* Minimap */}
           {(selectedMap || (showReveal && correctMap)) && (
