@@ -13,6 +13,7 @@ const Gallery = lazy(() => import('@/pages/Gallery'));
 const Modules = lazy(() => import('@/pages/Modules'));
 const ModuleStub = lazy(() => import('@/pages/ModuleStub'));
 const GuideBots = lazy(() => import('@/pages/modules/GuideBots'));
+const Geoguesser = lazy(() => import('@/pages/modules/Geoguesser'));
 const AuthWgCallback = lazy(() => import('@/pages/AuthWgCallback'));
 const Recruitment = lazy(() => import('@/pages/Recruitment'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
           { path: '/galerie', element: <Gallery /> },
           { path: '/modules', element: <Modules /> },
           { path: '/modules/guide-bots', element: <GuideBots /> },
+          { path: '/modules/wot-geoguesser', element: <Geoguesser /> },
           { path: '/modules/:slug', element: <ModuleStub /> },
           { path: '/recrutement', element: <Recruitment /> },
           { path: '/auth/wg/callback', element: <AuthWgCallback /> },

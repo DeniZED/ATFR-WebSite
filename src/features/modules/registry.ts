@@ -50,7 +50,6 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     accentGradient: 'from-emerald-500/25 to-transparent',
     category: 'jeu',
     cta: 'Lancer une partie',
-    comingSoon: true,
   },
 ];
 
