@@ -15,42 +15,54 @@ const DIFFICULTY_MUL: Record<QuizDifficulty, number> = {
 
 export interface RoundScoreInput {
   correctMap: boolean;
-  /** Distance réelle entre le pick joueur et le shot, en mètres.
-   * Ignorée si `correctMap` est faux. */
+  /** Distance réelle pick joueur ↔ shot, en mètres. Ignorée si correctMap=false. */
   distanceM: number;
-  /** Côté de la map en mètres (les maps WoT sont carrées). */
-  mapSizeM: number;
+  /** Diagonale réelle de la map en mètres (= sqrt(width² + height²)). */
+  diagonalM: number;
   difficulty: QuizDifficulty;
 }
 
+/** Fraction de la diagonale au-delà de laquelle la précision tend vers 0.
+ *  Plus la valeur est petite, plus le score chute vite avec la distance.
+ *  À 0.18 sur une map 1000×1000 (diag ≈ 1414 m) : decay ≈ 254 m
+ *   - 0 m   → 100 %
+ *   - 100 m → 67 %
+ *   - 250 m → 37 %
+ *   - 500 m → 14 %
+ *   - 1000 m → 2 %
+ */
+const SCORE_DECAY_FRACTION = 0.18;
+
 /**
- * Score d'une manche.
- *  - Mauvaise map : score négatif (= malus × difficulté). Le score "gagné"
- *    sur la manche est 0 ; on applique en plus une pénalité.
- *  - Bonne map    : 0..5000 selon la précision, × multiplicateur difficulté.
+ *  Mauvaise map : -malus × difficulté (0 point gagné + pénalité).
+ *  Bonne map    : 5000 × exp(-d / decay) × multiplicateur de difficulté.
  */
 export function roundScore(input: RoundScoreInput): number {
   const mul = DIFFICULTY_MUL[input.difficulty];
-  if (!input.correctMap) {
-    return -Math.round(WRONG_MAP_MALUS * mul);
-  }
-  const maxDistanceM = Math.max(1, input.mapSizeM) * Math.SQRT2;
-  const precision = Math.max(0, 1 - input.distanceM / maxDistanceM);
+  if (!input.correctMap) return -Math.round(WRONG_MAP_MALUS * mul);
+  const decay = Math.max(50, input.diagonalM * SCORE_DECAY_FRACTION);
+  const precision = Math.exp(-Math.max(0, input.distanceM) / decay);
   return Math.round(ROUND_MAX * precision * mul);
 }
 
 /**
- * Distance euclidienne réelle (en mètres) entre deux points normalisés
- * sur une map de côté `sizeM`. Les coordonnées sont dans [0,1].
+ * Distance euclidienne réelle (mètres) entre deux points normalisés
+ * sur une map de dimensions widthM × heightM. Coords dans [0,1].
  */
 export function realDistanceM(
   a: { x: number; y: number },
   b: { x: number; y: number },
-  sizeM: number,
+  widthM: number,
+  heightM: number,
 ): number {
-  const dx = (a.x - b.x) * sizeM;
-  const dy = (a.y - b.y) * sizeM;
+  const dx = (a.x - b.x) * Math.max(1, widthM);
+  const dy = (a.y - b.y) * Math.max(1, heightM);
   return Math.hypot(dx, dy);
+}
+
+/** Diagonale réelle d'une map width × height en mètres. */
+export function diagonalM(widthM: number, heightM: number): number {
+  return Math.hypot(Math.max(1, widthM), Math.max(1, heightM));
 }
 
 /** Format compact pour l'UI : 12 m / 234 m / 1,23 km. */

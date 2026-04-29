@@ -709,6 +709,9 @@ export interface Database {
           width: number | null;
           height: number | null;
           size_m: number;
+          width_m: number;
+          height_m: number;
+          kind: string;
           source: 'wg' | 'manual';
           is_active: boolean;
           sort_order: number;
@@ -723,6 +726,9 @@ export interface Database {
           width?: number | null;
           height?: number | null;
           size_m?: number;
+          width_m?: number;
+          height_m?: number;
+          kind?: string;
           source?: 'wg' | 'manual';
           is_active?: boolean;
           sort_order?: number;
@@ -737,6 +743,9 @@ export interface Database {
           width?: number | null;
           height?: number | null;
           size_m?: number;
+          width_m?: number;
+          height_m?: number;
+          kind?: string;
           source?: 'wg' | 'manual';
           is_active?: boolean;
           sort_order?: number;
