@@ -15,8 +15,19 @@ interface WgArena {
   description?: string | null;
   /** Champ historiquement renvoyé par WG : URL absolue ou chemin relatif. */
   minimap?: string | null;
-  /** Côté de la map en mètres (souvent renvoyé sous forme "1000x1000"). */
-  area_size?: string | null;
+}
+
+interface WgError {
+  field?: string;
+  message?: string;
+  code?: number;
+  value?: string;
+}
+
+interface WgArenasResponse {
+  status: string;
+  error?: WgError;
+  data?: Record<string, WgArena>;
 }
 
 export interface WgMapPayload {
@@ -39,17 +50,6 @@ function resolveMinimapUrl(
   return `${WG_CDN_BASE}/${arenaId}.png`;
 }
 
-function parseAreaSize(value: string | null | undefined): number {
-  if (!value) return 1000;
-  const m = /(\d+)\s*[x×*]\s*(\d+)/i.exec(value);
-  if (!m) return 1000;
-  const w = Number(m[1]);
-  const h = Number(m[2]);
-  if (!Number.isFinite(w) || !Number.isFinite(h)) return 1000;
-  // Maps WoT carrées ; on prend le max au cas où.
-  return Math.max(w, h);
-}
-
 export default async (req: Request, _ctx: Context): Promise<Response> => {
   if (req.method !== 'GET') {
     return new Response('Method not allowed', { status: 405 });
@@ -62,20 +62,45 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   }
 
   try {
+    // On reste sur les champs publics garantis par /encyclopedia/arenas/.
+    // (`area_size` n'est pas exposé ici ; les maps WoT font ~1000 m de
+    // côté par défaut, l'éditeur peut surcharger `size_m` map par map.)
     const qs = new URLSearchParams({
       application_id: APP_ID,
-      fields: 'arena_id,name_i18n,description,minimap,area_size',
+      fields: 'arena_id,name_i18n,description,minimap',
       language: 'fr',
     });
-    const res = await fetch(`${WG_BASE}/encyclopedia/arenas/?${qs}`);
-    if (!res.ok) throw new Error(`WG /encyclopedia/arenas/ ${res.status}`);
-    const json = (await res.json()) as {
-      status: string;
-      error?: { message: string };
-      data: Record<string, WgArena>;
-    };
+    const url = `${WG_BASE}/encyclopedia/arenas/?${qs}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({
+          error: `WG HTTP ${res.status}`,
+          body: text.slice(0, 400),
+        }),
+        { status: 502, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
+    let json: WgArenasResponse;
+    try {
+      json = JSON.parse(text) as WgArenasResponse;
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'WG payload not JSON', body: text.slice(0, 400) }),
+        { status: 502, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
     if (json.status !== 'ok') {
-      throw new Error(`WG error: ${json.error?.message ?? 'unknown'}`);
+      return new Response(
+        JSON.stringify({
+          error: 'WG error',
+          wg: json.error ?? null,
+        }),
+        { status: 502, headers: { 'content-type': 'application/json' } },
+      );
     }
 
     const maps: WgMapPayload[] = Object.values(json.data ?? {})
@@ -85,7 +110,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         name: a.name_i18n?.trim() || a.arena_id,
         description: a.description?.trim() || null,
         image_url: resolveMinimapUrl(a.minimap, a.arena_id),
-        size_m: parseAreaSize(a.area_size),
+        size_m: 1000,
       }));
 
     return new Response(JSON.stringify({ maps }), {
