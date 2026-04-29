@@ -84,8 +84,19 @@ export interface WgMapPayload {
 
 export async function fetchWgMaps(): Promise<WgMapPayload[]> {
   const res = await fetch('/.netlify/functions/wg-maps');
-  if (!res.ok) throw new Error(`WG sync failed: ${res.status}`);
-  const json = (await res.json()) as { maps?: WgMapPayload[] };
+  const json = (await res.json().catch(() => ({}))) as {
+    maps?: WgMapPayload[];
+    error?: string;
+    body?: string;
+    wg?: { message?: string; field?: string; value?: string };
+  };
+  if (!res.ok) {
+    const wgMsg = json.wg
+      ? `${json.wg.message ?? '?'}${json.wg.field ? ` (field=${json.wg.field})` : ''}${json.wg.value ? ` value=${json.wg.value}` : ''}`
+      : null;
+    const detail = wgMsg ?? json.error ?? json.body ?? `HTTP ${res.status}`;
+    throw new Error(`WG sync failed: ${detail}`);
+  }
   return json.maps ?? [];
 }
 
