@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Database } from '@/types/database';
+import type { Database, QuizDifficulty } from '@/types/database';
 
 type MapRow = Database['public']['Tables']['wot_maps']['Row'];
 type MapInsert = Database['public']['Tables']['wot_maps']['Insert'];
@@ -198,5 +198,31 @@ export function useDuplicateShot() {
       return data.id;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_shots'] }),
+  });
+}
+
+// ----------------------------------------------------------------------
+// Public game data
+// ----------------------------------------------------------------------
+export function usePublicGeoShots(opts: { difficulty?: string } = {}) {
+  return useQuery({
+    queryKey: ['geo_shots', 'public', opts.difficulty ?? 'all'],
+    queryFn: async (): Promise<ShotWithMap[]> => {
+      let q = supabase
+        .from('geoguesser_shots')
+        .select('*, map:wot_maps(*)')
+        .eq('is_published', true);
+      if (opts.difficulty && opts.difficulty !== 'all') {
+        q = q.eq('difficulty', opts.difficulty as QuizDifficulty);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      // Filter out shots whose map is inactive (RLS catches this server-side
+      // but we double-check client-side).
+      return (data ?? []).filter(
+        (s) => (s as ShotWithMap).map && (s as ShotWithMap).map?.is_active,
+      ) as ShotWithMap[];
+    },
+    staleTime: 60_000,
   });
 }
