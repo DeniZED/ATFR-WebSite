@@ -262,6 +262,7 @@ export const DEFAULT_GEO_SETTINGS: SettingsRow = {
   round_time_s: 45,
   wrong_map_malus_m: 2000,
   timeout_malus_m: 2000,
+  daily_challenge_rounds: 5,
   updated_at: new Date(0).toISOString(),
 };
 

@@ -825,6 +825,7 @@ export interface Database {
           round_time_s: number;
           wrong_map_malus_m: number;
           timeout_malus_m: number;
+          daily_challenge_rounds: number;
           updated_at: string;
         };
         Insert: {
@@ -832,6 +833,7 @@ export interface Database {
           round_time_s?: number;
           wrong_map_malus_m?: number;
           timeout_malus_m?: number;
+          daily_challenge_rounds?: number;
           updated_at?: string;
         };
         Update: {
@@ -839,6 +841,7 @@ export interface Database {
           round_time_s?: number;
           wrong_map_malus_m?: number;
           timeout_malus_m?: number;
+          daily_challenge_rounds?: number;
           updated_at?: string;
         };
         Relationships: [];
