@@ -215,6 +215,7 @@ export default function AdminGeoShots() {
                       {s.caption}
                     </p>
                   )}
+                  <ShotStats shot={s} />
                   <div className="flex flex-wrap gap-2 pt-1">
                     <Link to={`/admin/geoguesser/shots/${s.id}`}>
                       <Button
@@ -253,6 +254,40 @@ export default function AdminGeoShots() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface ShotLike {
+  attempt_count: number;
+  correct_map_count: number;
+  success_score_sum: number;
+}
+
+function ShotStats({ shot }: { shot: ShotLike }) {
+  if (shot.attempt_count <= 0) {
+    return (
+      <p className="text-[11px] text-atfr-fog/70">
+        Pas encore joué (0 tentative).
+      </p>
+    );
+  }
+  const mapRate = Math.round((shot.correct_map_count / shot.attempt_count) * 100);
+  // success_score_sum is the cumulative "perf" (max - distance) sent by
+  // the client. The mean rate is just an indicator (0..1) — higher means
+  // the screen is generally easy.
+  const meanPerf =
+    shot.attempt_count > 0
+      ? shot.success_score_sum / shot.attempt_count
+      : 0;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[11px] text-atfr-fog">
+      <span>
+        <strong className="text-atfr-bone">{shot.attempt_count}</strong>{' '}
+        tentative(s)
+      </span>
+      <span>· bonne map {mapRate}%</span>
+      <span>· perf moy {Math.round(meanPerf)}</span>
     </div>
   );
 }

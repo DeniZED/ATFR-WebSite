@@ -1,48 +1,49 @@
 import type { QuizDifficulty } from '@/types/database';
 
-export const ROUND_MAX = 5000;
-/** Pénalité (en points) pour une mauvaise map. Multipliée par la difficulté. */
-export const WRONG_MAP_MALUS = 200;
-/** Côté par défaut d'une map WoT, en mètres (utilisé en fallback). */
-export const DEFAULT_MAP_SIZE_M = 1000;
+/**
+ * Modèle de scoring "proximité" (lower-is-better).
+ *
+ *  - Bonne map + pick : score = distance réelle en mètres entre le pick
+ *    joueur et le shot (arrondi). Plus c'est proche, mieux c'est.
+ *  - Bonne map sans pick (timeout) : score = `timeout_malus_m`.
+ *  - Mauvaise map : score = `wrong_map_malus_m`.
+ *
+ *  Le score TOTAL est la somme des manches : il faut viser le plus
+ *  bas possible.
+ */
 
-const DIFFICULTY_MUL: Record<QuizDifficulty, number> = {
-  easy: 1,
-  medium: 1.1,
-  hard: 1.25,
-  expert: 1.5,
-};
+export interface RoundScoreSettings {
+  wrongMapMalusM: number;
+  timeoutMalusM: number;
+}
 
 export interface RoundScoreInput {
   correctMap: boolean;
-  /** Distance réelle pick joueur ↔ shot, en mètres. Ignorée si correctMap=false. */
+  /** True si le joueur a posé un pin avant la fin du timer. */
+  hasPick: boolean;
+  /** Distance pick ↔ shot en mètres. Pertinent uniquement si correctMap. */
   distanceM: number;
-  /** Diagonale réelle de la map en mètres (= sqrt(width² + height²)). */
-  diagonalM: number;
-  difficulty: QuizDifficulty;
+  settings: RoundScoreSettings;
 }
 
-/** Fraction de la diagonale au-delà de laquelle la précision tend vers 0.
- *  Plus la valeur est petite, plus le score chute vite avec la distance.
- *  À 0.18 sur une map 1000×1000 (diag ≈ 1414 m) : decay ≈ 254 m
- *   - 0 m   → 100 %
- *   - 100 m → 67 %
- *   - 250 m → 37 %
- *   - 500 m → 14 %
- *   - 1000 m → 2 %
- */
-const SCORE_DECAY_FRACTION = 0.18;
+export interface RoundScoreResult {
+  /** Score de la manche, en mètres. Toujours positif. */
+  score: number;
+  /** Type de score, pour l'affichage. */
+  kind: 'distance' | 'wrong-map' | 'timeout';
+}
 
-/**
- *  Mauvaise map : -malus × difficulté (0 point gagné + pénalité).
- *  Bonne map    : 5000 × exp(-d / decay) × multiplicateur de difficulté.
- */
-export function roundScore(input: RoundScoreInput): number {
-  const mul = DIFFICULTY_MUL[input.difficulty];
-  if (!input.correctMap) return -Math.round(WRONG_MAP_MALUS * mul);
-  const decay = Math.max(50, input.diagonalM * SCORE_DECAY_FRACTION);
-  const precision = Math.exp(-Math.max(0, input.distanceM) / decay);
-  return Math.round(ROUND_MAX * precision * mul);
+export function roundScore(input: RoundScoreInput): RoundScoreResult {
+  if (!input.correctMap) {
+    return { score: input.settings.wrongMapMalusM, kind: 'wrong-map' };
+  }
+  if (!input.hasPick) {
+    return { score: input.settings.timeoutMalusM, kind: 'timeout' };
+  }
+  return {
+    score: Math.max(0, Math.round(input.distanceM)),
+    kind: 'distance',
+  };
 }
 
 /**
@@ -65,19 +66,19 @@ export function diagonalM(widthM: number, heightM: number): number {
   return Math.hypot(Math.max(1, widthM), Math.max(1, heightM));
 }
 
-/** Format compact pour l'UI : 12 m / 234 m / 1,23 km. */
+/** Format compact : 12 m / 234 m / 1,23 km. */
 export function formatDistance(meters: number): string {
   if (!Number.isFinite(meters) || meters < 0) return '—';
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-/** Score max atteignable sur une liste de difficultés. */
-export function maxScoreFor(difficulties: QuizDifficulty[]): number {
-  return difficulties.reduce(
-    (acc, d) => acc + Math.round(ROUND_MAX * DIFFICULTY_MUL[d]),
-    0,
-  );
+/** Score "max" théorique (si toutes les manches étaient timeout/mauvaise map). */
+export function worstTotalFor(
+  rounds: number,
+  settings: RoundScoreSettings,
+): number {
+  return rounds * Math.max(settings.wrongMapMalusM, settings.timeoutMalusM);
 }
 
 export interface ScoreTier {
@@ -85,30 +86,40 @@ export interface ScoreTier {
   message: string;
 }
 
-export function scoreTier(pct: number): ScoreTier {
-  if (pct < 30) {
+/** Classement basé sur la distance moyenne par manche (en mètres). */
+export function scoreTier(avgDistanceM: number): ScoreTier {
+  if (avgDistanceM < 80) {
     return {
-      title: 'Bot dépisté',
+      title: 'Boussole humaine',
       message:
-        'On dirait que tu as joué les yeux fermés. Ouvre la minimap en jeu, parfois ça aide.',
+        'Reconnaissance instantanée + précision chirurgicale. Tu connais Prokhorovka mieux que ton salon.',
     };
   }
-  if (pct < 60) {
+  if (avgDistanceM < 200) {
+    return {
+      title: 'Cartographe ATFR',
+      message: 'Solide. Les maps n’ont presque plus de secret pour toi.',
+    };
+  }
+  if (avgDistanceM < 600) {
     return {
       title: 'Apprenti cartographe',
       message:
         'Tu reconnais les grandes maps mais tu te perds vite dans les détails. Bonne base.',
     };
   }
-  if (pct < 85) {
-    return {
-      title: 'Cartographe ATFR',
-      message: 'Solide. Les maps n’ont presque plus de secret pour toi.',
-    };
-  }
   return {
-    title: 'Boussole humaine',
+    title: 'Bot dépisté',
     message:
-      'Reconnaissance instantanée + précision chirurgicale. Tu connais Prokhorovka mieux que ton salon.',
+      'On dirait que tu as joué les yeux fermés. Ouvre la minimap en jeu, parfois ça aide.',
   };
 }
+
+// --- Difficulté multiplicateur conservée pour la rétro-compat des écrans
+// admin (badge de difficulté) ; le scoring n'en dépend plus. ---
+export const DIFFICULTY_MULTIPLIER: Record<QuizDifficulty, number> = {
+  easy: 1,
+  medium: 1.1,
+  hard: 1.25,
+  expert: 1.5,
+};

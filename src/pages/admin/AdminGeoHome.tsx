@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Camera, Map as MapIcon } from 'lucide-react';
+import { Camera, Map as MapIcon, Settings } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui';
 import { useGeoMaps, useGeoShots } from '@/features/geoguesser/queries';
 
@@ -22,7 +22,7 @@ export default function AdminGeoHome() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Link to="/admin/geoguesser/maps">
           <Card className="hover:border-atfr-gold/40 transition-colors h-full">
             <CardBody className="p-6 flex items-start gap-4">
@@ -61,6 +61,24 @@ export default function AdminGeoHome() {
                 <p className="text-sm text-atfr-fog mt-3">
                   Uploader, associer à une map, placer le point sur la
                   minimap, publier.
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </Link>
+
+        <Link to="/admin/geoguesser/settings">
+          <Card className="hover:border-atfr-gold/40 transition-colors h-full">
+            <CardBody className="p-6 flex items-start gap-4">
+              <div className="h-12 w-12 rounded-lg border border-atfr-gold/40 bg-atfr-ink/60 flex items-center justify-center text-atfr-gold shrink-0">
+                <Settings size={22} strokeWidth={1.6} />
+              </div>
+              <div>
+                <p className="font-display text-xl text-atfr-bone">Paramètres</p>
+                <p className="text-xs text-atfr-fog mt-1">Timer & malus</p>
+                <p className="text-sm text-atfr-fog mt-3">
+                  Régler la durée d'une manche et la valeur des malus
+                  (mauvaise map, time out).
                 </p>
               </div>
             </CardBody>

@@ -819,6 +819,30 @@ export interface Database {
           },
         ];
       };
+      geoguesser_settings: {
+        Row: {
+          id: number;
+          round_time_s: number;
+          wrong_map_malus_m: number;
+          timeout_malus_m: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          round_time_s?: number;
+          wrong_map_malus_m?: number;
+          timeout_malus_m?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          round_time_s?: number;
+          wrong_map_malus_m?: number;
+          timeout_malus_m?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       module_scores: {
         Row: {
           id: string;
