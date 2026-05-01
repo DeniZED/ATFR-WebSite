@@ -1,15 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  CalendarDays,
   CheckCircle2,
   Clock,
+  Copy,
+  Crown,
+  Flame,
   Map as MapIcon,
   RotateCcw,
+  ShieldCheck,
+  Shuffle,
   Target,
+  Trophy,
+  Users,
   XCircle,
 } from 'lucide-react';
 import {
@@ -26,7 +34,6 @@ import { cn } from '@/lib/cn';
 import { FloatingMapPicker } from '@/components/geoguesser/FloatingMapPicker';
 import { RoundTimer } from '@/components/geoguesser/RoundTimer';
 import { IdentityBar } from '@/components/quiz/IdentityBar';
-import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import {
   DEFAULT_GEO_SETTINGS,
   useGeoMaps,
@@ -35,7 +42,11 @@ import {
   useRecordShotAttempt,
   type ShotWithMap,
 } from '@/features/geoguesser/queries';
-import { useSubmitScore } from '@/features/leaderboard/queries';
+import {
+  useLeaderboard,
+  useSubmitScore,
+  type LeaderboardEntry,
+} from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import {
   diagonalM,
@@ -56,6 +67,7 @@ const MODULE_SLUG = 'wot-geoguesser';
 const ROUNDS_PER_GAME = 5;
 const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
 type DifficultyFilter = QuizDifficulty | 'all';
+type GameMode = 'daily' | 'random';
 
 type Stage = 'intro' | 'playing' | 'reveal' | 'result';
 
@@ -75,6 +87,7 @@ interface RoundResult {
 export default function Geoguesser() {
   const [stage, setStage] = useState<Stage>('intro');
   const [difficulty, setDifficulty] = useState<DifficultyFilter>('all');
+  const [gameMode, setGameMode] = useState<GameMode>('daily');
 
   const maps = useGeoMaps({ activeOnly: true });
   const shots = usePublicGeoShots({ difficulty });
@@ -85,6 +98,7 @@ export default function Geoguesser() {
 
   const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
   const roundTimeS = cfg.round_time_s;
+  const dailyRounds = clampNumber(cfg.daily_challenge_rounds, 1, 20);
   const malus: RoundScoreSettings = {
     wrongMapMalusM: cfg.wrong_map_malus_m,
     timeoutMalusM: cfg.timeout_malus_m,
@@ -99,13 +113,34 @@ export default function Geoguesser() {
   const [pickY, setPickY] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(roundTimeS);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [activeChallengeKey, setActiveChallengeKey] = useState(
+    getDailyChallengeKey(),
+  );
+  const [activeRoundTarget, setActiveRoundTarget] = useState(dailyRounds);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const current = pool[index];
   const total = pool.length;
+  const todayChallengeKey = getDailyChallengeKey();
+  const displayChallengeKey =
+    gameMode === 'daily' && stage !== 'intro'
+      ? activeChallengeKey
+      : todayChallengeKey;
+  const displayRoundTarget =
+    gameMode === 'daily' && stage !== 'intro'
+      ? activeRoundTarget
+      : dailyRounds;
+  const leaderboardSubmode = getLeaderboardSubmode(
+    gameMode,
+    difficulty,
+    displayChallengeKey,
+    displayRoundTarget,
+  );
   const totalScore = useMemo(
     () => results.reduce((acc, r) => acc + r.score, 0),
     [results],
   );
+  const resultStats = useMemo(() => summarizeResults(results), [results]);
 
   // Reset per-round picks + timer when advancing.
   useEffect(() => {
@@ -131,11 +166,23 @@ export default function Geoguesser() {
 
   function startGame() {
     if (!shots.data || shots.data.length === 0) return;
-    const subset = pickPool(shots.data, ROUNDS_PER_GAME);
+    const challengeKey = getDailyChallengeKey();
+    const rounds = gameMode === 'daily' ? dailyRounds : ROUNDS_PER_GAME;
+    const subset =
+      gameMode === 'daily'
+        ? pickPool(
+            sortShotsStable(shots.data),
+            rounds,
+            createSeededRandom(`${challengeKey}:${difficulty}:${rounds}`),
+          )
+        : pickPool(shots.data, rounds);
     if (subset.length === 0) return;
     setPool(subset);
     setIndex(0);
     setResults([]);
+    setActiveChallengeKey(challengeKey);
+    setActiveRoundTarget(rounds);
+    setShareCopied(false);
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
@@ -219,7 +266,8 @@ export default function Geoguesser() {
     }
     // End of game: submit + show result.
     const finalScore = results.reduce((acc, r) => acc + r.score, 0);
-    const worst = worstTotalFor(pool.length, malus);
+    const worst = Math.max(1, worstTotalFor(pool.length, malus));
+    const finalStats = summarizeResults(results);
     if (identity.nickname && pool.length > 0) {
       try {
         // Lower-is-better in-game ; pour que le leaderboard générique
@@ -229,7 +277,12 @@ export default function Geoguesser() {
         // pour affichage / debug.
         await submitScore.mutateAsync({
           module_slug: MODULE_SLUG,
-          submode: difficulty === 'all' ? 'default' : difficulty,
+          submode: getLeaderboardSubmode(
+            gameMode,
+            difficulty,
+            activeChallengeKey,
+            activeRoundTarget,
+          ),
           player_anon_id: identity.id,
           player_nickname: identity.nickname,
           player_account_id: identity.accountId,
@@ -238,9 +291,18 @@ export default function Geoguesser() {
           max_score: worst,
           meta: {
             mode: 'distance',
+            game_mode: gameMode,
+            daily_key: gameMode === 'daily' ? activeChallengeKey : null,
+            daily_rounds: gameMode === 'daily' ? activeRoundTarget : null,
             rounds: pool.length,
             difficulty,
             distance_m: finalScore,
+            avg_distance_m: pool.length > 0 ? finalScore / pool.length : 0,
+            map_accuracy_pct: finalStats.mapAccuracyPct,
+            correct_maps: finalStats.correctMaps,
+            wrong_maps: finalStats.wrongMaps,
+            timeouts: finalStats.timeouts,
+            best_streak: finalStats.bestStreak,
           },
         });
       } catch {
@@ -255,9 +317,32 @@ export default function Geoguesser() {
     setPool([]);
     setIndex(0);
     setResults([]);
+    setShareCopied(false);
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
+  }
+
+  async function copyClanChallenge() {
+    const modeLabel =
+      gameMode === 'daily'
+        ? `défi du jour ${formatChallengeDate(activeChallengeKey)}`
+        : `série ${difficulty === 'all' ? 'mixte' : DIFFICULTY_LABELS[difficulty]}`;
+    const url =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/modules/wot-geoguesser`
+        : '/modules/wot-geoguesser';
+    const text = [
+      `J'ai fait ${formatDistance(totalScore)} sur le GeoGuesseur ATFR (${modeLabel}).`,
+      `${resultStats.correctMaps}/${resultStats.rounds} maps trouvées, meilleure série ${resultStats.bestStreak}.`,
+      `Qui me bat ? ${url}`,
+    ].join(' ');
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareCopied(true);
+    } catch {
+      setShareCopied(false);
+    }
   }
 
   // -----------------------------------------------------------------
@@ -296,8 +381,21 @@ export default function Geoguesser() {
                 <div className="grid sm:grid-cols-3 gap-3 text-center">
                   <Stat label="Maps actives" value={maps.data?.length ?? 0} />
                   <Stat label="Screenshots dispo" value={shots.data.length} />
-                  <Stat label="Manches / partie" value={ROUNDS_PER_GAME} />
+                  <Stat
+                    label={
+                      gameMode === 'daily' ? 'Screens défi' : 'Manches / série'
+                    }
+                    value={
+                      gameMode === 'daily' ? dailyRounds : ROUNDS_PER_GAME
+                    }
+                  />
                 </div>
+
+                <GameModeSelector
+                  value={gameMode}
+                  onChange={setGameMode}
+                  challengeKey={displayChallengeKey}
+                />
 
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
@@ -353,9 +451,11 @@ export default function Geoguesser() {
             </Card>
           )}
 
-          <LeaderboardPanel
+          <GeoguesserLeaderboardPanel
             moduleSlug={MODULE_SLUG}
-            submode={difficulty === 'all' ? 'default' : difficulty}
+            submode={leaderboardSubmode}
+            gameMode={gameMode}
+            challengeKey={displayChallengeKey}
           />
         </div>
       </Section>
@@ -381,20 +481,28 @@ export default function Geoguesser() {
       : null;
     // Map shown in the picker overlay (placement or reveal).
     const overlayMap = showReveal && correctMap ? correctMap : selectedMap;
+    const canValidate = !!selectedMapId && pickX != null && pickY != null;
 
     return (
       <Section
         eyebrow={`Manche ${index + 1} / ${total}`}
         title="Où ce screenshot a-t-il été pris ?"
       >
-        <div className="max-w-5xl mx-auto space-y-5">
+        <div className="max-w-[min(96vw,1440px)] mx-auto space-y-5">
           <ProgressBar total={total} currentIndex={index} results={results} />
+          <RoundStatusBar
+            stats={resultStats}
+            totalScore={totalScore}
+            gameMode={gameMode}
+            challengeKey={activeChallengeKey}
+            difficulty={difficulty}
+          />
 
           {/* Screenshot — overlays both timer (top-right) and floating
               picker (bottom-right) so the player never has to scroll. */}
           <Card className="overflow-hidden">
             <CardBody className="p-0">
-              <div className="relative aspect-video bg-atfr-graphite">
+              <div className="relative h-[min(72vh,760px)] min-h-[320px] bg-atfr-graphite">
                 <img
                   src={current.image_url}
                   alt=""
@@ -512,10 +620,14 @@ export default function Geoguesser() {
             ) : (
               <Button
                 onClick={validate}
-                disabled={!selectedMapId}
+                disabled={!canValidate}
                 trailingIcon={<ArrowRight size={14} />}
               >
-                Valider
+                {!selectedMapId
+                  ? 'Choisis une map'
+                  : pickX == null || pickY == null
+                    ? 'Place ton point'
+                    : 'Valider'}
               </Button>
             )}
           </div>
@@ -529,20 +641,30 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   const avg = pool.length > 0 ? totalScore / pool.length : 0;
   const tier = scoreTier(avg);
-  const worst = worstTotalFor(pool.length, malus);
+  const worst = Math.max(1, worstTotalFor(pool.length, malus));
   // Clamp pct to 0..100 ; closer to 0 is better.
   const pct = worst > 0 ? Math.min(100, (totalScore / worst) * 100) : 0;
 
   return (
     <Section eyebrow="Résultat final" title={tier.title}>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <Card>
           <CardBody className="p-8 text-center space-y-5">
+            <div className="flex justify-center gap-2 flex-wrap">
+              <Badge variant={gameMode === 'daily' ? 'gold' : 'outline'}>
+                {gameMode === 'daily'
+                  ? `Défi ${formatChallengeDate(activeChallengeKey)}`
+                  : 'Série libre'}
+              </Badge>
+              <Badge variant="outline">
+                {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
+              </Badge>
+            </div>
             <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80">
               Score (plus bas = meilleur)
             </p>
-            <p className="font-display text-6xl text-atfr-bone">
-              {totalScore.toLocaleString('fr-FR')} m
+            <p className="font-display text-5xl sm:text-6xl text-atfr-bone">
+              {formatDistance(totalScore)}
             </p>
             <p className="text-sm text-atfr-fog">
               Moyenne par manche : {formatDistance(avg)}
@@ -560,11 +682,24 @@ export default function Geoguesser() {
             </p>
             <div className="flex flex-wrap justify-center gap-3 pt-2">
               <Button
+                onClick={startGame}
+                leadingIcon={<RotateCcw size={14} />}
+              >
+                Rejouer même difficulté
+              </Button>
+              <Button
+                onClick={copyClanChallenge}
+                leadingIcon={<Copy size={14} />}
+                variant="outline"
+              >
+                {shareCopied ? 'Défi copié' : 'Défier le clan'}
+              </Button>
+              <Button
                 onClick={restart}
                 leadingIcon={<RotateCcw size={14} />}
                 variant="outline"
               >
-                Recommencer
+                Changer de mode
               </Button>
               <Link to="/modules">
                 <Button variant="ghost">Retour à l'académie</Button>
@@ -572,6 +707,8 @@ export default function Geoguesser() {
             </div>
           </CardBody>
         </Card>
+
+        <ResultInsights stats={resultStats} />
 
         {/* Per-round recap */}
         <div>
@@ -620,10 +757,10 @@ export default function Geoguesser() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-display text-xl text-atfr-bone tabular-nums">
-                      {r.score.toLocaleString('fr-FR')}
+                      {formatDistance(r.score)}
                     </p>
                     <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-                      mètres
+                      score
                     </p>
                   </div>
                 </CardBody>
@@ -632,9 +769,11 @@ export default function Geoguesser() {
           </div>
         </div>
 
-        <LeaderboardPanel
+        <GeoguesserLeaderboardPanel
           moduleSlug={MODULE_SLUG}
-          submode={difficulty === 'all' ? 'default' : difficulty}
+          submode={leaderboardSubmode}
+          gameMode={gameMode}
+          challengeKey={activeChallengeKey}
         />
       </div>
     </Section>
@@ -642,10 +781,97 @@ export default function Geoguesser() {
 }
 
 // ---------------------------------------------------------------------------
+// Game helpers
+// ---------------------------------------------------------------------------
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function getDailyChallengeKey(date = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const year = parts.find((p) => p.type === 'year')?.value;
+    const month = parts.find((p) => p.type === 'month')?.value;
+    const day = parts.find((p) => p.type === 'day')?.value;
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch {
+    /* fallback below */
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function formatChallengeDate(key: string): string {
+  const [, month, day] = key.split('-');
+  return month && day ? `${day}/${month}` : key;
+}
+
+function getLeaderboardSubmode(
+  mode: GameMode,
+  difficulty: DifficultyFilter,
+  challengeKey: string,
+  dailyRounds: number,
+): string {
+  const difficultyKey = difficulty === 'all' ? 'default' : difficulty;
+  return mode === 'daily'
+    ? `daily:${challengeKey}:${difficultyKey}:${dailyRounds}`
+    : difficultyKey;
+}
+
+function createSeededRandom(seed: string): () => number {
+  let state = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    state ^= seed.charCodeAt(i);
+    state = Math.imul(state, 16777619);
+  }
+  return () => {
+    state += 0x6d2b79f5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function getMetaNumber(
+  meta: Record<string, unknown> | null | undefined,
+  key: string,
+): number | null {
+  const value = meta?.[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function getMetaString(
+  meta: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
+  const value = meta?.[key];
+  return typeof value === 'string' ? value : null;
+}
+
+function sortShotsStable(shots: ShotWithMap[]): ShotWithMap[] {
+  return [...shots].sort((a, b) => {
+    const map = a.map_id.localeCompare(b.map_id);
+    if (map !== 0) return map;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Pool selection — Fisher-Yates + prefer one shot per map (variety),
 // then dedup by id and image_url.
 // ---------------------------------------------------------------------------
-function pickPool(all: ShotWithMap[], n: number): ShotWithMap[] {
+function pickPool(
+  all: ShotWithMap[],
+  n: number,
+  rng: () => number = Math.random,
+): ShotWithMap[] {
   if (all.length === 0) return [];
   // Group by map.
   const byMap = new Map<string, ShotWithMap[]>();
@@ -658,14 +884,14 @@ function pickPool(all: ShotWithMap[], n: number): ShotWithMap[] {
   // Shuffle each bucket independently.
   for (const arr of byMap.values()) {
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
   }
   // Pick one shot per map first (random map order), then refill.
   const mapKeys = [...byMap.keys()];
   for (let i = mapKeys.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [mapKeys[i], mapKeys[j]] = [mapKeys[j], mapKeys[i]];
   }
   const out: ShotWithMap[] = [];
@@ -686,7 +912,7 @@ function pickPool(all: ShotWithMap[], n: number): ShotWithMap[] {
     const rest: ShotWithMap[] = [];
     for (const arr of byMap.values()) rest.push(...arr);
     for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [rest[i], rest[j]] = [rest[j], rest[i]];
     }
     for (const s of rest) {
@@ -698,6 +924,140 @@ function pickPool(all: ShotWithMap[], n: number): ShotWithMap[] {
     }
   }
   return out;
+}
+
+interface RoundInsight {
+  round: number;
+  result: RoundResult;
+}
+
+interface ResultStats {
+  rounds: number;
+  correctMaps: number;
+  wrongMaps: number;
+  timeouts: number;
+  mapAccuracyPct: number;
+  currentStreak: number;
+  bestStreak: number;
+  best: RoundInsight | null;
+  toughest: RoundInsight | null;
+  advice: string;
+}
+
+function summarizeResults(results: RoundResult[]): ResultStats {
+  let best: RoundInsight | null = null;
+  let toughest: RoundInsight | null = null;
+  let correctMaps = 0;
+  let wrongMaps = 0;
+  let timeouts = 0;
+  let currentStreak = 0;
+  let bestStreak = 0;
+
+  results.forEach((result, index) => {
+    const current = { round: index + 1, result };
+    if (result.correctMap) {
+      correctMaps += 1;
+      currentStreak += 1;
+      bestStreak = Math.max(bestStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+    if (result.kind === 'wrong-map') wrongMaps += 1;
+    if (result.kind === 'timeout') timeouts += 1;
+
+    if (
+      result.kind === 'distance' &&
+      result.distanceM != null &&
+      (!best || result.distanceM < (best.result.distanceM ?? Infinity))
+    ) {
+      best = current;
+    }
+
+    if (!toughest || result.score > toughest.result.score) {
+      toughest = current;
+    }
+  });
+
+  const rounds = results.length;
+  const mapAccuracyPct =
+    rounds > 0 ? Math.round((correctMaps / rounds) * 100) : 0;
+
+  return {
+    rounds,
+    correctMaps,
+    wrongMaps,
+    timeouts,
+    mapAccuracyPct,
+    currentStreak,
+    bestStreak,
+    best,
+    toughest,
+    advice: buildResultAdvice({
+      rounds,
+      correctMaps,
+      wrongMaps,
+      timeouts,
+      best,
+    }),
+  };
+}
+
+function buildResultAdvice({
+  rounds,
+  correctMaps,
+  wrongMaps,
+  timeouts,
+  best,
+}: Pick<
+  ResultStats,
+  'rounds' | 'correctMaps' | 'wrongMaps' | 'timeouts' | 'best'
+>): string {
+  if (rounds === 0) return 'Lance une partie pour obtenir une lecture utile.';
+  if (timeouts > 0) {
+    return 'Pose un point approximatif dès que tu as une intuition : même imparfait, un pick joué bat souvent un time out.';
+  }
+  if (wrongMaps >= Math.ceil(rounds / 2)) {
+    return 'Travaille d’abord la silhouette des minimaps : chemins de fer, lignes d’eau et gros reliefs donnent souvent la map avant les détails.';
+  }
+  if (correctMaps < rounds) {
+    return 'Tu lis déjà plusieurs maps. Pour gratter des mètres, repère les spawns, bases et couloirs de tir visibles sur le screen.';
+  }
+  if (best?.result.distanceM != null && best.result.distanceM < 100) {
+    return 'Très propre : garde cette méthode, puis cherche les micro-repères pour stabiliser les manches plus dures.';
+  }
+  return 'Bonne lecture globale. Le prochain palier se joue sur la précision du pin, pas seulement sur le choix de map.';
+}
+
+function buildRoundFeedback(result: RoundResult): string {
+  if (result.kind === 'timeout') {
+    return 'Même sans certitude, pose un point tôt : tu peux toujours le déplacer avant de valider.';
+  }
+  if (result.kind === 'wrong-map') {
+    return 'Mauvaise map : compare les grands repères de minimap avant les détails du screenshot.';
+  }
+  if (
+    result.selectedX == null ||
+    result.selectedY == null ||
+    result.distanceM == null
+  ) {
+    return 'Bonne map. Rejoue les zones autour des bases pour gagner en précision.';
+  }
+
+  const dx = result.selectedX - result.shot.x_pct;
+  const dy = result.selectedY - result.shot.y_pct;
+  const horizontal =
+    Math.abs(dx) < 0.06 ? null : dx > 0 ? 'à l’est' : 'à l’ouest';
+  const vertical =
+    Math.abs(dy) < 0.06 ? null : dy > 0 ? 'au sud' : 'au nord';
+  const direction = [vertical, horizontal].filter(Boolean).join(' et ');
+
+  if (result.distanceM < 80) {
+    return 'Excellent placement : tu as identifié la bonne zone et les micro-repères.';
+  }
+  if (direction) {
+    return `Bonne map, mais ton point est trop ${direction}. Recale-toi avec les bases, reliefs et lignes de tir.`;
+  }
+  return 'Bonne map : tu es dans le bon secteur, il manque surtout un repère fin pour verrouiller le pin.';
 }
 
 // ---------------------------------------------------------------------------
@@ -713,6 +1073,471 @@ function Stat({ label, value }: { label: string; value: number }) {
       <p className="font-display text-2xl text-atfr-bone mt-1">{value}</p>
     </div>
   );
+}
+
+function GameModeSelector({
+  value,
+  onChange,
+  challengeKey,
+}: {
+  value: GameMode;
+  onChange: (mode: GameMode) => void;
+  challengeKey: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
+        Mode
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <ModeButton
+          active={value === 'daily'}
+          icon={<CalendarDays size={16} />}
+          title="Challenge du jour"
+          detail={`Même série pour tous · ${formatChallengeDate(challengeKey)}`}
+          onClick={() => onChange('daily')}
+        />
+        <ModeButton
+          active={value === 'random'}
+          icon={<Shuffle size={16} />}
+          title="Série libre"
+          detail={`${ROUNDS_PER_GAME} manches tirées au hasard`}
+          onClick={() => onChange('random')}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ModeButton({
+  active,
+  icon,
+  title,
+  detail,
+  onClick,
+}: {
+  active: boolean;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-md border p-3 text-left transition-colors',
+        active
+          ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
+          : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
+      )}
+    >
+      <span className="flex items-center gap-2 text-sm font-medium">
+        <span
+          className={cn(
+            'inline-flex h-8 w-8 items-center justify-center rounded-md border',
+            active
+              ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
+              : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
+          )}
+        >
+          {icon}
+        </span>
+        {title}
+      </span>
+      <span className="mt-2 block text-xs text-atfr-fog">{detail}</span>
+    </button>
+  );
+}
+
+function RoundStatusBar({
+  stats,
+  totalScore,
+  gameMode,
+  challengeKey,
+  difficulty,
+}: {
+  stats: ResultStats;
+  totalScore: number;
+  gameMode: GameMode;
+  challengeKey: string;
+  difficulty: DifficultyFilter;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-atfr-gold/10 bg-atfr-carbon/70 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={gameMode === 'daily' ? 'gold' : 'outline'}>
+          {gameMode === 'daily'
+            ? `Défi ${formatChallengeDate(challengeKey)}`
+            : 'Série libre'}
+        </Badge>
+        <Badge variant="outline">
+          {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
+        </Badge>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-atfr-fog">
+        <span className="inline-flex items-center gap-1">
+          <Flame size={13} className="text-atfr-gold" />
+          Série {stats.currentStreak}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Trophy size={13} className="text-atfr-gold" />
+          Best {stats.bestStreak}
+        </span>
+        <span className="tabular-nums">{formatDistance(totalScore)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ResultInsights({ stats }: { stats: ResultStats }) {
+  const bestValue =
+    stats.best?.result.distanceM != null
+      ? formatDistance(stats.best.result.distanceM)
+      : '—';
+  const bestDetail = stats.best
+    ? `Manche ${stats.best.round} · ${stats.best.result.shot.map?.name ?? 'Map inconnue'}`
+    : 'Aucune bonne map cette fois';
+  const toughestValue = stats.toughest
+    ? formatDistance(stats.toughest.result.score)
+    : '—';
+  const toughestDetail = stats.toughest
+    ? `Manche ${stats.toughest.round} · ${stats.toughest.result.shot.map?.name ?? 'Map inconnue'}`
+    : 'Aucune manche jouée';
+
+  return (
+    <Card>
+      <CardBody className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
+              Lecture de partie
+            </p>
+            <p className="text-sm text-atfr-fog mt-1">
+              Les points à retenir avant de relancer une série.
+            </p>
+          </div>
+          <Badge variant="outline">
+            {stats.mapAccuracyPct}% maps trouvées
+          </Badge>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <InsightStat
+            icon={<CheckCircle2 size={16} />}
+            label="Maps trouvées"
+            value={`${stats.correctMaps}/${stats.rounds}`}
+            detail={`${stats.wrongMaps} mauvaise(s) · streak ${stats.bestStreak}`}
+            tone="success"
+          />
+          <InsightStat
+            icon={<Target size={16} />}
+            label="Meilleur placement"
+            value={bestValue}
+            detail={bestDetail}
+            tone="gold"
+          />
+          <InsightStat
+            icon={<XCircle size={16} />}
+            label="Manche à revoir"
+            value={toughestValue}
+            detail={toughestDetail}
+            tone="danger"
+          />
+        </div>
+
+        <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 p-4">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-1">
+            Conseil
+          </p>
+          <p className="text-sm text-atfr-bone leading-relaxed">
+            {stats.advice}
+          </p>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function InsightStat({
+  icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+  tone: 'success' | 'gold' | 'danger';
+}) {
+  const toneClass =
+    tone === 'success'
+      ? 'border-atfr-success/30 bg-atfr-success/10 text-atfr-success'
+      : tone === 'danger'
+        ? 'border-atfr-danger/30 bg-atfr-danger/10 text-atfr-danger'
+        : 'border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold';
+
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-ink/45 p-3 min-w-0">
+      <div
+        className={cn(
+          'mb-3 inline-flex h-8 w-8 items-center justify-center rounded-md border',
+          toneClass,
+        )}
+      >
+        {icon}
+      </div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="font-display text-xl text-atfr-bone mt-1 truncate">
+        {value}
+      </p>
+      <p className="text-xs text-atfr-fog mt-1 truncate">{detail}</p>
+    </div>
+  );
+}
+
+function GeoguesserLeaderboardPanel({
+  moduleSlug,
+  submode,
+  gameMode,
+  challengeKey,
+}: {
+  moduleSlug: string;
+  submode: string;
+  gameMode: GameMode;
+  challengeKey: string;
+}) {
+  const [tab, setTab] = useState<'all' | 'verified'>('all');
+  const me = usePlayerIdentity();
+  const board = useLeaderboard({
+    moduleSlug,
+    submode,
+    limit: 50,
+    verifiedOnly: tab === 'verified',
+  });
+  const entries = useMemo(
+    () => dedupeLeaderboardEntries(board.data ?? []).slice(0, 12),
+    [board.data],
+  );
+  const title =
+    gameMode === 'daily'
+      ? `Classement du défi ${formatChallengeDate(challengeKey)}`
+      : 'Classement GeoGuesseur';
+
+  return (
+    <Card>
+      <CardBody className="p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <div>
+            <h3 className="font-display text-lg text-atfr-bone flex items-center gap-2">
+              <Crown size={18} className="text-atfr-gold" />
+              {title}
+            </h3>
+            <p className="text-xs text-atfr-fog mt-1">
+              Meilleur score par joueur, distance réelle et précision map.
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <LeaderboardTab active={tab === 'all'} onClick={() => setTab('all')}>
+              <Users size={12} /> Tous
+            </LeaderboardTab>
+            <LeaderboardTab
+              active={tab === 'verified'}
+              onClick={() => setTab('verified')}
+            >
+              <ShieldCheck size={12} /> Vérifiés WG
+            </LeaderboardTab>
+          </div>
+        </div>
+
+        {board.isLoading ? (
+          <div className="flex justify-center py-6">
+            <Spinner />
+          </div>
+        ) : entries.length === 0 ? (
+          <p className="text-center text-sm text-atfr-fog py-6">
+            {gameMode === 'daily'
+              ? 'Personne n’a encore terminé le défi du jour.'
+              : 'Pas encore de score sur cette difficulté.'}
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {entries.map((entry, idx) => (
+              <GeoguesserLeaderboardRow
+                key={entry.id}
+                entry={entry}
+                rank={idx + 1}
+                isMe={isLeaderboardEntryMe(entry, me)}
+              />
+            ))}
+          </ol>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function GeoguesserLeaderboardRow({
+  entry,
+  rank,
+  isMe,
+}: {
+  entry: LeaderboardEntry;
+  rank: number;
+  isMe: boolean;
+}) {
+  const distanceM =
+    getMetaNumber(entry.meta, 'distance_m') ??
+    Math.max(0, entry.max_score - entry.score);
+  const rounds = getMetaNumber(entry.meta, 'rounds');
+  const avgM = rounds && rounds > 0 ? distanceM / rounds : null;
+  const mapAccuracy = getMetaNumber(entry.meta, 'map_accuracy_pct');
+  const bestStreak = getMetaNumber(entry.meta, 'best_streak');
+  const dailyKey = getMetaString(entry.meta, 'daily_key');
+  const pct = Math.round(entry.ratio * 100);
+
+  return (
+    <li
+      className={cn(
+        'rounded-md border p-3 transition-colors',
+        isMe
+          ? 'border-atfr-gold/60 bg-atfr-gold/10'
+          : 'border-atfr-gold/15 bg-atfr-graphite/40',
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-display',
+            rank === 1 && 'bg-gradient-gold text-atfr-ink',
+            rank > 1 && 'bg-atfr-ink/60 text-atfr-gold',
+          )}
+        >
+          {rank === 1 ? <Crown size={15} /> : rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-atfr-bone truncate flex items-center gap-1.5">
+            {entry.player_nickname}
+            {entry.is_verified && (
+              <ShieldCheck
+                size={14}
+                className="text-atfr-success shrink-0"
+                aria-label="Compte WG vérifié"
+              />
+            )}
+          </p>
+          <p className="text-xs text-atfr-fog">
+            {dailyKey ? `Défi ${formatChallengeDate(dailyKey)} · ` : ''}
+            {formatScoreDate(entry.created_at)}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-display text-xl text-atfr-bone tabular-nums">
+            {formatDistance(distanceM)}
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
+            perf {pct}%
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <LeaderboardMetric
+          label="Moy."
+          value={avgM != null ? formatDistance(avgM) : '—'}
+        />
+        <LeaderboardMetric
+          label="Maps"
+          value={mapAccuracy != null ? `${mapAccuracy}%` : '—'}
+        />
+        <LeaderboardMetric
+          label="Série"
+          value={bestStreak != null ? String(bestStreak) : '—'}
+        />
+      </div>
+    </li>
+  );
+}
+
+function LeaderboardMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded bg-atfr-ink/45 px-2 py-1.5">
+      <p className="text-[9px] uppercase tracking-[0.16em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="text-sm text-atfr-bone tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function LeaderboardTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors',
+        active
+          ? 'bg-atfr-gold text-atfr-ink border-atfr-gold'
+          : 'border-atfr-gold/30 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/60',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function isLeaderboardEntryMe(
+  entry: LeaderboardEntry,
+  me: ReturnType<typeof usePlayerIdentity>,
+): boolean {
+  return (
+    (me.isVerified &&
+      entry.is_verified &&
+      entry.player_account_id === me.accountId) ||
+    (!me.isVerified &&
+      !entry.is_verified &&
+      entry.player_anon_id === me.id)
+  );
+}
+
+function dedupeLeaderboardEntries(
+  entries: LeaderboardEntry[],
+): LeaderboardEntry[] {
+  const bestByPlayer = new Map<string, LeaderboardEntry>();
+  for (const entry of entries) {
+    const key =
+      entry.is_verified && entry.player_account_id != null
+        ? `wg:${entry.player_account_id}`
+        : `anon:${entry.player_anon_id}`;
+    if (!bestByPlayer.has(key)) {
+      bestByPlayer.set(key, entry);
+    }
+  }
+  return [...bestByPlayer.values()];
+}
+
+function formatScoreDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function ProgressBar({
@@ -735,9 +1560,11 @@ function ProgressBar({
             className={cn(
               'h-1.5 flex-1 rounded-full',
               r
-                ? r.correctMap
-                  ? 'bg-atfr-success'
-                  : 'bg-atfr-danger'
+                ? r.kind === 'timeout'
+                  ? 'bg-atfr-warning'
+                  : r.correctMap
+                    ? 'bg-atfr-success'
+                    : 'bg-atfr-danger'
                 : isCurrent
                   ? 'bg-atfr-gold'
                   : 'bg-atfr-graphite',
@@ -756,6 +1583,7 @@ function RevealBanner({
   result: RoundResult;
   settings: RoundScoreSettings;
 }) {
+  const feedback = buildRoundFeedback(result);
   const closeHit =
     result.kind === 'distance' &&
     result.distanceM != null &&
@@ -808,13 +1636,16 @@ function RevealBanner({
               {result.shot.map?.name}
             </span>
           </p>
+          <p className="text-sm text-atfr-bone/90 mt-2 leading-relaxed">
+            {feedback}
+          </p>
         </div>
         <div className="text-right">
           <p className="font-display text-3xl text-atfr-bone tabular-nums">
-            {result.score.toLocaleString('fr-FR')}
+            {formatDistance(result.score)}
           </p>
           <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            mètres
+            score
           </p>
         </div>
       </CardBody>

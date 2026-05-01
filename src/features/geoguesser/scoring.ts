@@ -3,10 +3,10 @@ import type { QuizDifficulty } from '@/types/database';
 /**
  * Modèle de scoring "proximité" (lower-is-better).
  *
- *  - Bonne map + pick : score = distance réelle en mètres entre le pick
- *    joueur et le shot (arrondi). Plus c'est proche, mieux c'est.
- *  - Bonne map sans pick (timeout) : score = `timeout_malus_m`.
- *  - Mauvaise map : score = `wrong_map_malus_m`.
+ *  - Pick posé sur la bonne map : score = distance réelle en mètres entre
+ *    le pick joueur et le shot (arrondi). Plus c'est proche, mieux c'est.
+ *  - Aucun pick posé avant la fin du timer : score = `timeout_malus_m`.
+ *  - Pick posé sur une mauvaise map : score = `wrong_map_malus_m`.
  *
  *  Le score TOTAL est la somme des manches : il faut viser le plus
  *  bas possible.
@@ -34,11 +34,11 @@ export interface RoundScoreResult {
 }
 
 export function roundScore(input: RoundScoreInput): RoundScoreResult {
-  if (!input.correctMap) {
-    return { score: input.settings.wrongMapMalusM, kind: 'wrong-map' };
-  }
   if (!input.hasPick) {
     return { score: input.settings.timeoutMalusM, kind: 'timeout' };
+  }
+  if (!input.correctMap) {
+    return { score: input.settings.wrongMapMalusM, kind: 'wrong-map' };
   }
   return {
     score: Math.max(0, Math.round(input.distanceM)),

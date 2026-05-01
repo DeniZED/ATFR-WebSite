@@ -21,6 +21,7 @@ export default function AdminGeoSettings() {
   const [roundTime, setRoundTime] = useState<number>(45);
   const [wrongMap, setWrongMap] = useState<number>(2000);
   const [timeout, setTimeoutMalus] = useState<number>(2000);
+  const [dailyRounds, setDailyRounds] = useState<number>(5);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function AdminGeoSettings() {
       setRoundTime(settings.data.round_time_s);
       setWrongMap(settings.data.wrong_map_malus_m);
       setTimeoutMalus(settings.data.timeout_malus_m);
+      setDailyRounds(settings.data.daily_challenge_rounds ?? 5);
     }
   }, [settings.data]);
 
@@ -38,6 +40,7 @@ export default function AdminGeoSettings() {
       round_time_s: roundTime,
       wrong_map_malus_m: wrongMap,
       timeout_malus_m: timeout,
+      daily_challenge_rounds: dailyRounds,
     });
     setSaved(true);
   }
@@ -70,7 +73,7 @@ export default function AdminGeoSettings() {
       ) : (
         <Card>
           <CardBody className="p-6">
-            <form onSubmit={save} className="grid gap-4 md:grid-cols-3">
+            <form onSubmit={save} className="grid gap-4 md:grid-cols-4">
               <Input
                 label="Timer par manche (s)"
                 type="number"
@@ -97,25 +100,34 @@ export default function AdminGeoSettings() {
                 value={timeout}
                 onChange={(e) => setTimeoutMalus(Number(e.target.value))}
               />
-              <p className="md:col-span-3 text-xs text-atfr-fog">
+              <Input
+                label="Screens défi du jour"
+                type="number"
+                min={1}
+                max={20}
+                value={dailyRounds}
+                onChange={(e) => setDailyRounds(Number(e.target.value))}
+                hint="Même série pour tous les joueurs chaque jour."
+              />
+              <p className="md:col-span-4 text-xs text-atfr-fog">
                 Le score d'une manche est la distance réelle (en mètres) entre
                 le pick joueur et le shot. Mauvaise map → +malus. Pas de pick
                 avant la fin du timer → +malus time out. Le but est d'avoir le
                 score TOTAL le plus bas possible.
               </p>
               {saved && (
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <Alert tone="success">Paramètres enregistrés.</Alert>
                 </div>
               )}
               {update.isError && (
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <Alert tone="danger">
                     {(update.error as Error).message}
                   </Alert>
                 </div>
               )}
-              <div className="md:col-span-3 flex justify-end">
+              <div className="md:col-span-4 flex justify-end">
                 <Button
                   type="submit"
                   leadingIcon={<Save size={14} />}

@@ -107,8 +107,8 @@ export function FloatingMapPicker({
       <div
         ref={wrapRef}
         className={cn(
-          'absolute z-20 right-3 bottom-3',
-          'w-[min(92vw,420px)]',
+          'absolute z-20 inset-x-2 bottom-2 sm:inset-x-auto sm:right-4 sm:bottom-4',
+          'sm:w-[min(56vw,620px)] lg:w-[min(44vw,680px)]',
           disabled && 'pointer-events-none opacity-80',
         )}
       >
@@ -205,7 +205,7 @@ export function FloatingMapPicker({
     <div
       ref={wrapRef}
       className={cn(
-        'absolute z-20 right-3 bottom-3 flex flex-col items-end gap-2',
+        'absolute z-20 inset-x-2 bottom-2 sm:inset-x-auto sm:right-4 sm:bottom-4 flex flex-col items-stretch sm:items-end gap-2',
         disabled && 'pointer-events-none opacity-70',
       )}
       onMouseEnter={() => !disabled && setOpen(true)}
@@ -213,7 +213,7 @@ export function FloatingMapPicker({
     >
       {open && (
         <div
-          className="w-[min(92vw,420px)] max-h-[min(60vh,440px)] overflow-hidden rounded-lg border border-atfr-gold/30 bg-atfr-ink/95 backdrop-blur shadow-2xl"
+          className="w-full sm:w-[min(56vw,620px)] lg:w-[min(44vw,680px)] max-h-[min(72vh,560px)] overflow-hidden rounded-lg border border-atfr-gold/30 bg-atfr-ink/95 backdrop-blur shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 border-b border-atfr-gold/15 px-3 py-2">
@@ -234,7 +234,7 @@ export function FloatingMapPicker({
               <X size={14} />
             </button>
           </div>
-          <div className="overflow-y-auto p-2 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[min(48vh,360px)]">
+          <div className="overflow-y-auto p-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[min(58vh,460px)]">
             {filtered.length === 0 ? (
               <p className="col-span-full py-6 text-center text-xs text-atfr-fog">
                 Aucune map ne correspond.
@@ -277,7 +277,7 @@ export function FloatingMapPicker({
       <button
         type="button"
         onClick={() => !disabled && setOpen((p) => !p)}
-        className="flex items-center gap-2 rounded-md border-2 border-atfr-gold/40 hover:border-atfr-gold bg-atfr-ink/80 backdrop-blur shadow-xl px-2 py-1.5 transition-all"
+        className="flex items-center gap-2 rounded-md border-2 border-atfr-gold/40 hover:border-atfr-gold bg-atfr-ink/80 backdrop-blur shadow-xl px-2 py-1.5 transition-all sm:max-w-[260px]"
       >
         <div className="h-12 w-12 sm:h-16 sm:w-16 rounded overflow-hidden bg-atfr-graphite shrink-0 flex items-center justify-center">
           <MapIcon size={20} className="text-atfr-gold opacity-70" />
@@ -324,4 +324,3 @@ function PinAt({
     </div>
   );
 }
-
