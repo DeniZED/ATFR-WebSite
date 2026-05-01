@@ -6,6 +6,8 @@ import {
   ArrowRight,
   Camera,
   CheckCircle2,
+  Clock,
+  Map as MapIcon,
   RotateCcw,
   Target,
   XCircle,
@@ -21,13 +23,14 @@ import {
   Spinner,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Minimap } from '@/components/geoguesser/Minimap';
 import { FloatingMapPicker } from '@/components/geoguesser/FloatingMapPicker';
 import { RoundTimer } from '@/components/geoguesser/RoundTimer';
 import { IdentityBar } from '@/components/quiz/IdentityBar';
 import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import {
+  DEFAULT_GEO_SETTINGS,
   useGeoMaps,
+  useGeoSettings,
   usePublicGeoShots,
   useRecordShotAttempt,
   type ShotWithMap,
@@ -35,14 +38,14 @@ import {
 import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import {
-  ROUND_MAX,
-  WRONG_MAP_MALUS,
   diagonalM,
   formatDistance,
-  maxScoreFor,
   realDistanceM,
   roundScore,
   scoreTier,
+  worstTotalFor,
+  type RoundScoreResult,
+  type RoundScoreSettings,
 } from '@/features/geoguesser/scoring';
 import {
   DIFFICULTY_LABELS,
@@ -51,7 +54,7 @@ import {
 
 const MODULE_SLUG = 'wot-geoguesser';
 const ROUNDS_PER_GAME = 5;
-const ROUND_TIME_S = 30;
+const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
 type DifficultyFilter = QuizDifficulty | 'all';
 
 type Stage = 'intro' | 'playing' | 'reveal' | 'result';
@@ -62,10 +65,11 @@ interface RoundResult {
   selectedX: number | null;
   selectedY: number | null;
   correctMap: boolean;
-  /** Distance réelle entre le pick joueur et le shot, en mètres.
-   * `null` quand le joueur a choisi la mauvaise map. */
+  /** Distance pick ↔ shot en mètres (null si mauvaise map ou pas de pick). */
   distanceM: number | null;
+  /** Score de la manche en mètres (lower-is-better). */
   score: number;
+  kind: RoundScoreResult['kind'];
 }
 
 export default function Geoguesser() {
@@ -74,9 +78,17 @@ export default function Geoguesser() {
 
   const maps = useGeoMaps({ activeOnly: true });
   const shots = usePublicGeoShots({ difficulty });
+  const settings = useGeoSettings();
   const submitScore = useSubmitScore();
   const recordAttempt = useRecordShotAttempt();
   const identity = usePlayerIdentity();
+
+  const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
+  const roundTimeS = cfg.round_time_s;
+  const malus: RoundScoreSettings = {
+    wrongMapMalusM: cfg.wrong_map_malus_m,
+    timeoutMalusM: cfg.timeout_malus_m,
+  };
 
   const [pool, setPool] = useState<ShotWithMap[]>([]);
   const [index, setIndex] = useState(0);
@@ -85,22 +97,23 @@ export default function Geoguesser() {
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [pickX, setPickX] = useState<number | null>(null);
   const [pickY, setPickY] = useState<number | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(ROUND_TIME_S);
+  const [secondsLeft, setSecondsLeft] = useState(roundTimeS);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const current = pool[index];
   const total = pool.length;
   const totalScore = useMemo(
-    () => Math.max(0, results.reduce((acc, r) => acc + r.score, 0)),
+    () => results.reduce((acc, r) => acc + r.score, 0),
     [results],
   );
 
-  // When advancing, reset per-round picks + timer.
+  // Reset per-round picks + timer when advancing.
   useEffect(() => {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
-    setSecondsLeft(ROUND_TIME_S);
-  }, [index, stage]);
+    setSecondsLeft(roundTimeS);
+  }, [index, stage, roundTimeS]);
 
   // 1Hz countdown only while playing.
   useEffect(() => {
@@ -118,24 +131,7 @@ export default function Geoguesser() {
 
   function startGame() {
     if (!shots.data || shots.data.length === 0) return;
-    // Fisher-Yates + dedup by id and image_url so the same photo never
-    // appears twice in the same game.
-    const arr = [...shots.data];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    const seenIds = new Set<string>();
-    const seenImgs = new Set<string>();
-    const subset: ShotWithMap[] = [];
-    for (const s of arr) {
-      if (seenIds.has(s.id)) continue;
-      if (seenImgs.has(s.image_url)) continue;
-      seenIds.add(s.id);
-      seenImgs.add(s.image_url);
-      subset.push(s);
-      if (subset.length >= ROUNDS_PER_GAME) break;
-    }
+    const subset = pickPool(shots.data, ROUNDS_PER_GAME);
     if (subset.length === 0) return;
     setPool(subset);
     setIndex(0);
@@ -143,36 +139,40 @@ export default function Geoguesser() {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
+    if (typeof window !== 'undefined' && !localStorage.getItem(TUTORIAL_KEY)) {
+      setShowTutorial(true);
+    }
     setStage('playing');
+  }
+
+  function dismissTutorial() {
+    setShowTutorial(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TUTORIAL_KEY, '1');
+    }
   }
 
   function validate() {
     if (!current) return;
     const hasPick = pickX != null && pickY != null;
     const hasMap = !!selectedMapId;
-    const correctMap = selectedMapId === current.map_id;
+    const correctMap = hasMap && selectedMapId === current.map_id;
     const widthM = current.map?.width_m ?? current.map?.size_m ?? 1000;
     const heightM = current.map?.height_m ?? current.map?.size_m ?? 1000;
-    const diag = diagonalM(widthM, heightM);
     let d: number | null = null;
-    if (correctMap) {
-      if (hasPick) {
-        d = realDistanceM(
-          { x: pickX!, y: pickY! },
-          { x: current.x_pct, y: current.y_pct },
-          widthM,
-          heightM,
-        );
-      } else {
-        // Time ran out without a pick: max distance → 0 points.
-        d = diag;
-      }
+    if (correctMap && hasPick) {
+      d = realDistanceM(
+        { x: pickX!, y: pickY! },
+        { x: current.x_pct, y: current.y_pct },
+        widthM,
+        heightM,
+      );
     }
-    const s = roundScore({
+    const r = roundScore({
       correctMap,
+      hasPick,
       distanceM: d ?? 0,
-      diagonalM: diag,
-      difficulty: current.difficulty,
+      settings: malus,
     });
     setResults((prev) => [
       ...prev,
@@ -183,17 +183,20 @@ export default function Geoguesser() {
         selectedY: hasPick ? pickY : null,
         correctMap,
         distanceM: d,
-        score: s,
+        score: r.score,
+        kind: r.kind,
       },
     ]);
-    // Record attempt for adaptive difficulty (best-effort, never blocks UX).
-    const maxRound = Math.round(ROUND_MAX * 1.5); // expert ceiling
+    // Difficulté adaptative : on passe une "perf" 0..maxRound où plus
+    // c'est élevé mieux c'est, pour que la RPC garde son comportement.
+    const maxRound = diagonalM(widthM, heightM);
+    const perf = Math.max(0, Math.round(maxRound - (d ?? maxRound)));
     recordAttempt.mutate(
       {
         shot_id: current.id,
         correct_map: correctMap,
-        round_score: s,
-        max_round_score: maxRound,
+        round_score: perf,
+        max_round_score: Math.round(maxRound),
       },
       { onError: () => undefined },
     );
@@ -216,9 +219,14 @@ export default function Geoguesser() {
     }
     // End of game: submit + show result.
     const finalScore = results.reduce((acc, r) => acc + r.score, 0);
-    const max = maxScoreFor(pool.map((s) => s.difficulty));
+    const worst = worstTotalFor(pool.length, malus);
     if (identity.nickname && pool.length > 0) {
       try {
+        // Lower-is-better in-game ; pour que le leaderboard générique
+        // (sort score DESC) classe correctement, on stocke
+        // `score = worst - finalScore` (= "perf" : plus c'est haut, mieux
+        // c'est). La distance réelle est conservée dans `meta.distance_m`
+        // pour affichage / debug.
         await submitScore.mutateAsync({
           module_slug: MODULE_SLUG,
           submode: difficulty === 'all' ? 'default' : difficulty,
@@ -226,16 +234,17 @@ export default function Geoguesser() {
           player_nickname: identity.nickname,
           player_account_id: identity.accountId,
           is_verified: identity.isVerified,
-          score: finalScore,
-          max_score: max,
+          score: Math.max(0, worst - finalScore),
+          max_score: worst,
           meta: {
-            mode: 'standard',
+            mode: 'distance',
             rounds: pool.length,
             difficulty,
+            distance_m: finalScore,
           },
         });
       } catch {
-        // Best-effort: never block the UX.
+        /* best-effort */
       }
     }
     setStage('result');
@@ -259,7 +268,7 @@ export default function Geoguesser() {
       <Section
         eyebrow="WoT GeoGuesseur"
         title="Devine la map et l’endroit"
-        description="Un screenshot in-game. À toi de retrouver d'abord la map dans le carrousel, puis de cliquer sur la minimap pour pointer où il a été pris."
+        description="Chaque manche : une capture in-game. Choisis la map dans le picker en bas-droite, puis clique sur la minimap pour pointer où le screen a été pris. Plus tu es proche, plus ton score est petit. Le but est d'avoir le score le plus bas possible."
       >
         <div className="max-w-3xl mx-auto space-y-6">
           <Link
@@ -285,14 +294,8 @@ export default function Geoguesser() {
             <Card>
               <CardBody className="p-6 sm:p-8 space-y-6">
                 <div className="grid sm:grid-cols-3 gap-3 text-center">
-                  <Stat
-                    label="Maps actives"
-                    value={maps.data?.length ?? 0}
-                  />
-                  <Stat
-                    label="Screenshots dispo"
-                    value={shots.data.length}
-                  />
+                  <Stat label="Maps actives" value={maps.data?.length ?? 0} />
+                  <Stat label="Screenshots dispo" value={shots.data.length} />
                   <Stat label="Manches / partie" value={ROUNDS_PER_GAME} />
                 </div>
 
@@ -319,13 +322,19 @@ export default function Geoguesser() {
 
                 <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 p-4 text-sm text-atfr-fog leading-relaxed space-y-1">
                   <p>
-                    <strong className="text-atfr-bone">Score :</strong> jusqu'à{' '}
-                    5 000 points par manche selon la précision (× difficulté).
-                    La distance est calculée en mètres sur la map réelle.
+                    <strong className="text-atfr-bone">Score :</strong> distance
+                    réelle entre ton pick et le shot, en mètres. Plus c'est
+                    bas, mieux c'est.
                   </p>
                   <p>
-                    <strong className="text-atfr-bone">Mauvaise map :</strong> 0
-                    point + malus de {WRONG_MAP_MALUS} × difficulté.
+                    <strong className="text-atfr-bone">Mauvaise map :</strong>{' '}
+                    +{cfg.wrong_map_malus_m} m.{' '}
+                    <strong className="text-atfr-bone">Time out :</strong>{' '}
+                    +{cfg.timeout_malus_m} m.
+                  </p>
+                  <p>
+                    <strong className="text-atfr-bone">Timer :</strong>{' '}
+                    {roundTimeS} s par manche.
                   </p>
                 </div>
 
@@ -354,12 +363,24 @@ export default function Geoguesser() {
   }
 
   // -----------------------------------------------------------------
-  // Stage: playing or reveal (same screen, different overlay)
+  // Stage: playing or reveal
   // -----------------------------------------------------------------
   if ((stage === 'playing' || stage === 'reveal') && current) {
     const lastResult = results[index];
-    const showReveal = stage === 'reveal' && lastResult;
+    const showReveal = stage === 'reveal' && !!lastResult;
     const correctMap = showReveal ? lastResult.shot.map : null;
+    const revealPlayer =
+      showReveal &&
+      lastResult.correctMap &&
+      lastResult.selectedX != null &&
+      lastResult.selectedY != null
+        ? { x: lastResult.selectedX, y: lastResult.selectedY }
+        : null;
+    const revealCorrect = showReveal
+      ? { x: lastResult.shot.x_pct, y: lastResult.shot.y_pct }
+      : null;
+    // Map shown in the picker overlay (placement or reveal).
+    const overlayMap = showReveal && correctMap ? correctMap : selectedMap;
 
     return (
       <Section
@@ -369,8 +390,8 @@ export default function Geoguesser() {
         <div className="max-w-5xl mx-auto space-y-5">
           <ProgressBar total={total} currentIndex={index} results={results} />
 
-          {/* Screenshot — relative container hosts the floating picker
-              (bottom-right) and the round timer (top-right) overlays. */}
+          {/* Screenshot — overlays both timer (top-right) and floating
+              picker (bottom-right) so the player never has to scroll. */}
           <Card className="overflow-hidden">
             <CardBody className="p-0">
               <div className="relative aspect-video bg-atfr-graphite">
@@ -383,23 +404,65 @@ export default function Geoguesser() {
                   <div className="absolute top-3 right-3 z-20">
                     <RoundTimer
                       secondsLeft={secondsLeft}
-                      total={ROUND_TIME_S}
+                      total={roundTimeS}
                     />
                   </div>
                 )}
                 <FloatingMapPicker
                   maps={maps.data ?? []}
-                  selectedId={
-                    showReveal ? lastResult.shot.map_id : selectedMapId
-                  }
+                  selectedMap={overlayMap}
                   onSelect={(id) => {
                     if (showReveal) return;
                     setSelectedMapId(id);
                     setPickX(null);
                     setPickY(null);
                   }}
-                  disabled={!!showReveal}
+                  onClearMap={() => {
+                    if (showReveal) return;
+                    setSelectedMapId(null);
+                    setPickX(null);
+                    setPickY(null);
+                  }}
+                  player={
+                    showReveal
+                      ? revealPlayer
+                      : pickX != null && pickY != null
+                        ? { x: pickX, y: pickY }
+                        : null
+                  }
+                  correct={showReveal ? revealCorrect : null}
+                  onPlace={
+                    showReveal
+                      ? undefined
+                      : (x, y) => {
+                          setPickX(x);
+                          setPickY(y);
+                        }
+                  }
+                  distanceLabel={
+                    showReveal && lastResult.distanceM != null
+                      ? formatDistance(lastResult.distanceM)
+                      : null
+                  }
+                  disabled={!!showReveal && !revealCorrect}
                 />
+
+                {/* Tutorial overlay, first run only. */}
+                <AnimatePresence>
+                  {showTutorial && !showReveal && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-30 bg-atfr-ink/85 backdrop-blur-sm flex items-center justify-center p-4"
+                    >
+                      <TutorialCard
+                        onClose={dismissTutorial}
+                        roundTimeS={roundTimeS}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               {current.caption && (
                 <p className="px-4 py-2 text-xs text-atfr-fog border-t border-atfr-gold/10">
@@ -418,12 +481,11 @@ export default function Geoguesser() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <RevealBanner result={lastResult} />
+                <RevealBanner result={lastResult} settings={malus} />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Wrong-map note (shown only on reveal). */}
           {showReveal && lastResult.selectedMapId !== lastResult.shot.map_id && (
             <Alert tone="danger">
               Mauvaise map :{' '}
@@ -436,58 +498,6 @@ export default function Geoguesser() {
             </Alert>
           )}
 
-          {/* Minimap */}
-          {(selectedMap || (showReveal && correctMap)) && (
-            <Card>
-              <CardBody className="p-5">
-                <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-                  <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-                    {showReveal
-                      ? 'Révélation'
-                      : `Place ton point sur ${selectedMap?.name}`}
-                  </p>
-                  {showReveal && lastResult.distanceM != null && (
-                    <Badge variant="outline">
-                      Distance : {formatDistance(lastResult.distanceM)}
-                    </Badge>
-                  )}
-                </div>
-                <Minimap
-                  imageUrl={
-                    showReveal && correctMap
-                      ? correctMap.image_url
-                      : selectedMap?.image_url ?? ''
-                  }
-                  player={
-                    showReveal
-                      ? lastResult.correctMap &&
-                        lastResult.selectedX != null &&
-                        lastResult.selectedY != null
-                        ? { x: lastResult.selectedX, y: lastResult.selectedY }
-                        : null
-                      : pickX != null && pickY != null
-                        ? { x: pickX, y: pickY }
-                        : null
-                  }
-                  correct={
-                    showReveal
-                      ? { x: lastResult.shot.x_pct, y: lastResult.shot.y_pct }
-                      : null
-                  }
-                  onPlace={
-                    showReveal
-                      ? undefined
-                      : (x, y) => {
-                          setPickX(x);
-                          setPickY(y);
-                        }
-                  }
-                  size="lg"
-                />
-              </CardBody>
-            </Card>
-          )}
-
           {/* Actions */}
           <div className="flex justify-end gap-2">
             {showReveal ? (
@@ -495,7 +505,9 @@ export default function Geoguesser() {
                 onClick={nextRound}
                 trailingIcon={<ArrowRight size={14} />}
               >
-                {index < total - 1 ? 'Manche suivante' : 'Voir le score final'}
+                {index < total - 1
+                  ? 'Manche suivante'
+                  : 'Voir le score final'}
               </Button>
             ) : (
               <Button
@@ -513,11 +525,13 @@ export default function Geoguesser() {
   }
 
   // -----------------------------------------------------------------
-  // Stage: result
+  // Stage: result — lower is better, total = sum of distances.
   // -----------------------------------------------------------------
-  const max = maxScoreFor(pool.map((s) => s.difficulty));
-  const pct = max > 0 ? (totalScore / max) * 100 : 0;
-  const tier = scoreTier(pct);
+  const avg = pool.length > 0 ? totalScore / pool.length : 0;
+  const tier = scoreTier(avg);
+  const worst = worstTotalFor(pool.length, malus);
+  // Clamp pct to 0..100 ; closer to 0 is better.
+  const pct = worst > 0 ? Math.min(100, (totalScore / worst) * 100) : 0;
 
   return (
     <Section eyebrow="Résultat final" title={tier.title}>
@@ -525,18 +539,18 @@ export default function Geoguesser() {
         <Card>
           <CardBody className="p-8 text-center space-y-5">
             <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80">
-              Score
+              Score (plus bas = meilleur)
             </p>
             <p className="font-display text-6xl text-atfr-bone">
-              {totalScore.toLocaleString('fr-FR')}{' '}
-              <span className="text-atfr-fog text-3xl">
-                / {max.toLocaleString('fr-FR')}
-              </span>
+              {totalScore.toLocaleString('fr-FR')} m
+            </p>
+            <p className="text-sm text-atfr-fog">
+              Moyenne par manche : {formatDistance(avg)}
             </p>
             <div className="h-2 w-full max-w-md mx-auto rounded-full bg-atfr-graphite overflow-hidden">
               <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${pct}%` }}
+                initial={{ width: '100%' }}
+                animate={{ width: `${100 - pct}%` }}
                 transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
                 className="h-full bg-gradient-gold"
               />
@@ -581,13 +595,19 @@ export default function Geoguesser() {
                       <strong>{r.shot.map?.name ?? '?'}</strong>
                     </p>
                     <p className="text-xs text-atfr-fog mt-1 flex items-center gap-2 flex-wrap">
-                      {r.correctMap ? (
+                      {r.kind === 'distance' && (
                         <span className="inline-flex items-center gap-1 text-atfr-success">
                           <CheckCircle2 size={12} /> Bonne map
                         </span>
-                      ) : (
+                      )}
+                      {r.kind === 'wrong-map' && (
                         <span className="inline-flex items-center gap-1 text-atfr-danger">
                           <XCircle size={12} /> Mauvaise map
+                        </span>
+                      )}
+                      {r.kind === 'timeout' && (
+                        <span className="inline-flex items-center gap-1 text-atfr-warning">
+                          <Clock size={12} /> Time out
                         </span>
                       )}
                       {r.distanceM != null && (
@@ -599,17 +619,11 @@ export default function Geoguesser() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p
-                      className={cn(
-                        'font-display text-xl',
-                        r.score < 0 ? 'text-atfr-danger' : 'text-atfr-bone',
-                      )}
-                    >
-                      {r.score > 0 ? '+' : ''}
+                    <p className="font-display text-xl text-atfr-bone tabular-nums">
                       {r.score.toLocaleString('fr-FR')}
                     </p>
                     <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-                      {r.score < 0 ? 'malus' : 'points'}
+                      mètres
                     </p>
                   </div>
                 </CardBody>
@@ -625,6 +639,65 @@ export default function Geoguesser() {
       </div>
     </Section>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Pool selection — Fisher-Yates + prefer one shot per map (variety),
+// then dedup by id and image_url.
+// ---------------------------------------------------------------------------
+function pickPool(all: ShotWithMap[], n: number): ShotWithMap[] {
+  if (all.length === 0) return [];
+  // Group by map.
+  const byMap = new Map<string, ShotWithMap[]>();
+  for (const s of all) {
+    const k = s.map_id ?? '_none';
+    const arr = byMap.get(k) ?? [];
+    arr.push(s);
+    byMap.set(k, arr);
+  }
+  // Shuffle each bucket independently.
+  for (const arr of byMap.values()) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+  // Pick one shot per map first (random map order), then refill.
+  const mapKeys = [...byMap.keys()];
+  for (let i = mapKeys.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [mapKeys[i], mapKeys[j]] = [mapKeys[j], mapKeys[i]];
+  }
+  const out: ShotWithMap[] = [];
+  const seenIds = new Set<string>();
+  const seenImgs = new Set<string>();
+  for (const k of mapKeys) {
+    if (out.length >= n) break;
+    const arr = byMap.get(k);
+    if (!arr || arr.length === 0) continue;
+    const s = arr.shift()!;
+    if (seenIds.has(s.id) || seenImgs.has(s.image_url)) continue;
+    seenIds.add(s.id);
+    seenImgs.add(s.image_url);
+    out.push(s);
+  }
+  // Refill from the remaining shots (still shuffled inside their bucket).
+  if (out.length < n) {
+    const rest: ShotWithMap[] = [];
+    for (const arr of byMap.values()) rest.push(...arr);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    for (const s of rest) {
+      if (out.length >= n) break;
+      if (seenIds.has(s.id) || seenImgs.has(s.image_url)) continue;
+      seenIds.add(s.id);
+      seenImgs.add(s.image_url);
+      out.push(s);
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -676,32 +749,58 @@ function ProgressBar({
   );
 }
 
-function RevealBanner({ result }: { result: RoundResult }) {
+function RevealBanner({
+  result,
+  settings,
+}: {
+  result: RoundResult;
+  settings: RoundScoreSettings;
+}) {
   const closeHit =
-    result.correctMap && result.distanceM != null && result.distanceM < 50;
+    result.kind === 'distance' &&
+    result.distanceM != null &&
+    result.distanceM < 80;
+  const headline =
+    result.kind === 'wrong-map'
+      ? `Mauvaise map — +${settings.wrongMapMalusM} m de malus`
+      : result.kind === 'timeout'
+        ? `Time out — +${settings.timeoutMalusM} m de malus`
+        : closeHit
+          ? 'Pile au bon endroit !'
+          : 'Bonne map';
+  const tone =
+    result.kind === 'distance'
+      ? 'success'
+      : result.kind === 'timeout'
+        ? 'warning'
+        : 'danger';
+  const Icon =
+    result.kind === 'distance'
+      ? Target
+      : result.kind === 'timeout'
+        ? Clock
+        : XCircle;
+  const toneClass =
+    tone === 'success'
+      ? 'bg-atfr-success/15 border-atfr-success/40 text-atfr-success'
+      : tone === 'warning'
+        ? 'bg-atfr-warning/15 border-atfr-warning/40 text-atfr-warning'
+        : 'bg-atfr-danger/15 border-atfr-danger/40 text-atfr-danger';
   return (
     <Card>
       <CardBody className="p-5 flex items-center gap-4 flex-wrap">
         <div
           className={cn(
-            'inline-flex h-12 w-12 items-center justify-center rounded-lg',
-            result.correctMap
-              ? 'bg-atfr-success/15 border border-atfr-success/40 text-atfr-success'
-              : 'bg-atfr-danger/15 border border-atfr-danger/40 text-atfr-danger',
+            'inline-flex h-12 w-12 items-center justify-center rounded-lg border',
+            toneClass,
           )}
         >
-          {result.correctMap ? <Target size={22} /> : <XCircle size={22} />}
+          <Icon size={22} />
         </div>
         <div className="flex-1">
-          <p className="font-display text-lg text-atfr-bone">
-            {result.correctMap
-              ? closeHit
-                ? 'Pile au bon endroit !'
-                : 'Bonne map'
-              : `Mauvaise map — 0 point + malus de ${WRONG_MAP_MALUS}`}
-          </p>
+          <p className="font-display text-lg text-atfr-bone">{headline}</p>
           <p className="text-xs text-atfr-fog mt-0.5 flex items-center gap-2 flex-wrap">
-            {result.correctMap && result.distanceM != null && (
+            {result.kind === 'distance' && result.distanceM != null && (
               <span>Distance : {formatDistance(result.distanceM)}</span>
             )}
             <span>
@@ -711,20 +810,78 @@ function RevealBanner({ result }: { result: RoundResult }) {
           </p>
         </div>
         <div className="text-right">
-          <p
-            className={cn(
-              'font-display text-3xl',
-              result.score < 0 ? 'text-atfr-danger' : 'text-atfr-bone',
-            )}
-          >
-            {result.score > 0 ? '+' : ''}
+          <p className="font-display text-3xl text-atfr-bone tabular-nums">
             {result.score.toLocaleString('fr-FR')}
           </p>
           <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            {result.score < 0 ? 'malus' : 'points'}
+            mètres
           </p>
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+function TutorialCard({
+  onClose,
+  roundTimeS,
+}: {
+  onClose: () => void;
+  roundTimeS: number;
+}) {
+  return (
+    <Card className="max-w-md w-full">
+      <CardBody className="p-5 space-y-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">
+            Mini-tutoriel
+          </p>
+          <p className="font-display text-xl text-atfr-bone">
+            Comment jouer ?
+          </p>
+        </div>
+        <ol className="space-y-3 text-sm text-atfr-bone">
+          <li className="flex gap-3">
+            <Step n={1} />
+            <span>
+              <strong>Choisis la map</strong> dans la vignette en bas-droite —
+              survole-la pour voir toutes les maps, ou clique pour ouvrir le
+              choix.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Step n={2} />
+            <span>
+              <strong>Clique sur la minimap</strong> qui s'affiche pour
+              pointer où le screenshot a été pris. Bouton « ← Map » pour
+              revenir au choix de la map.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <Step n={3} />
+            <span>
+              <strong>Valide avant la fin du timer</strong> ({roundTimeS}{' '}
+              secondes). Plus ton pin est proche du shot, plus ton score est
+              petit. Score le plus bas = meilleur joueur.
+            </span>
+          </li>
+        </ol>
+        <Button
+          onClick={onClose}
+          className="w-full"
+          trailingIcon={<MapIcon size={14} />}
+        >
+          C'est parti
+        </Button>
+      </CardBody>
+    </Card>
+  );
+}
+
+function Step({ n }: { n: number }) {
+  return (
+    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-atfr-gold/20 border border-atfr-gold/40 text-atfr-gold text-xs font-display">
+      {n}
+    </span>
   );
 }

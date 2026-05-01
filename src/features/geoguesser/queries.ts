@@ -250,6 +250,52 @@ export interface ShotAttemptInput {
   max_round_score: number;
 }
 
+// ----------------------------------------------------------------------
+// Settings (round timer, malus values) — single-row config table.
+// ----------------------------------------------------------------------
+type SettingsRow = Database['public']['Tables']['geoguesser_settings']['Row'];
+type SettingsUpdate =
+  Database['public']['Tables']['geoguesser_settings']['Update'];
+
+export const DEFAULT_GEO_SETTINGS: SettingsRow = {
+  id: 1,
+  round_time_s: 45,
+  wrong_map_malus_m: 2000,
+  timeout_malus_m: 2000,
+  updated_at: new Date(0).toISOString(),
+};
+
+export function useGeoSettings() {
+  return useQuery({
+    queryKey: ['geoguesser_settings'],
+    queryFn: async (): Promise<SettingsRow> => {
+      const { data, error } = await supabase
+        .from('geoguesser_settings')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw error;
+      return data ?? DEFAULT_GEO_SETTINGS;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateGeoSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: SettingsUpdate) => {
+      const { error } = await supabase
+        .from('geoguesser_settings')
+        .update(patch)
+        .eq('id', 1);
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['geoguesser_settings'] }),
+  });
+}
+
 export function useRecordShotAttempt() {
   return useMutation({
     mutationFn: async (input: ShotAttemptInput) => {
