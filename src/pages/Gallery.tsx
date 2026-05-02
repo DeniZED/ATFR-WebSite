@@ -10,14 +10,13 @@ type MediaRow = Database['public']['Tables']['media_assets']['Row'];
 
 export default function Gallery() {
   const [filter, setFilter] = useState<MediaKind | 'all'>('all');
-  const { data, isLoading } = useMediaAssets();
+  const { data, isLoading } = useMediaAssets(
+    filter === 'all' ? undefined : filter,
+    { galleryOnly: true },
+  );
   const [selected, setSelected] = useState<MediaRow | null>(null);
 
-  const filtered = useMemo(
-    () =>
-      (data ?? []).filter((a) => (filter === 'all' ? true : a.kind === filter)),
-    [data, filter],
-  );
+  const filtered = useMemo(() => data ?? [], [data]);
 
   useEffect(() => {
     if (!selected) return;

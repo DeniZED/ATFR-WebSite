@@ -311,6 +311,7 @@ export interface Database {
           height: number | null;
           caption: string | null;
           tags: string[];
+          is_gallery_visible: boolean;
         };
         Insert: {
           id?: string;
@@ -325,6 +326,7 @@ export interface Database {
           height?: number | null;
           caption?: string | null;
           tags?: string[];
+          is_gallery_visible?: boolean;
         };
         Update: {
           id?: string;
@@ -339,6 +341,7 @@ export interface Database {
           height?: number | null;
           caption?: string | null;
           tags?: string[];
+          is_gallery_visible?: boolean;
         };
         Relationships: [];
       };

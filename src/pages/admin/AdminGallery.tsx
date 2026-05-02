@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import {
   Alert,
   Badge,
@@ -19,18 +19,29 @@ import {
 import type { Database, MediaKind } from '@/types/database';
 
 type MediaRow = Database['public']['Tables']['media_assets']['Row'];
+type VisibilityFilter = 'all' | 'gallery' | 'site';
 
 export default function AdminGallery() {
   const [filter, setFilter] = useState<MediaKind | 'all'>('all');
+  const [visibilityFilter, setVisibilityFilter] =
+    useState<VisibilityFilter>('all');
   const { data, isLoading } = useMediaAssets();
   const upload = useUploadMedia();
   const update = useUpdateMedia();
   const remove = useDeleteMedia();
   const [copied, setCopied] = useState<string | null>(null);
 
-  const filtered = (data ?? []).filter((a) =>
-    filter === 'all' ? true : a.kind === filter,
-  );
+  const visibleCount = (data ?? []).filter((a) => a.is_gallery_visible).length;
+  const filtered = (data ?? []).filter((a) => {
+    const kindOk = filter === 'all' ? true : a.kind === filter;
+    const visibilityOk =
+      visibilityFilter === 'all'
+        ? true
+        : visibilityFilter === 'gallery'
+          ? a.is_gallery_visible
+          : !a.is_gallery_visible;
+    return kindOk && visibilityOk;
+  });
 
   async function copy(url: string) {
     await navigator.clipboard.writeText(url);
@@ -46,7 +57,8 @@ export default function AdminGallery() {
         </p>
         <h1 className="font-display text-3xl text-atfr-bone">Galerie</h1>
         <p className="text-sm text-atfr-fog mt-1">
-          Images et vidéos utilisables partout (hero, highlights, palmarès…).
+          Images et vidéos utilisables partout (hero, highlights, palmarès...).
+          Seuls les médias publiés dans la galerie apparaissent sur le site.
         </p>
       </div>
 
@@ -57,7 +69,7 @@ export default function AdminGallery() {
               await upload.mutateAsync({ file });
             }}
             disabled={upload.isPending}
-            label={upload.isPending ? 'Upload en cours…' : 'Uploader un média'}
+            label={upload.isPending ? 'Upload en cours...' : 'Uploader un média'}
             hint="Formats : images (png, jpeg, webp, svg), vidéos (mp4, webm). Max 100 Mo."
           />
           {upload.isError && (
@@ -68,22 +80,54 @@ export default function AdminGallery() {
         </CardBody>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'image', 'video'] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={
-              filter === f
-                ? 'rounded-full bg-atfr-gold text-atfr-ink px-3 py-1 text-xs uppercase tracking-wider'
-                : 'rounded-full border border-atfr-gold/30 px-3 py-1 text-xs uppercase tracking-wider text-atfr-fog hover:text-atfr-bone'
-            }
-          >
-            {f === 'all' ? 'Tous' : f === 'image' ? 'Images' : 'Vidéos'}
-          </button>
-        ))}
+      <div className="flex flex-col gap-3 rounded-lg border border-atfr-gold/15 bg-atfr-carbon/60 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', 'image', 'video'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={
+                filter === f
+                  ? 'rounded-full bg-atfr-gold text-atfr-ink px-3 py-1 text-xs uppercase tracking-wider'
+                  : 'rounded-full border border-atfr-gold/30 px-3 py-1 text-xs uppercase tracking-wider text-atfr-fog hover:text-atfr-bone'
+              }
+            >
+              {f === 'all' ? 'Tous' : f === 'image' ? 'Images' : 'Vidéos'}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {([
+            ['all', 'Tous les usages'],
+            ['gallery', 'Galerie publique'],
+            ['site', 'Assets site'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setVisibilityFilter(value)}
+              className={
+                visibilityFilter === value
+                  ? 'rounded-full bg-atfr-gold text-atfr-ink px-3 py-1 text-xs uppercase tracking-wider'
+                  : 'rounded-full border border-atfr-gold/30 px-3 py-1 text-xs uppercase tracking-wider text-atfr-fog hover:text-atfr-bone'
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-atfr-fog">
+          {visibleCount} média(s) visible(s) dans la galerie publique sur{' '}
+          {data?.length ?? 0} au total.
+        </p>
       </div>
+
+      {update.isError && (
+        <Alert tone="danger">
+          {(update.error as Error).message}
+        </Alert>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-10">
@@ -101,6 +145,7 @@ export default function AdminGallery() {
               copied={copied === a.public_url}
               onUpdate={(patch) => update.mutateAsync({ id: a.id, ...patch })}
               onDelete={() => remove.mutateAsync({ id: a.id, path: a.path })}
+              saving={update.isPending}
               deleting={remove.isPending}
             />
           ))}
@@ -114,8 +159,12 @@ interface MediaCardProps {
   asset: MediaRow;
   onCopy: (url: string) => void;
   copied: boolean;
-  onUpdate: (patch: { caption?: string | null }) => Promise<void>;
+  onUpdate: (patch: {
+    caption?: string | null;
+    is_gallery_visible?: boolean;
+  }) => Promise<void>;
   onDelete: () => Promise<void>;
+  saving: boolean;
   deleting: boolean;
 }
 
@@ -125,6 +174,7 @@ function MediaCard({
   copied,
   onUpdate,
   onDelete,
+  saving,
   deleting,
 }: MediaCardProps) {
   const [caption, setCaption] = useState(asset.caption ?? '');
@@ -152,10 +202,15 @@ function MediaCard({
           )}
         </div>
         <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <Badge variant={asset.kind === 'video' ? 'gold' : 'outline'}>
-              {asset.kind}
-            </Badge>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant={asset.kind === 'video' ? 'gold' : 'outline'}>
+                {asset.kind}
+              </Badge>
+              <Badge variant={asset.is_gallery_visible ? 'success' : 'neutral'}>
+                {asset.is_gallery_visible ? 'Galerie publique' : 'Asset site'}
+              </Badge>
+            </div>
             {asset.size_bytes && (
               <span className="text-xs text-atfr-fog">
                 {(asset.size_bytes / 1024 / 1024).toFixed(2)} Mo
@@ -169,15 +224,33 @@ function MediaCard({
             onChange={(e) => setCaption(e.target.value)}
           />
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {dirty && (
               <Button
                 size="sm"
-                onClick={() => onUpdate({ caption: caption || null })}
+                disabled={saving}
+                onClick={() =>
+                  onUpdate({ caption: caption || null }).catch(() => undefined)
+                }
               >
                 Enregistrer
               </Button>
             )}
+            <Button
+              size="sm"
+              variant={asset.is_gallery_visible ? 'secondary' : 'outline'}
+              leadingIcon={
+                asset.is_gallery_visible ? <EyeOff size={12} /> : <Eye size={12} />
+              }
+              onClick={() =>
+                onUpdate({
+                  is_gallery_visible: !asset.is_gallery_visible,
+                }).catch(() => undefined)
+              }
+              disabled={saving}
+            >
+              {asset.is_gallery_visible ? 'Masquer' : 'Publier'}
+            </Button>
             <Button
               size="sm"
               variant="ghost"
