@@ -95,12 +95,20 @@ interface RoundResult {
   kind: RoundScoreResult['kind'];
 }
 
+interface DifficultyAvailability {
+  mapCount: number;
+  shotCount: number;
+  requiredMapCount: number;
+  disabled: boolean;
+}
+
 export default function Geoguesser() {
   const [stage, setStage] = useState<Stage>('intro');
   const [difficulty, setDifficulty] = useState<DifficultyFilter>('all');
   const [gameMode, setGameMode] = useState<GameMode>('daily');
 
   const maps = useGeoMaps({ activeOnly: true });
+  const allShots = usePublicGeoShots();
   const shots = usePublicGeoShots({ difficulty });
   const settings = useGeoSettings();
   const submitScore = useSubmitScore();
@@ -115,6 +123,7 @@ export default function Geoguesser() {
   const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
   const roundTimeS = cfg.round_time_s;
   const dailyRounds = clampNumber(cfg.daily_challenge_rounds, 1, 20);
+  const roundTarget = getRoundTargetForMode(gameMode, dailyRounds);
   const roundTimeLimitS = getRoundTimeLimit(gameMode, roundTimeS);
   const malus: RoundScoreSettings = {
     wrongMapMalusM: cfg.wrong_map_malus_m,
@@ -144,9 +153,7 @@ export default function Geoguesser() {
       ? activeChallengeKey
       : todayChallengeKey;
   const displayRoundTarget =
-    stage !== 'intro'
-      ? activeRoundTarget
-      : getRoundTargetForMode(gameMode, dailyRounds);
+    stage !== 'intro' ? activeRoundTarget : roundTarget;
   const leaderboardSubmode = getLeaderboardSubmode(
     gameMode,
     difficulty,
@@ -174,6 +181,21 @@ export default function Geoguesser() {
     () => summarizePlayerScores(playerScores.data ?? []),
     [playerScores.data],
   );
+  const difficultyAvailability = useMemo(
+    () => buildDifficultyAvailability(allShots.data ?? [], roundTarget),
+    [allShots.data, roundTarget],
+  );
+  const selectedDifficultyAvailability = difficultyAvailability[difficulty];
+  const canStartGame =
+    !!identity.nickname &&
+    !!selectedDifficultyAvailability &&
+    !selectedDifficultyAvailability.disabled &&
+    !shots.isLoading;
+  const startDisabledReason = !identity.nickname
+    ? 'Choisis d’abord un pseudo'
+    : selectedDifficultyAvailability?.disabled
+      ? `Il faut ${selectedDifficultyAvailability.requiredMapCount} maps minimum pour ce mode.`
+      : null;
 
   // Reset per-round picks + timer when advancing.
   useEffect(() => {
@@ -192,15 +214,30 @@ export default function Geoguesser() {
     return () => clearInterval(id);
   }, [stage, index, showTutorial]);
 
+  useEffect(() => {
+    if (stage !== 'intro' || !allShots.data) return;
+    if (!selectedDifficultyAvailability?.disabled) return;
+    const fallback = getFirstAvailableDifficulty(difficultyAvailability);
+    if (fallback && fallback !== difficulty) {
+      setDifficulty(fallback);
+    }
+  }, [
+    allShots.data,
+    difficulty,
+    difficultyAvailability,
+    selectedDifficultyAvailability,
+    stage,
+  ]);
+
   const selectedMap = useMemo(
     () => (maps.data ?? []).find((m) => m.id === selectedMapId) ?? null,
     [maps.data, selectedMapId],
   );
 
   function startGame() {
-    if (!shots.data || shots.data.length === 0) return;
+    if (!canStartGame || !shots.data || shots.data.length === 0) return;
     const challengeKey = getDailyChallengeKey();
-    const rounds = getRoundTargetForMode(gameMode, dailyRounds);
+    const rounds = roundTarget;
     const subset =
       gameMode === 'daily'
         ? pickPool(
@@ -421,12 +458,14 @@ export default function Geoguesser() {
 
           <IdentityBar />
 
-          {shots.isLoading || maps.isLoading ? (
+          {shots.isLoading || allShots.isLoading || maps.isLoading ? (
             <div className="flex justify-center py-20">
               <Spinner />
             </div>
-          ) : shots.isError ? (
-            <Alert tone="danger">{(shots.error as Error).message}</Alert>
+          ) : shots.isError || allShots.isError ? (
+            <Alert tone="danger">
+              {((shots.error ?? allShots.error) as Error).message}
+            </Alert>
           ) : !shots.data || shots.data.length === 0 ? (
             <Alert tone="warning" title="Pas encore de screenshot">
               L'éditeur travaille dessus. Reviens bientôt.
@@ -439,7 +478,7 @@ export default function Geoguesser() {
                   <Stat label="Screenshots dispo" value={shots.data.length} />
                   <Stat
                     label={gameMode === 'daily' ? 'Screens défi' : 'Manches'}
-                    value={getRoundTargetForMode(gameMode, dailyRounds)}
+                    value={roundTarget}
                   />
                 </div>
 
@@ -454,6 +493,7 @@ export default function Geoguesser() {
                     <DifficultyPicker
                       value={difficulty}
                       onChange={setDifficulty}
+                      availability={difficultyAvailability}
                     />
                   </div>
 
@@ -461,10 +501,15 @@ export default function Geoguesser() {
                     gameMode={gameMode}
                     difficulty={difficulty}
                     roundTimeS={roundTimeLimitS}
-                    roundTarget={getRoundTargetForMode(gameMode, dailyRounds)}
+                    roundTarget={roundTarget}
+                    playableMapCount={
+                      selectedDifficultyAvailability?.mapCount ?? 0
+                    }
                     wrongMapMalusM={cfg.wrong_map_malus_m}
                     timeoutMalusM={cfg.timeout_malus_m}
                     hasNickname={!!identity.nickname}
+                    canStart={canStartGame}
+                    disabledReason={startDisabledReason}
                     onStart={startGame}
                   />
                 </div>
@@ -953,6 +998,65 @@ function getDifficultyDotClass(difficulty: DifficultyFilter): string {
   if (difficulty === 'hard') return 'border-atfr-warning bg-atfr-warning';
   if (difficulty === 'expert') return 'border-atfr-danger bg-atfr-danger';
   return 'border-atfr-fog bg-atfr-fog';
+}
+
+function buildDifficultyAvailability(
+  shots: ShotWithMap[],
+  requiredMapCount: number,
+): Record<DifficultyFilter, DifficultyAvailability> {
+  const empty = (): DifficultyAvailability => ({
+    mapCount: 0,
+    shotCount: 0,
+    requiredMapCount,
+    disabled: requiredMapCount > 0,
+  });
+  const result: Record<DifficultyFilter, DifficultyAvailability> = {
+    all: empty(),
+    easy: empty(),
+    medium: empty(),
+    hard: empty(),
+    expert: empty(),
+  };
+  const byDifficulty: Record<DifficultyFilter, Set<string>> = {
+    all: new Set<string>(),
+    easy: new Set<string>(),
+    medium: new Set<string>(),
+    hard: new Set<string>(),
+    expert: new Set<string>(),
+  };
+  const shotCounts: Record<DifficultyFilter, number> = {
+    all: 0,
+    easy: 0,
+    medium: 0,
+    hard: 0,
+    expert: 0,
+  };
+
+  for (const shot of shots) {
+    byDifficulty.all.add(shot.map_id);
+    byDifficulty[shot.difficulty].add(shot.map_id);
+    shotCounts.all += 1;
+    shotCounts[shot.difficulty] += 1;
+  }
+
+  for (const key of Object.keys(result) as DifficultyFilter[]) {
+    const mapCount = byDifficulty[key].size;
+    result[key] = {
+      mapCount,
+      shotCount: shotCounts[key],
+      requiredMapCount,
+      disabled: mapCount < requiredMapCount,
+    };
+  }
+
+  return result;
+}
+
+function getFirstAvailableDifficulty(
+  availability: Record<DifficultyFilter, DifficultyAvailability>,
+): DifficultyFilter | null {
+  const preferred: DifficultyFilter[] = ['all', 'easy', 'medium', 'hard', 'expert'];
+  return preferred.find((difficulty) => !availability[difficulty].disabled) ?? null;
 }
 
 function getRoundActionStatus(
@@ -1505,9 +1609,11 @@ function GameModeSelector({
 function DifficultyPicker({
   value,
   onChange,
+  availability,
 }: {
   value: DifficultyFilter;
   onChange: (difficulty: DifficultyFilter) => void;
+  availability: Record<DifficultyFilter, DifficultyAvailability>;
 }) {
   const options: Array<{
     value: DifficultyFilter;
@@ -1539,17 +1645,29 @@ function DifficultyPicker({
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         {options.map((option) => {
           const active = value === option.value;
+          const status = availability[option.value];
+          const disabled = status.disabled;
           return (
             <button
               key={option.value}
               type="button"
               aria-pressed={active}
-              onClick={() => onChange(option.value)}
+              disabled={disabled}
+              title={
+                disabled
+                  ? `${status.mapCount}/${status.requiredMapCount} maps disponibles`
+                  : undefined
+              }
+              onClick={() => {
+                if (!disabled) onChange(option.value);
+              }}
               className={cn(
                 'rounded-md border p-3 text-left transition-colors',
-                active
-                  ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
-                  : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
+                disabled
+                  ? 'cursor-not-allowed border-atfr-gold/10 bg-atfr-graphite/25 text-atfr-fog opacity-45 grayscale'
+                  : active
+                    ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
+                    : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
               )}
             >
               <span className="flex items-center gap-2 text-sm font-medium">
@@ -1562,6 +1680,11 @@ function DifficultyPicker({
                 {option.label}
               </span>
               <span className="mt-2 block text-xs text-atfr-fog">
+                {disabled
+                  ? `${status.mapCount}/${status.requiredMapCount} maps nécessaires`
+                  : `${status.mapCount} maps · ${status.shotCount} screens`}
+              </span>
+              <span className="mt-1 block text-[10px] text-atfr-fog/80">
                 {option.detail}
               </span>
             </button>
@@ -1577,18 +1700,24 @@ function SetupSummaryPanel({
   difficulty,
   roundTimeS,
   roundTarget,
+  playableMapCount,
   wrongMapMalusM,
   timeoutMalusM,
   hasNickname,
+  canStart,
+  disabledReason,
   onStart,
 }: {
   gameMode: GameMode;
   difficulty: DifficultyFilter;
   roundTimeS: number;
   roundTarget: number;
+  playableMapCount: number;
   wrongMapMalusM: number;
   timeoutMalusM: number;
   hasNickname: boolean;
+  canStart: boolean;
+  disabledReason: string | null;
   onStart: () => void;
 }) {
   return (
@@ -1609,6 +1738,11 @@ function SetupSummaryPanel({
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <SetupMetric label="Manches" value={String(roundTarget)} />
+        <SetupMetric
+          label="Maps jouables"
+          value={`${playableMapCount}/${roundTarget}`}
+          tone={playableMapCount >= roundTarget ? 'default' : 'warning'}
+        />
         <SetupMetric label="Timer" value={`${roundTimeS}s`} />
         <SetupMetric
           label="Mauvaise map"
@@ -1633,20 +1767,38 @@ function SetupSummaryPanel({
         size="lg"
         className="mt-5 w-full"
         onClick={onStart}
-        disabled={!hasNickname}
+        disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
       >
         {hasNickname
           ? getStartButtonLabel(gameMode)
           : 'Choisis d’abord un pseudo'}
       </Button>
+      {disabledReason && (
+        <p className="mt-2 text-xs text-atfr-warning">{disabledReason}</p>
+      )}
     </div>
   );
 }
 
-function SetupMetric({ label, value }: { label: string; value: string }) {
+function SetupMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'warning';
+}) {
   return (
-    <div className="rounded bg-atfr-graphite/55 px-3 py-2">
+    <div
+      className={cn(
+        'rounded px-3 py-2',
+        tone === 'warning'
+          ? 'border border-atfr-warning/30 bg-atfr-warning/10'
+          : 'bg-atfr-graphite/55',
+      )}
+    >
       <p className="text-[9px] uppercase tracking-[0.16em] text-atfr-fog">
         {label}
       </p>
