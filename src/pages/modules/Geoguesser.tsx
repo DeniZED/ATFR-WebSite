@@ -10,6 +10,7 @@ import {
   Clock,
   Copy,
   Crown,
+  EyeOff,
   Flame,
   Map as MapIcon,
   RotateCcw,
@@ -19,6 +20,7 @@ import {
   Trophy,
   Users,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import {
   Alert,
@@ -65,9 +67,14 @@ import {
 
 const MODULE_SLUG = 'wot-geoguesser';
 const ROUNDS_PER_GAME = 5;
+const SPRINT_ROUNDS_PER_GAME = 10;
+const SPRINT_ROUND_TIME_S = 20;
+const SPRINT_TIME_PENALTY_M = 12;
+const BLIND_ROUNDS_PER_GAME = 5;
+const BLIND_PREVIEW_SECONDS = 5;
 const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
 type DifficultyFilter = QuizDifficulty | 'all';
-type GameMode = 'daily' | 'random';
+type GameMode = 'daily' | 'random' | 'sprint' | 'blind';
 
 type Stage = 'intro' | 'playing' | 'reveal' | 'result';
 
@@ -81,6 +88,9 @@ interface RoundResult {
   distanceM: number | null;
   /** Score de la manche en mètres (lower-is-better). */
   score: number;
+  baseScore: number;
+  timePenalty: number;
+  elapsedSeconds: number;
   kind: RoundScoreResult['kind'];
 }
 
@@ -99,6 +109,7 @@ export default function Geoguesser() {
   const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
   const roundTimeS = cfg.round_time_s;
   const dailyRounds = clampNumber(cfg.daily_challenge_rounds, 1, 20);
+  const roundTimeLimitS = getRoundTimeLimit(gameMode, roundTimeS);
   const malus: RoundScoreSettings = {
     wrongMapMalusM: cfg.wrong_map_malus_m,
     timeoutMalusM: cfg.timeout_malus_m,
@@ -111,7 +122,7 @@ export default function Geoguesser() {
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [pickX, setPickX] = useState<number | null>(null);
   const [pickY, setPickY] = useState<number | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(roundTimeS);
+  const [secondsLeft, setSecondsLeft] = useState(roundTimeLimitS);
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeChallengeKey, setActiveChallengeKey] = useState(
     getDailyChallengeKey(),
@@ -127,9 +138,9 @@ export default function Geoguesser() {
       ? activeChallengeKey
       : todayChallengeKey;
   const displayRoundTarget =
-    gameMode === 'daily' && stage !== 'intro'
+    stage !== 'intro'
       ? activeRoundTarget
-      : dailyRounds;
+      : getRoundTargetForMode(gameMode, dailyRounds);
   const leaderboardSubmode = getLeaderboardSubmode(
     gameMode,
     difficulty,
@@ -140,6 +151,18 @@ export default function Geoguesser() {
     () => results.reduce((acc, r) => acc + r.score, 0),
     [results],
   );
+  const baseTotalScore = useMemo(
+    () => results.reduce((acc, r) => acc + r.baseScore, 0),
+    [results],
+  );
+  const totalTimePenalty = useMemo(
+    () => results.reduce((acc, r) => acc + r.timePenalty, 0),
+    [results],
+  );
+  const totalElapsedSeconds = useMemo(
+    () => results.reduce((acc, r) => acc + r.elapsedSeconds, 0),
+    [results],
+  );
   const resultStats = useMemo(() => summarizeResults(results), [results]);
 
   // Reset per-round picks + timer when advancing.
@@ -147,17 +170,17 @@ export default function Geoguesser() {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
-    setSecondsLeft(roundTimeS);
-  }, [index, stage, roundTimeS]);
+    setSecondsLeft(roundTimeLimitS);
+  }, [index, stage, roundTimeLimitS]);
 
   // 1Hz countdown only while playing.
   useEffect(() => {
-    if (stage !== 'playing') return;
+    if (stage !== 'playing' || showTutorial) return;
     const id = setInterval(() => {
       setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(id);
-  }, [stage, index]);
+  }, [stage, index, showTutorial]);
 
   const selectedMap = useMemo(
     () => (maps.data ?? []).find((m) => m.id === selectedMapId) ?? null,
@@ -167,7 +190,7 @@ export default function Geoguesser() {
   function startGame() {
     if (!shots.data || shots.data.length === 0) return;
     const challengeKey = getDailyChallengeKey();
-    const rounds = gameMode === 'daily' ? dailyRounds : ROUNDS_PER_GAME;
+    const rounds = getRoundTargetForMode(gameMode, dailyRounds);
     const subset =
       gameMode === 'daily'
         ? pickPool(
@@ -186,6 +209,7 @@ export default function Geoguesser() {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
+    setSecondsLeft(roundTimeLimitS);
     if (typeof window !== 'undefined' && !localStorage.getItem(TUTORIAL_KEY)) {
       setShowTutorial(true);
     }
@@ -221,6 +245,8 @@ export default function Geoguesser() {
       distanceM: d ?? 0,
       settings: malus,
     });
+    const elapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
+    const timePenalty = getSprintTimePenalty(gameMode, r.kind, elapsedSeconds);
     setResults((prev) => [
       ...prev,
       {
@@ -230,7 +256,10 @@ export default function Geoguesser() {
         selectedY: hasPick ? pickY : null,
         correctMap,
         distanceM: d,
-        score: r.score,
+        score: r.score + timePenalty,
+        baseScore: r.score,
+        timePenalty,
+        elapsedSeconds,
         kind: r.kind,
       },
     ]);
@@ -238,15 +267,18 @@ export default function Geoguesser() {
     // c'est élevé mieux c'est, pour que la RPC garde son comportement.
     const maxRound = diagonalM(widthM, heightM);
     const perf = Math.max(0, Math.round(maxRound - (d ?? maxRound)));
-    recordAttempt.mutate(
-      {
-        shot_id: current.id,
-        correct_map: correctMap,
-        round_score: perf,
-        max_round_score: Math.round(maxRound),
-      },
-      { onError: () => undefined },
-    );
+    // Les modes challenge ne recalibrent pas la difficulté des screenshots.
+    if (gameMode === 'daily' || gameMode === 'random') {
+      recordAttempt.mutate(
+        {
+          shot_id: current.id,
+          correct_map: correctMap,
+          round_score: perf,
+          max_round_score: Math.round(maxRound),
+        },
+        { onError: () => undefined },
+      );
+    }
     setStage('reveal');
   }
 
@@ -266,7 +298,19 @@ export default function Geoguesser() {
     }
     // End of game: submit + show result.
     const finalScore = results.reduce((acc, r) => acc + r.score, 0);
-    const worst = Math.max(1, worstTotalFor(pool.length, malus));
+    const finalBaseScore = results.reduce((acc, r) => acc + r.baseScore, 0);
+    const finalTimePenalty = results.reduce(
+      (acc, r) => acc + r.timePenalty,
+      0,
+    );
+    const finalElapsedSeconds = results.reduce(
+      (acc, r) => acc + r.elapsedSeconds,
+      0,
+    );
+    const worst = Math.max(
+      1,
+      getWorstTotalForMode(gameMode, pool.length, malus, roundTimeLimitS),
+    );
     const finalStats = summarizeResults(results);
     if (identity.nickname && pool.length > 0) {
       try {
@@ -290,13 +334,16 @@ export default function Geoguesser() {
           score: Math.max(0, worst - finalScore),
           max_score: worst,
           meta: {
-            mode: 'distance',
+            mode: gameMode === 'sprint' ? 'distance_time' : 'distance',
             game_mode: gameMode,
             daily_key: gameMode === 'daily' ? activeChallengeKey : null,
             daily_rounds: gameMode === 'daily' ? activeRoundTarget : null,
             rounds: pool.length,
             difficulty,
             distance_m: finalScore,
+            raw_distance_m: finalBaseScore,
+            time_penalty_m: finalTimePenalty,
+            elapsed_seconds: finalElapsedSeconds,
             avg_distance_m: pool.length > 0 ? finalScore / pool.length : 0,
             map_accuracy_pct: finalStats.mapAccuracyPct,
             correct_maps: finalStats.correctMaps,
@@ -324,16 +371,15 @@ export default function Geoguesser() {
   }
 
   async function copyClanChallenge() {
-    const modeLabel =
-      gameMode === 'daily'
-        ? `défi du jour ${formatChallengeDate(activeChallengeKey)}`
-        : `série ${difficulty === 'all' ? 'mixte' : DIFFICULTY_LABELS[difficulty]}`;
+    const modeLabel = formatModeLabel(gameMode, activeChallengeKey);
     const url =
       typeof window !== 'undefined'
         ? `${window.location.origin}/modules/wot-geoguesser`
         : '/modules/wot-geoguesser';
+    const difficultyLabel =
+      difficulty === 'all' ? 'mixte' : DIFFICULTY_LABELS[difficulty];
     const text = [
-      `J'ai fait ${formatDistance(totalScore)} sur le GeoGuesseur ATFR (${modeLabel}).`,
+      `J'ai fait ${formatDistance(totalScore)} sur le GeoGuesseur ATFR (${modeLabel}, ${difficultyLabel}).`,
       `${resultStats.correctMaps}/${resultStats.rounds} maps trouvées, meilleure série ${resultStats.bestStreak}.`,
       `Qui me bat ? ${url}`,
     ].join(' ');
@@ -382,12 +428,8 @@ export default function Geoguesser() {
                   <Stat label="Maps actives" value={maps.data?.length ?? 0} />
                   <Stat label="Screenshots dispo" value={shots.data.length} />
                   <Stat
-                    label={
-                      gameMode === 'daily' ? 'Screens défi' : 'Manches / série'
-                    }
-                    value={
-                      gameMode === 'daily' ? dailyRounds : ROUNDS_PER_GAME
-                    }
+                    label={gameMode === 'daily' ? 'Screens défi' : 'Manches'}
+                    value={getRoundTargetForMode(gameMode, dailyRounds)}
                   />
                 </div>
 
@@ -395,6 +437,11 @@ export default function Geoguesser() {
                   value={gameMode}
                   onChange={setGameMode}
                   challengeKey={displayChallengeKey}
+                />
+
+                <ModeRules
+                  gameMode={gameMode}
+                  roundTimeS={roundTimeLimitS}
                 />
 
                 <div className="space-y-3">
@@ -432,7 +479,7 @@ export default function Geoguesser() {
                   </p>
                   <p>
                     <strong className="text-atfr-bone">Timer :</strong>{' '}
-                    {roundTimeS} s par manche.
+                    {roundTimeLimitS} s par manche.
                   </p>
                 </div>
 
@@ -482,6 +529,19 @@ export default function Geoguesser() {
     // Map shown in the picker overlay (placement or reveal).
     const overlayMap = showReveal && correctMap ? correctMap : selectedMap;
     const canValidate = !!selectedMapId && pickX != null && pickY != null;
+    const roundElapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
+    const blindPreviewLimitS = Math.min(
+      BLIND_PREVIEW_SECONDS,
+      roundTimeLimitS,
+    );
+    const blindPreviewLeft = Math.ceil(
+      Math.max(0, blindPreviewLimitS - roundElapsedSeconds),
+    );
+    const isBlindCurtainVisible =
+      gameMode === 'blind' &&
+      !showReveal &&
+      !showTutorial &&
+      roundElapsedSeconds >= blindPreviewLimitS;
 
     return (
       <Section
@@ -506,13 +566,31 @@ export default function Geoguesser() {
                 <img
                   src={current.image_url}
                   alt=""
-                  className="h-full w-full object-cover"
+                  className={cn(
+                    'h-full w-full object-cover transition-opacity duration-300',
+                    isBlindCurtainVisible && 'opacity-0',
+                  )}
                 />
+                {gameMode === 'blind' && !showReveal && (
+                  <div className="absolute left-3 top-3 z-20 rounded-md border border-atfr-gold/30 bg-atfr-ink/85 px-3 py-2 text-xs text-atfr-bone backdrop-blur">
+                    <span className="inline-flex items-center gap-1">
+                      <EyeOff size={13} className="text-atfr-gold" />
+                      {isBlindCurtainVisible
+                        ? 'Screen masqué'
+                        : `Mémoire ${blindPreviewLeft}s`}
+                    </span>
+                  </div>
+                )}
+                <AnimatePresence>
+                  {isBlindCurtainVisible && (
+                    <BlindGuessCurtain previewSeconds={blindPreviewLimitS} />
+                  )}
+                </AnimatePresence>
                 {!showReveal && (
                   <div className="absolute top-3 right-3 z-20">
                     <RoundTimer
                       secondsLeft={secondsLeft}
-                      total={roundTimeS}
+                      total={roundTimeLimitS}
                     />
                   </div>
                 )}
@@ -566,13 +644,14 @@ export default function Geoguesser() {
                     >
                       <TutorialCard
                         onClose={dismissTutorial}
-                        roundTimeS={roundTimeS}
+                        roundTimeS={roundTimeLimitS}
+                        gameMode={gameMode}
                       />
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-              {current.caption && (
+              {current.caption && (gameMode !== 'blind' || showReveal) && (
                 <p className="px-4 py-2 text-xs text-atfr-fog border-t border-atfr-gold/10">
                   {current.caption}
                 </p>
@@ -641,7 +720,10 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   const avg = pool.length > 0 ? totalScore / pool.length : 0;
   const tier = scoreTier(avg);
-  const worst = Math.max(1, worstTotalFor(pool.length, malus));
+  const worst = Math.max(
+    1,
+    getWorstTotalForMode(gameMode, pool.length, malus, roundTimeLimitS),
+  );
   // Clamp pct to 0..100 ; closer to 0 is better.
   const pct = worst > 0 ? Math.min(100, (totalScore / worst) * 100) : 0;
 
@@ -651,17 +733,17 @@ export default function Geoguesser() {
         <Card>
           <CardBody className="p-8 text-center space-y-5">
             <div className="flex justify-center gap-2 flex-wrap">
-              <Badge variant={gameMode === 'daily' ? 'gold' : 'outline'}>
-                {gameMode === 'daily'
-                  ? `Défi ${formatChallengeDate(activeChallengeKey)}`
-                  : 'Série libre'}
+              <Badge variant={getModeBadgeVariant(gameMode)}>
+                {formatModeLabel(gameMode, activeChallengeKey)}
               </Badge>
               <Badge variant="outline">
                 {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
               </Badge>
             </div>
             <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80">
-              Score (plus bas = meilleur)
+              {gameMode === 'sprint'
+                ? 'Score sprint (distance + chrono)'
+                : 'Score (plus bas = meilleur)'}
             </p>
             <p className="font-display text-5xl sm:text-6xl text-atfr-bone">
               {formatDistance(totalScore)}
@@ -669,6 +751,13 @@ export default function Geoguesser() {
             <p className="text-sm text-atfr-fog">
               Moyenne par manche : {formatDistance(avg)}
             </p>
+            {gameMode === 'sprint' && (
+              <p className="text-xs text-atfr-fog">
+                Distance brute {formatDistance(baseTotalScore)} · chrono{' '}
+                {formatDuration(totalElapsedSeconds)} · pénalité{' '}
+                {formatDistance(totalTimePenalty)}
+              </p>
+            )}
             <div className="h-2 w-full max-w-md mx-auto rounded-full bg-atfr-graphite overflow-hidden">
               <motion.div
                 initial={{ width: '100%' }}
@@ -750,6 +839,12 @@ export default function Geoguesser() {
                       {r.distanceM != null && (
                         <span>· Distance {formatDistance(r.distanceM)}</span>
                       )}
+                      {r.timePenalty > 0 && (
+                        <span>
+                          · Chrono +{formatDistance(r.timePenalty)} (
+                          {formatDuration(r.elapsedSeconds)})
+                        </span>
+                      )}
                       <Badge variant="outline">
                         {DIFFICULTY_LABELS[r.shot.difficulty]}
                       </Badge>
@@ -812,6 +907,66 @@ function formatChallengeDate(key: string): string {
   return month && day ? `${day}/${month}` : key;
 }
 
+function getRoundTargetForMode(mode: GameMode, dailyRounds: number): number {
+  if (mode === 'daily') return dailyRounds;
+  if (mode === 'sprint') return SPRINT_ROUNDS_PER_GAME;
+  if (mode === 'blind') return BLIND_ROUNDS_PER_GAME;
+  return ROUNDS_PER_GAME;
+}
+
+function getRoundTimeLimit(mode: GameMode, roundTimeS: number): number {
+  if (mode === 'sprint') {
+    return Math.max(5, Math.min(roundTimeS, SPRINT_ROUND_TIME_S));
+  }
+  return roundTimeS;
+}
+
+function getSprintTimePenalty(
+  mode: GameMode,
+  kind: RoundScoreResult['kind'],
+  elapsedSeconds: number,
+): number {
+  if (mode !== 'sprint' || kind !== 'distance') return 0;
+  return Math.round(Math.max(0, elapsedSeconds) * SPRINT_TIME_PENALTY_M);
+}
+
+function getWorstTotalForMode(
+  mode: GameMode,
+  rounds: number,
+  settings: RoundScoreSettings,
+  roundTimeS: number,
+): number {
+  const baseWorst = worstTotalFor(rounds, settings);
+  if (mode !== 'sprint') return baseWorst;
+  const sprintWorst =
+    rounds *
+    (settings.timeoutMalusM + roundTimeS * SPRINT_TIME_PENALTY_M);
+  return Math.max(baseWorst, sprintWorst);
+}
+
+function formatModeLabel(mode: GameMode, challengeKey: string): string {
+  if (mode === 'daily') return `Défi ${formatChallengeDate(challengeKey)}`;
+  if (mode === 'sprint') return 'Sprint';
+  if (mode === 'blind') return 'Blind Guess';
+  return 'Série libre';
+}
+
+type BadgeVariant = 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'outline';
+
+function getModeBadgeVariant(mode: GameMode): BadgeVariant {
+  if (mode === 'daily') return 'gold';
+  if (mode === 'sprint') return 'warning';
+  if (mode === 'blind') return 'neutral';
+  return 'outline';
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return minutes > 0 ? `${minutes}m ${rest.toString().padStart(2, '0')}s` : `${rest}s`;
+}
+
 function getLeaderboardSubmode(
   mode: GameMode,
   difficulty: DifficultyFilter,
@@ -819,9 +974,16 @@ function getLeaderboardSubmode(
   dailyRounds: number,
 ): string {
   const difficultyKey = difficulty === 'all' ? 'default' : difficulty;
-  return mode === 'daily'
-    ? `daily:${challengeKey}:${difficultyKey}:${dailyRounds}`
-    : difficultyKey;
+  if (mode === 'daily') {
+    return `daily:${challengeKey}:${difficultyKey}:${dailyRounds}`;
+  }
+  if (mode === 'sprint') {
+    return `sprint:${difficultyKey}:${SPRINT_ROUNDS_PER_GAME}`;
+  }
+  if (mode === 'blind') {
+    return `blind:${difficultyKey}:${BLIND_ROUNDS_PER_GAME}`;
+  }
+  return difficultyKey;
 }
 
 function createSeededRandom(seed: string): () => number {
@@ -1089,7 +1251,7 @@ function GameModeSelector({
       <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
         Mode
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <ModeButton
           active={value === 'daily'}
           icon={<CalendarDays size={16} />}
@@ -1104,9 +1266,59 @@ function GameModeSelector({
           detail={`${ROUNDS_PER_GAME} manches tirées au hasard`}
           onClick={() => onChange('random')}
         />
+        <ModeButton
+          active={value === 'sprint'}
+          icon={<Zap size={16} />}
+          title="Sprint"
+          detail={`${SPRINT_ROUNDS_PER_GAME} manches · ${SPRINT_ROUND_TIME_S}s max`}
+          onClick={() => onChange('sprint')}
+        />
+        <ModeButton
+          active={value === 'blind'}
+          icon={<EyeOff size={16} />}
+          title="Blind Guess"
+          detail={`Screen visible ${BLIND_PREVIEW_SECONDS}s puis mémoire`}
+          onClick={() => onChange('blind')}
+        />
       </div>
     </div>
   );
+}
+
+function ModeRules({
+  gameMode,
+  roundTimeS,
+}: {
+  gameMode: GameMode;
+  roundTimeS: number;
+}) {
+  if (gameMode === 'sprint') {
+    return (
+      <div className="rounded-md border border-atfr-warning/30 bg-atfr-warning/10 p-4 text-sm text-atfr-bone leading-relaxed">
+        <p className="font-medium text-atfr-warning">Sprint</p>
+        <p className="mt-1 text-atfr-fog">
+          {SPRINT_ROUNDS_PER_GAME} manches, {roundTimeS}s par screen. Une bonne
+          map reçoit une pénalité chrono de {SPRINT_TIME_PENALTY_M} m par
+          seconde écoulée.
+        </p>
+      </div>
+    );
+  }
+
+  if (gameMode === 'blind') {
+    return (
+      <div className="rounded-md border border-atfr-gold/20 bg-atfr-graphite/40 p-4 text-sm text-atfr-bone leading-relaxed">
+        <p className="font-medium text-atfr-gold">Blind Guess</p>
+        <p className="mt-1 text-atfr-fog">
+          Le screenshot reste visible {Math.min(BLIND_PREVIEW_SECONDS, roundTimeS)}s,
+          puis il disparaît. Tu dois choisir la map et placer le point de
+          mémoire.
+        </p>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function ModeButton({
@@ -1167,10 +1379,8 @@ function RoundStatusBar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-atfr-gold/10 bg-atfr-carbon/70 px-3 py-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={gameMode === 'daily' ? 'gold' : 'outline'}>
-          {gameMode === 'daily'
-            ? `Défi ${formatChallengeDate(challengeKey)}`
-            : 'Série libre'}
+        <Badge variant={getModeBadgeVariant(gameMode)}>
+          {formatModeLabel(gameMode, challengeKey)}
         </Badge>
         <Badge variant="outline">
           {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
@@ -1327,7 +1537,11 @@ function GeoguesserLeaderboardPanel({
   const title =
     gameMode === 'daily'
       ? `Classement du défi ${formatChallengeDate(challengeKey)}`
-      : 'Classement GeoGuesseur';
+      : `Classement ${formatModeLabel(gameMode, challengeKey)}`;
+  const description =
+    gameMode === 'sprint'
+      ? 'Meilleur score par joueur, avec distance et chrono combinés.'
+      : 'Meilleur score par joueur, distance réelle et précision map.';
 
   return (
     <Card>
@@ -1339,7 +1553,7 @@ function GeoguesserLeaderboardPanel({
               {title}
             </h3>
             <p className="text-xs text-atfr-fog mt-1">
-              Meilleur score par joueur, distance réelle et précision map.
+              {description}
             </p>
           </div>
           <div className="flex gap-1">
@@ -1373,6 +1587,7 @@ function GeoguesserLeaderboardPanel({
                 entry={entry}
                 rank={idx + 1}
                 isMe={isLeaderboardEntryMe(entry, me)}
+                gameMode={gameMode}
               />
             ))}
           </ol>
@@ -1386,20 +1601,25 @@ function GeoguesserLeaderboardRow({
   entry,
   rank,
   isMe,
+  gameMode,
 }: {
   entry: LeaderboardEntry;
   rank: number;
   isMe: boolean;
+  gameMode: GameMode;
 }) {
-  const distanceM =
+  const scoreM =
     getMetaNumber(entry.meta, 'distance_m') ??
     Math.max(0, entry.max_score - entry.score);
+  const rawDistanceM = getMetaNumber(entry.meta, 'raw_distance_m');
+  const elapsedSeconds = getMetaNumber(entry.meta, 'elapsed_seconds');
   const rounds = getMetaNumber(entry.meta, 'rounds');
-  const avgM = rounds && rounds > 0 ? distanceM / rounds : null;
+  const avgM = rounds && rounds > 0 ? scoreM / rounds : null;
   const mapAccuracy = getMetaNumber(entry.meta, 'map_accuracy_pct');
   const bestStreak = getMetaNumber(entry.meta, 'best_streak');
   const dailyKey = getMetaString(entry.meta, 'daily_key');
   const pct = Math.round(entry.ratio * 100);
+  const isSprint = gameMode === 'sprint';
 
   return (
     <li
@@ -1438,10 +1658,10 @@ function GeoguesserLeaderboardRow({
         </div>
         <div className="text-right shrink-0">
           <p className="font-display text-xl text-atfr-bone tabular-nums">
-            {formatDistance(distanceM)}
+            {formatDistance(scoreM)}
           </p>
           <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            perf {pct}%
+            {isSprint ? 'score' : 'perf'} {pct}%
           </p>
         </div>
       </div>
@@ -1451,12 +1671,28 @@ function GeoguesserLeaderboardRow({
           value={avgM != null ? formatDistance(avgM) : '—'}
         />
         <LeaderboardMetric
-          label="Maps"
-          value={mapAccuracy != null ? `${mapAccuracy}%` : '—'}
+          label={isSprint ? 'Temps' : 'Maps'}
+          value={
+            isSprint
+              ? elapsedSeconds != null
+                ? formatDuration(elapsedSeconds)
+                : '—'
+              : mapAccuracy != null
+                ? `${mapAccuracy}%`
+                : '—'
+          }
         />
         <LeaderboardMetric
-          label="Série"
-          value={bestStreak != null ? String(bestStreak) : '—'}
+          label={isSprint ? 'Distance' : 'Série'}
+          value={
+            isSprint
+              ? rawDistanceM != null
+                ? formatDistance(rawDistanceM)
+                : '—'
+              : bestStreak != null
+                ? String(bestStreak)
+                : '—'
+          }
         />
       </div>
     </li>
@@ -1631,6 +1867,12 @@ function RevealBanner({
             {result.kind === 'distance' && result.distanceM != null && (
               <span>Distance : {formatDistance(result.distanceM)}</span>
             )}
+            {result.timePenalty > 0 && (
+              <span>
+                Chrono : +{formatDistance(result.timePenalty)} (
+                {formatDuration(result.elapsedSeconds)})
+              </span>
+            )}
             <span>
               <Camera size={12} className="inline mr-1" />
               {result.shot.map?.name}
@@ -1653,12 +1895,38 @@ function RevealBanner({
   );
 }
 
+function BlindGuessCurtain({ previewSeconds }: { previewSeconds: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-10 flex items-center justify-center bg-atfr-ink"
+    >
+      <div className="mx-4 max-w-md text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-atfr-gold/40 bg-atfr-gold/10 text-atfr-gold">
+          <EyeOff size={24} />
+        </div>
+        <p className="font-display text-2xl text-atfr-bone">
+          Screen masqué
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-atfr-fog">
+          Tu avais {previewSeconds}s pour mémoriser la scène. Choisis la map et
+          place ton point de mémoire.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 function TutorialCard({
   onClose,
   roundTimeS,
+  gameMode,
 }: {
   onClose: () => void;
   roundTimeS: number;
+  gameMode: GameMode;
 }) {
   return (
     <Card className="max-w-md w-full">
@@ -1697,6 +1965,18 @@ function TutorialCard({
             </span>
           </li>
         </ol>
+        {gameMode === 'sprint' && (
+          <p className="rounded-md border border-atfr-warning/30 bg-atfr-warning/10 p-3 text-xs text-atfr-bone">
+            Mode Sprint : valide vite. Chaque seconde utilisée ajoute une
+            petite pénalité si tu as trouvé la bonne map.
+          </p>
+        )}
+        {gameMode === 'blind' && (
+          <p className="rounded-md border border-atfr-gold/20 bg-atfr-graphite/50 p-3 text-xs text-atfr-bone">
+            Mode Blind Guess : mémorise le screenshot au lancement, il sera
+            masqué après {Math.min(BLIND_PREVIEW_SECONDS, roundTimeS)}s.
+          </p>
+        )}
         <Button
           onClick={onClose}
           className="w-full"
