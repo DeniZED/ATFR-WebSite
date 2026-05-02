@@ -19,6 +19,7 @@ import { Badge, Button, Section, Spinner } from '@/components/ui';
 import { useEvents } from '@/features/events/queries';
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
 import type { Database, EventType } from '@/types/database';
+import { useContent } from '@/hooks/useContent';
 
 type EventRow = Database['public']['Tables']['events']['Row'];
 
@@ -44,6 +45,7 @@ function eventTimeLabel(event: EventRow) {
 }
 
 export function NextOperation() {
+  const { get } = useContent();
   const { data, isLoading } = useEvents();
   const events = useMemo(() => {
     const now = Date.now();
@@ -62,9 +64,9 @@ export function NextOperation() {
 
   return (
     <Section
-      eyebrow="Agenda clan"
-      title="Prochaine opération"
-      description="Une home plus vivante montre immédiatement ce qui arrive : entraînement, tournoi, soirée clan ou rendez-vous vocal."
+      eyebrow={get('next_operation_eyebrow')}
+      title={get('next_operation_title')}
+      description={get('next_operation_text')}
       className="pt-10 sm:pt-16"
     >
       {isLoading ? (
@@ -86,15 +88,14 @@ export function NextOperation() {
           <div className="relative mx-auto max-w-2xl">
             <Calendar size={34} className="mx-auto text-atfr-gold" />
             <h3 className="mt-4 font-display text-2xl text-atfr-bone">
-              Aucun événement public planifié
+              {get('next_operation_empty_title')}
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-atfr-fog">
-              Ajoute le prochain entraînement ou tournoi depuis l'admin pour le
-              faire apparaître ici automatiquement.
+              {get('next_operation_empty_text')}
             </p>
             <Link to="/evenements" className="mt-6 inline-flex">
               <Button variant="outline" trailingIcon={<ArrowRight size={14} />}>
-                Voir l'agenda
+                {get('next_operation_empty_cta')}
               </Button>
             </Link>
           </div>
@@ -137,7 +138,7 @@ export function NextOperation() {
               </div>
               <Link to="/evenements" className="shrink-0">
                 <Button variant="outline" trailingIcon={<ArrowRight size={14} />}>
-                  Agenda
+                  {get('next_operation_cta')}
                 </Button>
               </Link>
             </div>
@@ -145,20 +146,20 @@ export function NextOperation() {
             <div className="relative mt-8 grid gap-3 sm:grid-cols-3">
               <Info
                 icon={<Calendar size={15} />}
-                label="Date"
+                label={get('next_operation_date_label')}
                 value={format(parseISO(featured.starts_at), 'EEEE d MMMM', {
                   locale: fr,
                 })}
               />
               <Info
                 icon={<Clock size={15} />}
-                label="Horaire"
+                label={get('next_operation_time_label')}
                 value={eventTimeLabel(featured)}
               />
               <Info
                 icon={<MapPin size={15} />}
-                label="Lieu"
-                value={featured.location || 'Discord / World of Tanks'}
+                label={get('next_operation_location_label')}
+                value={featured.location || get('next_operation_default_location')}
               />
             </div>
           </motion.article>
@@ -171,12 +172,11 @@ export function NextOperation() {
             className="rounded-xl border border-atfr-gold/15 bg-atfr-graphite/60 p-5"
           >
             <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-              File d'attente
+              {get('next_operation_queue_title')}
             </p>
             {queue.length === 0 ? (
               <p className="mt-5 text-sm leading-relaxed text-atfr-fog">
-                Aucun autre événement public à venir. Le prochain ajout admin
-                remontera automatiquement ici.
+                {get('next_operation_queue_empty')}
               </p>
             ) : (
               <div className="mt-5 space-y-3">

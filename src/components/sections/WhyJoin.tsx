@@ -8,47 +8,54 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button, Section } from '@/components/ui';
+import { useContent } from '@/hooks/useContent';
 
 const pillars = [
   {
     icon: Headphones,
-    title: 'Ambiance vocale',
-    text: 'Un Discord vivant pour lancer des pelotons, organiser les soirées et garder le contact hors bataille.',
-    stat: 'Discord actif',
+    titleKey: 'why_join_1_title',
+    textKey: 'why_join_1_text',
+    statKey: 'why_join_1_stat',
   },
   {
     icon: Crosshair,
-    title: 'Progression utile',
-    text: "Des retours concrets, des modules d'académie et des outils pour travailler décision, map awareness et placement.",
-    stat: 'Coaching clan',
+    titleKey: 'why_join_2_title',
+    textKey: 'why_join_2_text',
+    statKey: 'why_join_2_stat',
   },
   {
     icon: ShieldCheck,
-    title: 'Jeu structuré',
-    text: 'Escarmouches, événements et objectifs communs avec une organisation claire sans perdre le plaisir de jouer.',
-    stat: 'Objectifs partagés',
+    titleKey: 'why_join_3_title',
+    textKey: 'why_join_3_text',
+    statKey: 'why_join_3_stat',
   },
   {
     icon: LineChart,
-    title: 'Culture performance',
-    text: "Des stats suivies, des replays discutés et une envie simple : progresser ensemble sans casser l'ambiance.",
-    stat: 'Stats lisibles',
+    titleKey: 'why_join_4_title',
+    textKey: 'why_join_4_text',
+    statKey: 'why_join_4_stat',
   },
 ];
 
 export function WhyJoin() {
+  const { get } = useContent();
+  const journey = [1, 2, 3].map((i) => ({
+    title: get(`why_join_path_${i}_title`),
+    text: get(`why_join_path_${i}_text`),
+  }));
+
   return (
     <Section
-      eyebrow="Pourquoi ATFR"
-      title="Un clan qui aide vraiment à jouer mieux"
-      description="La home doit montrer en quelques secondes que le clan est actif, organisé et utile aux joueurs qui veulent progresser."
+      eyebrow={get('why_join_eyebrow')}
+      title={get('why_join_title')}
+      description={get('why_join_text')}
       className="overflow-hidden"
     >
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
         <div className="grid gap-4 sm:grid-cols-2">
           {pillars.map((pillar, i) => (
             <motion.article
-              key={pillar.title}
+              key={pillar.titleKey}
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-70px' }}
@@ -68,13 +75,13 @@ export function WhyJoin() {
                 <pillar.icon size={21} strokeWidth={1.6} />
               </div>
               <p className="mb-2 text-[10px] uppercase tracking-[0.25em] text-atfr-gold/80">
-                {pillar.stat}
+                {get(pillar.statKey)}
               </p>
               <h3 className="font-display text-2xl text-atfr-bone">
-                {pillar.title}
+                {get(pillar.titleKey)}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-atfr-fog">
-                {pillar.text}
+                {get(pillar.textKey)}
               </p>
             </motion.article>
           ))}
@@ -93,36 +100,28 @@ export function WhyJoin() {
           />
           <div className="relative">
             <p className="text-xs uppercase tracking-[0.3em] text-atfr-gold">
-              Parcours joueur
+              {get('why_join_path_eyebrow')}
             </p>
             <h3 className="mt-3 font-display text-3xl text-atfr-bone">
-              De la candidature au vocal, le chemin est plus clair.
+              {get('why_join_path_title')}
             </h3>
             <div className="mt-8 space-y-5">
-              {[
-                'Postuler avec les infos utiles',
-                'Passer en vocal et jouer quelques games',
-                'Trouver sa place dans les activités du clan',
-              ].map((step, i) => (
-                <div key={step} className="flex gap-4">
+              {journey.map((step, i) => (
+                <div key={step.title} className="flex gap-4">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-atfr-gold/40 bg-atfr-ink text-sm font-semibold text-atfr-gold">
                     {i + 1}
                   </div>
                   <div>
-                    <p className="font-medium text-atfr-bone">{step}</p>
-                    <p className="mt-1 text-sm text-atfr-fog">
-                      {i === 0
-                        ? 'Le formulaire donne une base propre aux officiers.'
-                        : i === 1
-                          ? 'La vraie compatibilité se voit vite en jeu.'
-                          : 'Le site devient le hub qui garde tout lisible.'}
-                    </p>
+                    <p className="font-medium text-atfr-bone">{step.title}</p>
+                    <p className="mt-1 text-sm text-atfr-fog">{step.text}</p>
                   </div>
                 </div>
               ))}
             </div>
             <Link to="/recrutement" className="mt-8 inline-flex">
-              <Button trailingIcon={<ArrowRight size={14} />}>Postuler</Button>
+              <Button trailingIcon={<ArrowRight size={14} />}>
+                {get('why_join_cta')}
+              </Button>
             </Link>
           </div>
         </motion.div>
