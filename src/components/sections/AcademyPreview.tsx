@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Map, Sparkles } from 'lucide-react';
 import { Button, Section, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePublishedModules } from '@/features/modules/queries';
+import { useContent } from '@/hooks/useContent';
 
 const fallbackModules = [
   {
@@ -25,6 +26,7 @@ const fallbackModules = [
 ];
 
 export function AcademyPreview() {
+  const { get } = useContent();
   const { data, isLoading } = usePublishedModules();
   const modules =
     data && data.length > 0
@@ -39,9 +41,9 @@ export function AcademyPreview() {
 
   return (
     <Section
-      eyebrow="Académie ATFR"
-      title="Des outils qui rendent le site vivant"
-      description="La page principale peut aussi orienter les joueurs vers les modules, les défis et les contenus utiles du clan."
+      eyebrow={get('academy_preview_eyebrow')}
+      title={get('academy_preview_title')}
+      description={get('academy_preview_text')}
     >
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <motion.div
@@ -55,15 +57,14 @@ export function AcademyPreview() {
             <Sparkles size={22} strokeWidth={1.6} />
           </div>
           <h3 className="mt-5 font-display text-3xl text-atfr-bone">
-            Un hub qui donne envie de revenir.
+            {get('academy_preview_card_title')}
           </h3>
           <p className="mt-4 text-sm leading-relaxed text-atfr-fog">
-            Les modules transforment le site en espace communautaire : on joue,
-            on apprend, on compare les scores et on garde une trace des défis.
+            {get('academy_preview_card_text')}
           </p>
           <Link to="/modules" className="mt-7 inline-flex">
             <Button variant="outline" trailingIcon={<ArrowRight size={14} />}>
-              Voir les modules
+              {get('academy_preview_cta')}
             </Button>
           </Link>
         </motion.div>
@@ -112,7 +113,7 @@ export function AcademyPreview() {
                     {module.description}
                   </p>
                   <span className="relative mt-6 inline-flex items-center gap-1 text-sm font-medium text-atfr-gold transition-all group-hover:gap-2">
-                    Lancer
+                    {get('academy_preview_module_cta')}
                     <ArrowRight size={14} />
                   </span>
                 </Link>

@@ -131,11 +131,19 @@ export function Hero() {
               {[
                 {
                   icon: ShieldCheck,
-                  label: 'Structure',
-                  value: 'Clan organisé',
+                  label: get('hero_signal_1_label'),
+                  value: get('hero_signal_1_value'),
                 },
-                { icon: BookOpen, label: 'Académie', value: 'Outils & tests' },
-                { icon: Radio, label: 'Discord', value: 'Vie active' },
+                {
+                  icon: BookOpen,
+                  label: get('hero_signal_2_label'),
+                  value: get('hero_signal_2_value'),
+                },
+                {
+                  icon: Radio,
+                  label: get('hero_signal_3_label'),
+                  value: get('hero_signal_3_value'),
+                },
               ].map((item, i) => (
                 <motion.div
                   key={item.label}
