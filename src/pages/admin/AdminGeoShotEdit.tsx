@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Copy, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Copy, RotateCcw, Save, Trash2 } from 'lucide-react';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardBody,
@@ -19,7 +20,9 @@ import {
   useGeoMaps,
   useGeoShot,
   useGeoShots,
+  useResetShotStats,
   useUpsertShot,
+  type ShotWithMap,
 } from '@/features/geoguesser/queries';
 import {
   DIFFICULTY_LABELS,
@@ -60,8 +63,10 @@ export default function AdminGeoShotEdit() {
   const upsert = useUpsertShot();
   const remove = useDeleteShot();
   const dup = useDuplicateShot();
+  const resetStats = useResetShotStats();
 
   const [draft, setDraft] = useState<Draft>(empty);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isNew) {
@@ -142,6 +147,23 @@ export default function AdminGeoShotEdit() {
     navigate(`/admin/geoguesser/shots/${newId}`);
   }
 
+  async function onResetStats() {
+    if (isNew || !id) return;
+    if (
+      !confirm(
+        'Réinitialiser les stats de ce screenshot ? Les compteurs repassent à 0 et la difficulté redevient Facile.',
+      )
+    ) {
+      return;
+    }
+    const affected = await resetStats.mutateAsync(id);
+    setResetMessage(
+      affected > 0
+        ? 'Stats réinitialisées. La difficulté est repassée en Facile.'
+        : 'Aucun screenshot modifie.',
+    );
+  }
+
   if (!isNew && existing.isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -180,6 +202,14 @@ export default function AdminGeoShotEdit() {
                 Dupliquer
               </Button>
               <Button
+                variant="ghost"
+                onClick={onResetStats}
+                leadingIcon={<RotateCcw size={14} />}
+                disabled={resetStats.isPending}
+              >
+                Reset stats
+              </Button>
+              <Button
                 variant="danger"
                 onClick={onDelete}
                 leadingIcon={<Trash2 size={14} />}
@@ -205,6 +235,14 @@ export default function AdminGeoShotEdit() {
         </Alert>
       )}
 
+      {resetMessage && <Alert tone="success">{resetMessage}</Alert>}
+
+      {resetStats.isError && (
+        <Alert tone="danger" title="Reset impossible">
+          {(resetStats.error as Error).message}
+        </Alert>
+      )}
+
       {validation.length > 0 && (
         <Alert tone="warning" title="À compléter avant de publier">
           <ul className="list-disc pl-5">
@@ -218,6 +256,8 @@ export default function AdminGeoShotEdit() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Form */}
         <div className="space-y-4">
+          {!isNew && existing.data && <ShotStatsCard shot={existing.data} />}
+
           <Card>
             <CardBody className="p-5 grid gap-4 md:grid-cols-2">
               <Select
@@ -317,4 +357,119 @@ export default function AdminGeoShotEdit() {
       </div>
     </div>
   );
+}
+
+function ShotStatsCard({ shot }: { shot: ShotWithMap }) {
+  const stats = getShotStats(shot);
+  return (
+    <Card>
+      <CardBody className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">
+              Stats joueur
+            </p>
+            <p className="font-display text-xl text-atfr-bone">
+              {stats.status}
+            </p>
+          </div>
+          <Badge variant={stats.badgeTone}>{stats.autoLabel}</Badge>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <ShotMetric label="Essais" value={shot.attempt_count} />
+          <ShotMetric
+            label="Bonne map"
+            value={stats.mapRatePct != null ? `${stats.mapRatePct}%` : '-'}
+          />
+          <ShotMetric
+            label="Perf"
+            value={stats.perfRatePct != null ? `${stats.perfRatePct}%` : '-'}
+          />
+        </div>
+        <p className="text-sm text-atfr-fog flex items-center gap-2">
+          <BarChart3 size={14} className="text-atfr-gold" />
+          {stats.helper}
+        </p>
+      </CardBody>
+    </Card>
+  );
+}
+
+function ShotMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="font-display text-lg text-atfr-bone mt-0.5">{value}</p>
+    </div>
+  );
+}
+
+function getShotStats(shot: ShotWithMap) {
+  const attempts = shot.attempt_count;
+  const diagonal = getShotDiagonalM(shot);
+  const maxPerf = attempts * diagonal;
+  const mapRatePct =
+    attempts > 0 ? Math.round((shot.correct_map_count / attempts) * 100) : null;
+  const perfRatePct =
+    attempts > 0 && maxPerf > 0
+      ? Math.round(Math.max(0, Math.min(1, shot.success_score_sum / maxPerf)) * 100)
+      : null;
+  const nextDifficulty = difficultyFromPerfRate(perfRatePct ?? 0);
+  const nextReviewAt = attempts < 10 ? 10 : Math.floor(attempts / 10) * 10 + 10;
+
+  if (attempts === 0) {
+    return {
+      status: 'Jamais joue',
+      autoLabel: 'Départ Facile',
+      badgeTone: 'neutral' as const,
+      mapRatePct,
+      perfRatePct,
+      helper:
+        'Ce screen part en Facile. La difficulté montera automatiquement après les premières tentatives.',
+    };
+  }
+
+  if (attempts < 10) {
+    return {
+      status: 'En apprentissage',
+      autoLabel: `${10 - attempts} avant réévaluation`,
+      badgeTone: 'warning' as const,
+      mapRatePct,
+      perfRatePct,
+      helper: `Première réévaluation automatique à 10 tentatives. Tendance actuelle : ${DIFFICULTY_LABELS[nextDifficulty]}.`,
+    };
+  }
+
+  return {
+    status:
+      nextDifficulty === shot.difficulty
+        ? 'Difficulté alignée'
+        : 'Tendance differente',
+    autoLabel: `Auto ${DIFFICULTY_LABELS[nextDifficulty]}`,
+    badgeTone: nextDifficulty === shot.difficulty ? 'success' as const : 'gold' as const,
+    mapRatePct,
+    perfRatePct,
+    helper: `Prochaine réévaluation automatique à ${nextReviewAt} tentatives.`,
+  };
+}
+
+function getShotDiagonalM(shot: ShotWithMap): number {
+  const width = shot.map?.width_m ?? shot.map?.size_m ?? 1000;
+  const height = shot.map?.height_m ?? shot.map?.size_m ?? 1000;
+  return Math.max(1, Math.hypot(width, height));
+}
+
+function difficultyFromPerfRate(ratePct: number): QuizDifficulty {
+  if (ratePct >= 80) return 'expert';
+  if (ratePct >= 60) return 'hard';
+  if (ratePct >= 40) return 'medium';
+  return 'easy';
 }
