@@ -296,8 +296,7 @@ export function useUpsertDiscordLink() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: SaveDiscordLinkInput) => {
-      const payload: DiscordLinkInsert | DiscordLinkUpdate = {
-        player_id: input.playerId,
+      const basePayload = {
         discord_user_id: input.discordUserId.trim(),
         discord_tag: input.discordTag?.trim() || null,
         discord_role: input.discordRole?.trim() || null,
@@ -306,14 +305,15 @@ export function useUpsertDiscordLink() {
         is_primary: true,
       };
 
-      const request = input.linkId
-        ? supabase
+      const { error } = input.linkId
+        ? await supabase
             .from('player_discord_links')
-            .update(payload)
+            .update(basePayload satisfies DiscordLinkUpdate)
             .eq('id', input.linkId)
-        : supabase.from('player_discord_links').insert(payload);
-
-      const { error } = await request;
+        : await supabase.from('player_discord_links').insert({
+            ...basePayload,
+            player_id: input.playerId,
+          } satisfies DiscordLinkInsert);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),

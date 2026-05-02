@@ -97,7 +97,8 @@ export default function AdminPlayerDetail() {
   const [noteType, setNoteType] = useState<StaffNoteType>('info');
   const [noteContent, setNoteContent] = useState('');
 
-  const summary = detail.data?.summary;
+  const detailData = detail.data;
+  const summary = detailData?.summary;
   const player = summary?.player;
   const link = summary?.discordLink;
 
@@ -205,7 +206,7 @@ export default function AdminPlayerDetail() {
     );
   }
 
-  if (detail.isError || !summary || !player) {
+  if (detail.isError || !detailData || !summary || !player) {
     return (
       <Alert tone="danger">
         {(detail.error as Error | undefined)?.message ?? 'Joueur introuvable.'}
@@ -218,7 +219,7 @@ export default function AdminPlayerDetail() {
   const recentChannels = getRecentChannels(summary.voiceSessions);
   const visibleAlerts = [
     ...summary.alerts,
-    ...detail.data.persistedAlerts.map((alert) => ({
+    ...detailData.persistedAlerts.map((alert) => ({
       kind: alert.kind,
       severity: alert.severity,
       title: alert.title,
@@ -626,11 +627,11 @@ export default function AdminPlayerDetail() {
             title="Historique RH"
             description="Changements de statut, grade et événements de suivi."
           />
-          {detail.data.statusHistory.length === 0 ? (
+          {detailData.statusHistory.length === 0 ? (
             <p className="text-sm text-atfr-fog">Aucun changement enregistré.</p>
           ) : (
             <div className="space-y-2">
-              {detail.data.statusHistory.map((event) => (
+              {detailData.statusHistory.map((event) => (
                 <div
                   key={event.id}
                   className="grid gap-2 md:grid-cols-[180px_1fr] rounded-md border border-atfr-gold/10 bg-atfr-ink/60 px-3 py-2 text-sm"
@@ -657,13 +658,13 @@ export default function AdminPlayerDetail() {
               ))}
             </div>
           )}
-          {detail.data.memberHistory.length > 0 && (
+          {detailData.memberHistory.length > 0 && (
             <div className="pt-2">
               <p className="text-xs uppercase tracking-wider text-atfr-fog mb-2">
                 Historique clan WoT
               </p>
               <div className="space-y-2">
-                {detail.data.memberHistory.map((event) => (
+                {detailData.memberHistory.map((event) => (
                   <div
                     key={event.id}
                     className="grid gap-2 md:grid-cols-[180px_1fr] rounded-md border border-atfr-gold/10 bg-atfr-ink/60 px-3 py-2 text-sm"
