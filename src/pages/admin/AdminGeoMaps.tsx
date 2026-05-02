@@ -104,12 +104,17 @@ export default function AdminGeoMaps() {
     ) {
       return;
     }
-    const affected = await resetMapStats.mutateAsync(map.id);
-    setResetMessage(
-      affected > 0
-        ? `${affected} screenshot(s) réinitialisé(s) pour ${map.name}.`
-        : `Aucun screenshot modifie pour ${map.name}.`,
-    );
+    setResetMessage(null);
+    try {
+      const affected = await resetMapStats.mutateAsync(map.id);
+      setResetMessage(
+        affected > 0
+          ? `${affected} screenshot(s) réinitialisé(s) pour ${map.name}.`
+          : `Aucun screenshot modifie pour ${map.name}.`,
+      );
+    } catch {
+      return;
+    }
   }
 
   return (

@@ -56,10 +56,15 @@ export default function AdminGeoSettings() {
     ) {
       return;
     }
-    const affected = await resetAllStats.mutateAsync();
-    setResetMessage(
-      `${affected} screenshot(s) réinitialisé(s). Les difficultés sont repassées en Facile.`,
-    );
+    setResetMessage(null);
+    try {
+      const affected = await resetAllStats.mutateAsync();
+      setResetMessage(
+        `${affected} screenshot(s) réinitialisé(s). Les difficultés sont repassées en Facile.`,
+      );
+    } catch {
+      return;
+    }
   }
 
   return (

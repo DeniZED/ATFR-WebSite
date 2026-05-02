@@ -113,12 +113,17 @@ export default function AdminGeoShots() {
     ) {
       return;
     }
-    const affected = await resetShotStats.mutateAsync(shot.id);
-    setResetMessage(
-      affected > 0
-        ? 'Stats du screenshot réinitialisées. La difficulté est repassée en Facile.'
-        : 'Aucun screenshot modifie.',
-    );
+    setResetMessage(null);
+    try {
+      const affected = await resetShotStats.mutateAsync(shot.id);
+      setResetMessage(
+        affected > 0
+          ? 'Stats du screenshot réinitialisées. La difficulté est repassée en Facile.'
+          : 'Aucun screenshot modifie.',
+      );
+    } catch {
+      return;
+    }
   }
 
   return (

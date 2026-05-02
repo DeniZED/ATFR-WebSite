@@ -156,12 +156,17 @@ export default function AdminGeoShotEdit() {
     ) {
       return;
     }
-    const affected = await resetStats.mutateAsync(id);
-    setResetMessage(
-      affected > 0
-        ? 'Stats réinitialisées. La difficulté est repassée en Facile.'
-        : 'Aucun screenshot modifie.',
-    );
+    setResetMessage(null);
+    try {
+      const affected = await resetStats.mutateAsync(id);
+      setResetMessage(
+        affected > 0
+          ? 'Stats réinitialisées. La difficulté est repassée en Facile.'
+          : 'Aucun screenshot modifie.',
+      );
+    } catch {
+      return;
+    }
   }
 
   if (!isNew && existing.isLoading) {

@@ -79,7 +79,8 @@ begin
          correct_map_count = 0,
          success_score_sum = 0,
          difficulty = 'easy',
-         updated_at = now();
+         updated_at = now()
+   where true;
 
   get diagnostics affected = row_count;
   return affected;
