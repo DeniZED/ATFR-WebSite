@@ -14,6 +14,8 @@ export function AvailabilityPicker({
   onChange,
   error,
 }: AvailabilityPickerProps) {
+  const hasSelection = days.length > 0 || slots.length > 0;
+
   const toggleDay = (day: string) => {
     onChange({
       days: days.includes(day) ? days.filter((d) => d !== day) : [...days, day],
@@ -41,6 +43,7 @@ export function AvailabilityPicker({
               <button
                 key={d}
                 type="button"
+                aria-pressed={active}
                 onClick={() => toggleDay(d)}
                 className={cn(
                   'px-3 py-1.5 rounded-full text-sm border transition-colors',
@@ -67,6 +70,7 @@ export function AvailabilityPicker({
               <button
                 key={s.id}
                 type="button"
+                aria-pressed={active}
                 onClick={() => toggleSlot(s.id)}
                 className={cn(
                   'px-3 py-2 rounded-md text-sm border text-left transition-colors',
@@ -81,6 +85,13 @@ export function AvailabilityPicker({
           })}
         </div>
       </div>
+
+      {hasSelection && (
+        <p className="text-xs text-atfr-fog/80" aria-live="polite">
+          {days.length} jour(s) et {slots.length} plage(s) horaire(s)
+          sélectionné(s).
+        </p>
+      )}
 
       {error && <p className="text-xs text-atfr-danger">{error}</p>}
     </div>

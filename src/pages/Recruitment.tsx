@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, ChevronLeft, ChevronRight, Search, Send } from 'lucide-react';
 import {
@@ -46,10 +46,12 @@ export default function Recruitment() {
     },
   });
 
-  const { handleSubmit, control, register, watch, formState } = form;
+  const { handleSubmit, control, register, formState } = form;
   const errors = formState.errors;
 
-  const playerName = watch('playerName');
+  const playerName = useWatch({ control, name: 'playerName' }) ?? '';
+  const targetClan = useWatch({ control, name: 'targetClan' });
+  const availability = useWatch({ control, name: 'availability' });
   const lookup = usePlayerLookup(lookupName, lookupName.length >= 3);
 
   const submit = useSubmitApplication();
@@ -57,14 +59,16 @@ export default function Recruitment() {
 
   const canGoNext = useMemo(() => {
     if (step === 1) {
-      return playerName.trim().length >= 3 && !!watch('targetClan');
+      return playerName.trim().length >= 3 && !!targetClan;
     }
     if (step === 2) {
-      const a = watch('availability');
-      return a.days.length > 0 && a.slots.length > 0;
+      return (
+        (availability?.days.length ?? 0) > 0 &&
+        (availability?.slots.length ?? 0) > 0
+      );
     }
     return true;
-  }, [step, playerName, watch]);
+  }, [availability, playerName, step, targetClan]);
 
   async function onSubmit(values: ApplicationValue) {
     const result = lookup.data;
