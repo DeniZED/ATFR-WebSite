@@ -11,6 +11,30 @@ export type ContentKind = 'text' | 'longtext' | 'url' | 'image' | 'video';
 export type UserRole = 'super_admin' | 'admin' | 'moderator' | 'editor';
 export type QuizDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type QuizMode = 'test' | 'training' | 'category';
+export type PlayerHrStatus =
+  | 'active'
+  | 'low_activity'
+  | 'inactive'
+  | 'former'
+  | 'prospect'
+  | 'watch';
+export type StaffNoteType =
+  | 'info'
+  | 'warning'
+  | 'recruitment'
+  | 'absence'
+  | 'behavior'
+  | 'other';
+export type PlayerAlertSeverity = 'info' | 'warning' | 'danger';
+export type PlayerAlertKind =
+  | 'inactive'
+  | 'no_discord'
+  | 'no_wot'
+  | 'game_no_voice'
+  | 'voice_no_clan'
+  | 'activity_drop'
+  | 'watch'
+  | 'custom';
 
 export const DIFFICULTY_LABELS: Record<QuizDifficulty, string> = {
   easy: 'Facile',
@@ -242,6 +266,345 @@ export interface Database {
           new_role?: string | null;
         };
         Relationships: [];
+      };
+      players: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          nickname: string;
+          account_id: number | null;
+          current_clan_id: number | null;
+          current_clan_tag: string | null;
+          internal_role: string | null;
+          joined_at: string | null;
+          status: PlayerHrStatus;
+          tags: string[];
+          staff_comment: string | null;
+          tomato_url: string | null;
+          wot_profile_url: string | null;
+          last_wot_activity_at: string | null;
+          last_discord_voice_at: string | null;
+          source: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          nickname: string;
+          account_id?: number | null;
+          current_clan_id?: number | null;
+          current_clan_tag?: string | null;
+          internal_role?: string | null;
+          joined_at?: string | null;
+          status?: PlayerHrStatus;
+          tags?: string[];
+          staff_comment?: string | null;
+          tomato_url?: string | null;
+          wot_profile_url?: string | null;
+          last_wot_activity_at?: string | null;
+          last_discord_voice_at?: string | null;
+          source?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          nickname?: string;
+          account_id?: number | null;
+          current_clan_id?: number | null;
+          current_clan_tag?: string | null;
+          internal_role?: string | null;
+          joined_at?: string | null;
+          status?: PlayerHrStatus;
+          tags?: string[];
+          staff_comment?: string | null;
+          tomato_url?: string | null;
+          wot_profile_url?: string | null;
+          last_wot_activity_at?: string | null;
+          last_discord_voice_at?: string | null;
+          source?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      player_discord_links: {
+        Row: {
+          id: string;
+          player_id: string;
+          discord_user_id: string;
+          discord_tag: string | null;
+          discord_role: string | null;
+          guild_id: string | null;
+          is_primary: boolean;
+          linked_at: string;
+          linked_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          discord_user_id: string;
+          discord_tag?: string | null;
+          discord_role?: string | null;
+          guild_id?: string | null;
+          is_primary?: boolean;
+          linked_at?: string;
+          linked_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          discord_user_id?: string;
+          discord_tag?: string | null;
+          discord_role?: string | null;
+          guild_id?: string | null;
+          is_primary?: boolean;
+          linked_at?: string;
+          linked_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_discord_links_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_activity_snapshots: {
+        Row: {
+          id: string;
+          player_id: string;
+          account_id: number | null;
+          snapshot_date: string;
+          captured_at: string;
+          clan_id: number | null;
+          clan_tag: string | null;
+          last_battle_at: string | null;
+          battles: number | null;
+          battles_delta: number | null;
+          active_day: boolean;
+          source: string;
+          meta: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          account_id?: number | null;
+          snapshot_date?: string;
+          captured_at?: string;
+          clan_id?: number | null;
+          clan_tag?: string | null;
+          last_battle_at?: string | null;
+          battles?: number | null;
+          battles_delta?: number | null;
+          active_day?: boolean;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          account_id?: number | null;
+          snapshot_date?: string;
+          captured_at?: string;
+          clan_id?: number | null;
+          clan_tag?: string | null;
+          last_battle_at?: string | null;
+          battles?: number | null;
+          battles_delta?: number | null;
+          active_day?: boolean;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_activity_snapshots_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      discord_voice_sessions: {
+        Row: {
+          id: string;
+          player_id: string | null;
+          discord_user_id: string;
+          guild_id: string | null;
+          channel_id: string;
+          channel_name: string | null;
+          joined_at: string;
+          left_at: string | null;
+          duration_seconds: number;
+          source: string;
+          meta: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          player_id?: string | null;
+          discord_user_id: string;
+          guild_id?: string | null;
+          channel_id: string;
+          channel_name?: string | null;
+          joined_at: string;
+          left_at?: string | null;
+          duration_seconds?: number;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Update: {
+          id?: string;
+          player_id?: string | null;
+          discord_user_id?: string;
+          guild_id?: string | null;
+          channel_id?: string;
+          channel_name?: string | null;
+          joined_at?: string;
+          left_at?: string | null;
+          duration_seconds?: number;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'discord_voice_sessions_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_staff_notes: {
+        Row: {
+          id: string;
+          player_id: string;
+          created_at: string;
+          author_id: string | null;
+          note_type: StaffNoteType;
+          content: string;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          created_at?: string;
+          author_id?: string | null;
+          note_type?: StaffNoteType;
+          content: string;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          created_at?: string;
+          author_id?: string | null;
+          note_type?: StaffNoteType;
+          content?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_staff_notes_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_status_history: {
+        Row: {
+          id: string;
+          player_id: string;
+          changed_at: string;
+          author_id: string | null;
+          old_status: PlayerHrStatus | null;
+          new_status: PlayerHrStatus | null;
+          old_role: string | null;
+          new_role: string | null;
+          note: string | null;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          changed_at?: string;
+          author_id?: string | null;
+          old_status?: PlayerHrStatus | null;
+          new_status?: PlayerHrStatus | null;
+          old_role?: string | null;
+          new_role?: string | null;
+          note?: string | null;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          changed_at?: string;
+          author_id?: string | null;
+          old_status?: PlayerHrStatus | null;
+          new_status?: PlayerHrStatus | null;
+          old_role?: string | null;
+          new_role?: string | null;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_status_history_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_alerts: {
+        Row: {
+          id: string;
+          player_id: string;
+          kind: PlayerAlertKind;
+          severity: PlayerAlertSeverity;
+          title: string;
+          description: string | null;
+          detected_at: string;
+          resolved_at: string | null;
+          meta: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          kind: PlayerAlertKind;
+          severity?: PlayerAlertSeverity;
+          title: string;
+          description?: string | null;
+          detected_at?: string;
+          resolved_at?: string | null;
+          meta?: Record<string, unknown>;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          kind?: PlayerAlertKind;
+          severity?: PlayerAlertSeverity;
+          title?: string;
+          description?: string | null;
+          detected_at?: string;
+          resolved_at?: string | null;
+          meta?: Record<string, unknown>;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_alerts_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       activity_logs: {
         Row: {
@@ -971,3 +1334,15 @@ export interface Database {
     CompositeTypes: Record<never, never>;
   };
 }
+
+export type PlayerRow = Database['public']['Tables']['players']['Row'];
+export type PlayerDiscordLinkRow =
+  Database['public']['Tables']['player_discord_links']['Row'];
+export type PlayerActivitySnapshotRow =
+  Database['public']['Tables']['player_activity_snapshots']['Row'];
+export type DiscordVoiceSessionRow =
+  Database['public']['Tables']['discord_voice_sessions']['Row'];
+export type PlayerStaffNoteRow =
+  Database['public']['Tables']['player_staff_notes']['Row'];
+export type PlayerStatusHistoryRow =
+  Database['public']['Tables']['player_status_history']['Row'];
