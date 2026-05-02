@@ -36,14 +36,11 @@ create table if not exists public.players (
   updated_by uuid references auth.users(id) on delete set null
 );
 
-create index if not exists players_nickname_idx
-  on public.players using gin (to_tsvector('simple', nickname));
+create index if not exists players_nickname_idx on public.players using gin (to_tsvector('simple', nickname));
 create index if not exists players_status_idx on public.players(status);
 create index if not exists players_clan_idx on public.players(current_clan_tag);
-create index if not exists players_discord_voice_idx
-  on public.players(last_discord_voice_at desc);
-create index if not exists players_wot_activity_idx
-  on public.players(last_wot_activity_at desc);
+create index if not exists players_discord_voice_idx on public.players(last_discord_voice_at desc);
+create index if not exists players_wot_activity_idx on public.players(last_wot_activity_at desc);
 
 create table if not exists public.player_discord_links (
   id uuid primary key default gen_random_uuid(),
@@ -58,16 +55,10 @@ create table if not exists public.player_discord_links (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists player_discord_links_player_idx
-  on public.player_discord_links(player_id);
-create index if not exists player_discord_links_discord_idx
-  on public.player_discord_links(discord_user_id);
-create unique index if not exists player_discord_links_primary_discord_uidx
-  on public.player_discord_links(discord_user_id)
-  where is_primary;
-create unique index if not exists player_discord_links_primary_player_uidx
-  on public.player_discord_links(player_id)
-  where is_primary;
+create index if not exists player_discord_links_player_idx on public.player_discord_links(player_id);
+create index if not exists player_discord_links_discord_idx on public.player_discord_links(discord_user_id);
+create unique index if not exists player_discord_links_primary_discord_uidx on public.player_discord_links(discord_user_id) where is_primary;
+create unique index if not exists player_discord_links_primary_player_uidx on public.player_discord_links(player_id) where is_primary;
 
 create table if not exists public.player_activity_snapshots (
   id uuid primary key default gen_random_uuid(),
@@ -87,12 +78,9 @@ create table if not exists public.player_activity_snapshots (
   unique (player_id, snapshot_date)
 );
 
-create index if not exists player_activity_snapshots_player_date_idx
-  on public.player_activity_snapshots(player_id, snapshot_date desc);
-create index if not exists player_activity_snapshots_account_idx
-  on public.player_activity_snapshots(account_id, snapshot_date desc);
-create index if not exists player_activity_snapshots_last_battle_idx
-  on public.player_activity_snapshots(last_battle_at desc);
+create index if not exists player_activity_snapshots_player_date_idx on public.player_activity_snapshots(player_id, snapshot_date desc);
+create index if not exists player_activity_snapshots_account_idx on public.player_activity_snapshots(account_id, snapshot_date desc);
+create index if not exists player_activity_snapshots_last_battle_idx on public.player_activity_snapshots(last_battle_at desc);
 
 create table if not exists public.discord_voice_sessions (
   id uuid primary key default gen_random_uuid(),
@@ -110,14 +98,10 @@ create table if not exists public.discord_voice_sessions (
   meta jsonb not null default '{}'::jsonb
 );
 
-create index if not exists discord_voice_sessions_player_date_idx
-  on public.discord_voice_sessions(player_id, joined_at desc);
-create index if not exists discord_voice_sessions_discord_date_idx
-  on public.discord_voice_sessions(discord_user_id, joined_at desc);
-create index if not exists discord_voice_sessions_channel_date_idx
-  on public.discord_voice_sessions(channel_id, joined_at desc);
-create index if not exists discord_voice_sessions_guild_idx
-  on public.discord_voice_sessions(guild_id);
+create index if not exists discord_voice_sessions_player_date_idx on public.discord_voice_sessions(player_id, joined_at desc);
+create index if not exists discord_voice_sessions_discord_date_idx on public.discord_voice_sessions(discord_user_id, joined_at desc);
+create index if not exists discord_voice_sessions_channel_date_idx on public.discord_voice_sessions(channel_id, joined_at desc);
+create index if not exists discord_voice_sessions_guild_idx on public.discord_voice_sessions(guild_id);
 
 create table if not exists public.player_staff_notes (
   id uuid primary key default gen_random_uuid(),
@@ -136,10 +120,8 @@ create table if not exists public.player_staff_notes (
   content text not null check (length(content) between 1 and 4000)
 );
 
-create index if not exists player_staff_notes_player_date_idx
-  on public.player_staff_notes(player_id, created_at desc);
-create index if not exists player_staff_notes_type_idx
-  on public.player_staff_notes(note_type);
+create index if not exists player_staff_notes_player_date_idx on public.player_staff_notes(player_id, created_at desc);
+create index if not exists player_staff_notes_type_idx on public.player_staff_notes(note_type);
 
 create table if not exists public.player_status_history (
   id uuid primary key default gen_random_uuid(),
@@ -171,8 +153,7 @@ create table if not exists public.player_status_history (
   note text
 );
 
-create index if not exists player_status_history_player_date_idx
-  on public.player_status_history(player_id, changed_at desc);
+create index if not exists player_status_history_player_date_idx on public.player_status_history(player_id, changed_at desc);
 
 create table if not exists public.player_alerts (
   id uuid primary key default gen_random_uuid(),
@@ -197,9 +178,7 @@ create table if not exists public.player_alerts (
   meta jsonb not null default '{}'::jsonb
 );
 
-create index if not exists player_alerts_player_active_idx
-  on public.player_alerts(player_id, detected_at desc)
-  where resolved_at is null;
+create index if not exists player_alerts_player_active_idx on public.player_alerts(player_id, detected_at desc) where resolved_at is null;
 create index if not exists player_alerts_kind_idx on public.player_alerts(kind);
 
 drop trigger if exists players_set_updated_at on public.players;
