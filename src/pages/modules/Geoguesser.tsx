@@ -30,7 +30,6 @@ import {
   Card,
   CardBody,
   Section,
-  Select,
   Spinner,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -412,7 +411,7 @@ export default function Geoguesser() {
         title="Devine la map et l’endroit"
         description="Chaque manche : une capture in-game. Choisis la map dans le picker en bas-droite, puis clique sur la minimap pour pointer où le screen a été pris. Plus tu es proche, plus ton score est petit. Le but est d'avoir le score le plus bas possible."
       >
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6">
           <Link
             to="/modules"
             className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
@@ -434,8 +433,8 @@ export default function Geoguesser() {
             </Alert>
           ) : (
             <Card>
-              <CardBody className="p-6 sm:p-8 space-y-6">
-                <div className="grid sm:grid-cols-3 gap-3 text-center">
+              <CardBody className="p-5 sm:p-7 space-y-6">
+                <div className="grid gap-3 text-center sm:grid-cols-3">
                   <Stat label="Maps actives" value={maps.data?.length ?? 0} />
                   <Stat label="Screenshots dispo" value={shots.data.length} />
                   <Stat
@@ -444,67 +443,31 @@ export default function Geoguesser() {
                   />
                 </div>
 
-                <GameModeSelector
-                  value={gameMode}
-                  onChange={setGameMode}
-                  challengeKey={displayChallengeKey}
-                />
+                <div className="grid gap-5 lg:grid-cols-[1.35fr_0.85fr]">
+                  <div className="space-y-5">
+                    <GameModeSelector
+                      value={gameMode}
+                      onChange={setGameMode}
+                      challengeKey={displayChallengeKey}
+                    />
 
-                <ModeRules
-                  gameMode={gameMode}
-                  roundTimeS={roundTimeLimitS}
-                />
+                    <DifficultyPicker
+                      value={difficulty}
+                      onChange={setDifficulty}
+                    />
+                  </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-                    Difficulté
-                  </p>
-                  <Select
-                    value={difficulty}
-                    onChange={(e) =>
-                      setDifficulty(e.target.value as DifficultyFilter)
-                    }
-                  >
-                    <option value="all">Mixte (toutes)</option>
-                    {(Object.keys(DIFFICULTY_LABELS) as QuizDifficulty[]).map(
-                      (d) => (
-                        <option key={d} value={d}>
-                          {DIFFICULTY_LABELS[d]}
-                        </option>
-                      ),
-                    )}
-                  </Select>
+                  <SetupSummaryPanel
+                    gameMode={gameMode}
+                    difficulty={difficulty}
+                    roundTimeS={roundTimeLimitS}
+                    roundTarget={getRoundTargetForMode(gameMode, dailyRounds)}
+                    wrongMapMalusM={cfg.wrong_map_malus_m}
+                    timeoutMalusM={cfg.timeout_malus_m}
+                    hasNickname={!!identity.nickname}
+                    onStart={startGame}
+                  />
                 </div>
-
-                <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 p-4 text-sm text-atfr-fog leading-relaxed space-y-1">
-                  <p>
-                    <strong className="text-atfr-bone">Score :</strong> distance
-                    réelle entre ton pick et le shot, en mètres. Plus c'est
-                    bas, mieux c'est.
-                  </p>
-                  <p>
-                    <strong className="text-atfr-bone">Mauvaise map :</strong>{' '}
-                    +{cfg.wrong_map_malus_m} m.{' '}
-                    <strong className="text-atfr-bone">Time out :</strong>{' '}
-                    +{cfg.timeout_malus_m} m.
-                  </p>
-                  <p>
-                    <strong className="text-atfr-bone">Timer :</strong>{' '}
-                    {roundTimeLimitS} s par manche.
-                  </p>
-                </div>
-
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={startGame}
-                  disabled={!identity.nickname}
-                  trailingIcon={<ArrowRight size={16} />}
-                >
-                  {!identity.nickname
-                    ? 'Choisis d’abord un pseudo'
-                    : 'Lancer une partie'}
-                </Button>
               </CardBody>
             </Card>
           )}
@@ -701,31 +664,19 @@ export default function Geoguesser() {
             </Alert>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2">
-            {showReveal ? (
-              <Button
-                onClick={nextRound}
-                trailingIcon={<ArrowRight size={14} />}
-              >
-                {index < total - 1
-                  ? 'Manche suivante'
-                  : 'Voir le score final'}
-              </Button>
-            ) : (
-              <Button
-                onClick={validate}
-                disabled={!canValidate}
-                trailingIcon={<ArrowRight size={14} />}
-              >
-                {!selectedMapId
-                  ? 'Choisis une map'
-                  : pickX == null || pickY == null
-                    ? 'Place ton point'
-                    : 'Valider'}
-              </Button>
-            )}
-          </div>
+          <RoundActionDock
+            showReveal={showReveal}
+            canValidate={canValidate}
+            selectedMapName={selectedMap?.name ?? null}
+            hasPick={pickX != null && pickY != null}
+            currentIndex={index}
+            total={total}
+            totalScore={totalScore}
+            secondsLeft={secondsLeft}
+            gameMode={gameMode}
+            onValidate={validate}
+            onNext={nextRound}
+          />
         </div>
       </Section>
     );
@@ -980,6 +931,61 @@ function formatGenericModeLabel(mode: GameMode): string {
 function formatScoreModeLabel(mode: GameMode, dailyKey?: string | null): string {
   if (mode === 'daily' && dailyKey) return formatModeLabel(mode, dailyKey);
   return formatGenericModeLabel(mode);
+}
+
+function getStartButtonLabel(mode: GameMode): string {
+  if (mode === 'daily') return 'Lancer le challenge';
+  if (mode === 'sprint') return 'Lancer le sprint';
+  if (mode === 'blind') return 'Lancer Blind Guess';
+  return 'Lancer une série';
+}
+
+function getDifficultyDetail(difficulty: QuizDifficulty): string {
+  if (difficulty === 'easy') return 'Repères évidents';
+  if (difficulty === 'medium') return 'Lecture de map';
+  if (difficulty === 'hard') return 'Zones piégeuses';
+  return 'Micro-repères';
+}
+
+function getDifficultyDotClass(difficulty: DifficultyFilter): string {
+  if (difficulty === 'easy') return 'border-atfr-success bg-atfr-success';
+  if (difficulty === 'medium') return 'border-atfr-gold bg-atfr-gold';
+  if (difficulty === 'hard') return 'border-atfr-warning bg-atfr-warning';
+  if (difficulty === 'expert') return 'border-atfr-danger bg-atfr-danger';
+  return 'border-atfr-fog bg-atfr-fog';
+}
+
+function getRoundActionStatus(
+  selectedMapName: string | null,
+  hasPick: boolean,
+  showReveal: boolean,
+): { label: string; detail: string; cta: string } {
+  if (showReveal) {
+    return {
+      label: 'Révélation',
+      detail: 'Compare ton point avec la position correcte.',
+      cta: 'Continuer',
+    };
+  }
+  if (!selectedMapName) {
+    return {
+      label: 'Étape 1',
+      detail: 'Ouvre le sélecteur de map en bas à droite et choisis la minimap.',
+      cta: 'Choisis une map',
+    };
+  }
+  if (!hasPick) {
+    return {
+      label: 'Étape 2',
+      detail: `${selectedMapName} sélectionnée. Clique sur la minimap pour poser ton point.`,
+      cta: 'Place ton point',
+    };
+  }
+  return {
+    label: 'Prêt',
+    detail: `${selectedMapName} sélectionnée. Tu peux valider ou déplacer ton point.`,
+    cta: 'Valider',
+  };
 }
 
 type BadgeVariant = 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'outline';
@@ -1496,6 +1502,161 @@ function GameModeSelector({
   );
 }
 
+function DifficultyPicker({
+  value,
+  onChange,
+}: {
+  value: DifficultyFilter;
+  onChange: (difficulty: DifficultyFilter) => void;
+}) {
+  const options: Array<{
+    value: DifficultyFilter;
+    label: string;
+    detail: string;
+  }> = [
+    {
+      value: 'all',
+      label: 'Mixte',
+      detail: 'Toutes les difficultés',
+    },
+    ...(Object.keys(DIFFICULTY_LABELS) as QuizDifficulty[]).map((d) => ({
+      value: d,
+      label: DIFFICULTY_LABELS[d],
+      detail: getDifficultyDetail(d),
+    })),
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
+          Difficulté
+        </p>
+        <span className="text-xs text-atfr-fog">
+          {value === 'all' ? 'Pool complet' : DIFFICULTY_LABELS[value]}
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {options.map((option) => {
+          const active = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'rounded-md border p-3 text-left transition-colors',
+                active
+                  ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
+                  : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
+              )}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <span
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full border',
+                    getDifficultyDotClass(option.value),
+                  )}
+                />
+                {option.label}
+              </span>
+              <span className="mt-2 block text-xs text-atfr-fog">
+                {option.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SetupSummaryPanel({
+  gameMode,
+  difficulty,
+  roundTimeS,
+  roundTarget,
+  wrongMapMalusM,
+  timeoutMalusM,
+  hasNickname,
+  onStart,
+}: {
+  gameMode: GameMode;
+  difficulty: DifficultyFilter;
+  roundTimeS: number;
+  roundTarget: number;
+  wrongMapMalusM: number;
+  timeoutMalusM: number;
+  hasNickname: boolean;
+  onStart: () => void;
+}) {
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-ink/45 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
+            Partie prête
+          </p>
+          <h3 className="mt-1 font-display text-xl text-atfr-bone">
+            {formatGenericModeLabel(gameMode)}
+          </h3>
+        </div>
+        <Badge variant={getModeBadgeVariant(gameMode)}>
+          {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <SetupMetric label="Manches" value={String(roundTarget)} />
+        <SetupMetric label="Timer" value={`${roundTimeS}s`} />
+        <SetupMetric
+          label="Mauvaise map"
+          value={`+${formatDistance(wrongMapMalusM)}`}
+        />
+        <SetupMetric
+          label="Time out"
+          value={`+${formatDistance(timeoutMalusM)}`}
+        />
+      </div>
+
+      <div className="mt-4">
+        <ModeRules gameMode={gameMode} roundTimeS={roundTimeS} />
+      </div>
+
+      <p className="mt-4 text-sm leading-relaxed text-atfr-fog">
+        Le score le plus bas gagne. Choisis la map, place ton pin, puis valide
+        avant la fin du timer.
+      </p>
+
+      <Button
+        size="lg"
+        className="mt-5 w-full"
+        onClick={onStart}
+        disabled={!hasNickname}
+        trailingIcon={<ArrowRight size={16} />}
+      >
+        {hasNickname
+          ? getStartButtonLabel(gameMode)
+          : 'Choisis d’abord un pseudo'}
+      </Button>
+    </div>
+  );
+}
+
+function SetupMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded bg-atfr-graphite/55 px-3 py-2">
+      <p className="text-[9px] uppercase tracking-[0.16em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-atfr-bone tabular-nums">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function ModeRules({
   gameMode,
   roundTimeS,
@@ -1529,7 +1690,18 @@ function ModeRules({
     );
   }
 
-  return null;
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 p-4 text-sm text-atfr-bone leading-relaxed">
+      <p className="font-medium text-atfr-gold">
+        {gameMode === 'daily' ? 'Challenge du jour' : 'Série libre'}
+      </p>
+      <p className="mt-1 text-atfr-fog">
+        {gameMode === 'daily'
+          ? 'Même sélection pour tout le clan aujourd’hui, avec un classement dédié.'
+          : 'Une série rapide pour t’entraîner sur le pool et la difficulté choisis.'}
+      </p>
+    </div>
+  );
 }
 
 function ModeButton({
@@ -1548,6 +1720,7 @@ function ModeButton({
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={cn(
         'rounded-md border p-3 text-left transition-colors',
@@ -1607,6 +1780,84 @@ function RoundStatusBar({
           Best {stats.bestStreak}
         </span>
         <span className="tabular-nums">{formatDistance(totalScore)}</span>
+      </div>
+    </div>
+  );
+}
+
+function RoundActionDock({
+  showReveal,
+  canValidate,
+  selectedMapName,
+  hasPick,
+  currentIndex,
+  total,
+  totalScore,
+  secondsLeft,
+  gameMode,
+  onValidate,
+  onNext,
+}: {
+  showReveal: boolean;
+  canValidate: boolean;
+  selectedMapName: string | null;
+  hasPick: boolean;
+  currentIndex: number;
+  total: number;
+  totalScore: number;
+  secondsLeft: number;
+  gameMode: GameMode;
+  onValidate: () => void;
+  onNext: () => void;
+}) {
+  const status = getRoundActionStatus(selectedMapName, hasPick, showReveal);
+  return (
+    <div className="sticky bottom-3 z-30 rounded-lg border border-atfr-gold/25 bg-atfr-ink/95 p-3 shadow-2xl backdrop-blur">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={showReveal ? 'gold' : getModeBadgeVariant(gameMode)}>
+              {showReveal ? 'Révélation' : status.label}
+            </Badge>
+            <span className="text-xs text-atfr-fog tabular-nums">
+              Manche {currentIndex + 1}/{total}
+            </span>
+            {!showReveal && (
+              <span className="text-xs text-atfr-fog tabular-nums">
+                {secondsLeft}s
+              </span>
+            )}
+          </div>
+          <p className="mt-1 truncate text-sm text-atfr-bone">
+            {showReveal
+              ? 'Analyse la correction puis passe à la suite.'
+              : status.detail}
+          </p>
+          <p className="mt-0.5 text-xs text-atfr-fog">
+            Score actuel : {formatDistance(totalScore)}
+          </p>
+        </div>
+
+        {showReveal ? (
+          <Button
+            className="w-full sm:w-auto"
+            onClick={onNext}
+            trailingIcon={<ArrowRight size={14} />}
+          >
+            {currentIndex < total - 1
+              ? 'Manche suivante'
+              : 'Voir le score final'}
+          </Button>
+        ) : (
+          <Button
+            className="w-full sm:w-auto"
+            onClick={onValidate}
+            disabled={!canValidate}
+            trailingIcon={<ArrowRight size={14} />}
+          >
+            {status.cta}
+          </Button>
+        )}
       </div>
     </div>
   );
