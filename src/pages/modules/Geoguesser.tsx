@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   Camera,
   CalendarDays,
   CheckCircle2,
@@ -46,6 +47,7 @@ import {
 } from '@/features/geoguesser/queries';
 import {
   useLeaderboard,
+  usePlayerModuleScores,
   useSubmitScore,
   type LeaderboardEntry,
 } from '@/features/leaderboard/queries';
@@ -105,6 +107,11 @@ export default function Geoguesser() {
   const submitScore = useSubmitScore();
   const recordAttempt = useRecordShotAttempt();
   const identity = usePlayerIdentity();
+  const playerScores = usePlayerModuleScores({
+    moduleSlug: MODULE_SLUG,
+    playerAnonId: identity.id,
+    playerAccountId: identity.accountId,
+  });
 
   const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
   const roundTimeS = cfg.round_time_s;
@@ -164,6 +171,10 @@ export default function Geoguesser() {
     [results],
   );
   const resultStats = useMemo(() => summarizeResults(results), [results]);
+  const personalStats = useMemo(
+    () => summarizePlayerScores(playerScores.data ?? []),
+    [playerScores.data],
+  );
 
   // Reset per-round picks + timer when advancing.
   useEffect(() => {
@@ -498,6 +509,11 @@ export default function Geoguesser() {
             </Card>
           )}
 
+          <PersonalStatsPanel
+            stats={personalStats}
+            isLoading={playerScores.isLoading}
+          />
+
           <GeoguesserLeaderboardPanel
             moduleSlug={MODULE_SLUG}
             submode={leaderboardSubmode}
@@ -799,6 +815,11 @@ export default function Geoguesser() {
 
         <ResultInsights stats={resultStats} />
 
+        <PersonalStatsPanel
+          stats={personalStats}
+          isLoading={playerScores.isLoading || playerScores.isFetching}
+        />
+
         {/* Per-round recap */}
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-3">
@@ -951,12 +972,28 @@ function formatModeLabel(mode: GameMode, challengeKey: string): string {
   return 'Série libre';
 }
 
+function formatGenericModeLabel(mode: GameMode): string {
+  if (mode === 'daily') return 'Challenge du jour';
+  return formatModeLabel(mode, getDailyChallengeKey());
+}
+
+function formatScoreModeLabel(mode: GameMode, dailyKey?: string | null): string {
+  if (mode === 'daily' && dailyKey) return formatModeLabel(mode, dailyKey);
+  return formatGenericModeLabel(mode);
+}
+
 type BadgeVariant = 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'outline';
 
 function getModeBadgeVariant(mode: GameMode): BadgeVariant {
   if (mode === 'daily') return 'gold';
   if (mode === 'sprint') return 'warning';
   if (mode === 'blind') return 'neutral';
+  return 'outline';
+}
+
+function getTrendBadgeVariant(tone: PersonalTrend['tone']): BadgeVariant {
+  if (tone === 'success') return 'success';
+  if (tone === 'warning') return 'warning';
   return 'outline';
 }
 
@@ -1106,6 +1143,44 @@ interface ResultStats {
   advice: string;
 }
 
+interface PersonalModeStat {
+  mode: GameMode;
+  games: number;
+  bestScoreM: number;
+  avgScoreM: number;
+  bestRatio: number;
+}
+
+interface PersonalRecentScore {
+  id: string;
+  mode: GameMode;
+  scoreM: number;
+  rounds: number | null;
+  mapAccuracyPct: number | null;
+  dailyKey: string | null;
+  createdAt: string;
+  ratio: number;
+}
+
+interface PersonalTrend {
+  label: string;
+  detail: string;
+  tone: 'success' | 'warning' | 'neutral';
+}
+
+interface PersonalStats {
+  games: number;
+  gamesLast7Days: number;
+  bestScoreM: number | null;
+  avgScoreM: number | null;
+  avgMapAccuracyPct: number | null;
+  bestStreak: number;
+  bestMode: PersonalModeStat | null;
+  modes: PersonalModeStat[];
+  recent: PersonalRecentScore[];
+  trend: PersonalTrend | null;
+}
+
 function summarizeResults(results: RoundResult[]): ResultStats {
   let best: RoundInsight | null = null;
   let toughest: RoundInsight | null = null;
@@ -1220,6 +1295,142 @@ function buildRoundFeedback(result: RoundResult): string {
     return `Bonne map, mais ton point est trop ${direction}. Recale-toi avec les bases, reliefs et lignes de tir.`;
   }
   return 'Bonne map : tu es dans le bon secteur, il manque surtout un repère fin pour verrouiller le pin.';
+}
+
+function summarizePlayerScores(entries: LeaderboardEntry[]): PersonalStats {
+  const parsed = entries
+    .map((entry) => {
+      const scoreM =
+        getMetaNumber(entry.meta, 'distance_m') ??
+        Math.max(0, entry.max_score - entry.score);
+      return {
+        entry,
+        mode: getEntryGameMode(entry),
+        scoreM,
+        rounds: getMetaNumber(entry.meta, 'rounds'),
+        mapAccuracyPct: getMetaNumber(entry.meta, 'map_accuracy_pct'),
+        dailyKey: getMetaString(entry.meta, 'daily_key'),
+        bestStreak: getMetaNumber(entry.meta, 'best_streak') ?? 0,
+        createdMs: new Date(entry.created_at).getTime(),
+      };
+    })
+    .filter((item) => Number.isFinite(item.scoreM))
+    .sort((a, b) => b.createdMs - a.createdMs);
+
+  if (parsed.length === 0) {
+    return {
+      games: 0,
+      gamesLast7Days: 0,
+      bestScoreM: null,
+      avgScoreM: null,
+      avgMapAccuracyPct: null,
+      bestStreak: 0,
+      bestMode: null,
+      modes: [],
+      recent: [],
+      trend: null,
+    };
+  }
+
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const mapAccuracyValues = parsed
+    .map((item) => item.mapAccuracyPct)
+    .filter((value): value is number => value != null);
+  const modes = new Map<GameMode, typeof parsed>();
+  for (const item of parsed) {
+    const list = modes.get(item.mode) ?? [];
+    list.push(item);
+    modes.set(item.mode, list);
+  }
+  const modeStats = [...modes.entries()]
+    .map(([mode, items]) => ({
+      mode,
+      games: items.length,
+      bestScoreM: Math.min(...items.map((item) => item.scoreM)),
+      avgScoreM:
+        items.reduce((acc, item) => acc + item.scoreM, 0) / items.length,
+      bestRatio: Math.max(...items.map((item) => item.entry.ratio)),
+    }))
+    .sort((a, b) => b.bestRatio - a.bestRatio || b.games - a.games);
+
+  return {
+    games: parsed.length,
+    gamesLast7Days: parsed.filter((item) => item.createdMs >= weekAgo).length,
+    bestScoreM: Math.min(...parsed.map((item) => item.scoreM)),
+    avgScoreM:
+      parsed.reduce((acc, item) => acc + item.scoreM, 0) / parsed.length,
+    avgMapAccuracyPct:
+      mapAccuracyValues.length > 0
+        ? Math.round(
+            mapAccuracyValues.reduce((acc, value) => acc + value, 0) /
+              mapAccuracyValues.length,
+          )
+        : null,
+    bestStreak: Math.max(...parsed.map((item) => item.bestStreak)),
+    bestMode: modeStats[0] ?? null,
+    modes: modeStats,
+    recent: parsed.slice(0, 5).map((item) => ({
+      id: item.entry.id,
+      mode: item.mode,
+      scoreM: item.scoreM,
+      rounds: item.rounds,
+      mapAccuracyPct: item.mapAccuracyPct,
+      dailyKey: item.dailyKey,
+      createdAt: item.entry.created_at,
+      ratio: item.entry.ratio,
+    })),
+    trend: buildPersonalTrend(parsed),
+  };
+}
+
+function buildPersonalTrend(
+  parsed: Array<{ scoreM: number; createdMs: number }>,
+): PersonalTrend | null {
+  if (parsed.length < 6) return null;
+  const recent = parsed.slice(0, 5);
+  const previous = parsed.slice(5, 10);
+  if (previous.length < 3) return null;
+  const recentAvg =
+    recent.reduce((acc, item) => acc + item.scoreM, 0) / recent.length;
+  const previousAvg =
+    previous.reduce((acc, item) => acc + item.scoreM, 0) / previous.length;
+  if (previousAvg <= 0) return null;
+  const deltaPct = Math.round(((recentAvg - previousAvg) / previousAvg) * 100);
+  if (deltaPct <= -5) {
+    return {
+      label: 'En progrès',
+      detail: `${Math.abs(deltaPct)}% de distance en moins sur tes 5 dernières parties.`,
+      tone: 'success',
+    };
+  }
+  if (deltaPct >= 8) {
+    return {
+      label: 'À stabiliser',
+      detail: `${deltaPct}% de distance en plus récemment. Rejoue tes modes forts.`,
+      tone: 'warning',
+    };
+  }
+  return {
+    label: 'Stable',
+    detail: 'Tes 5 dernières parties restent dans ton rythme habituel.',
+    tone: 'neutral',
+  };
+}
+
+function getEntryGameMode(entry: LeaderboardEntry): GameMode {
+  const metaMode = getMetaString(entry.meta, 'game_mode');
+  if (
+    metaMode === 'daily' ||
+    metaMode === 'random' ||
+    metaMode === 'sprint' ||
+    metaMode === 'blind'
+  ) {
+    return metaMode;
+  }
+  if (entry.submode.startsWith('daily:')) return 'daily';
+  if (entry.submode.startsWith('sprint:')) return 'sprint';
+  if (entry.submode.startsWith('blind:')) return 'blind';
+  return 'random';
 }
 
 // ---------------------------------------------------------------------------
@@ -1467,6 +1678,217 @@ function ResultInsights({ stats }: { stats: ResultStats }) {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+function PersonalStatsPanel({
+  stats,
+  isLoading,
+}: {
+  stats: PersonalStats;
+  isLoading: boolean;
+}) {
+  if (isLoading && stats.games === 0) {
+    return (
+      <Card>
+        <CardBody className="p-5 flex justify-center">
+          <Spinner />
+        </CardBody>
+      </Card>
+    );
+  }
+
+  if (stats.games === 0) {
+    return (
+      <Card>
+        <CardBody className="p-5 flex items-start gap-4">
+          <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <h3 className="font-display text-lg text-atfr-bone">Mes stats</h3>
+            <p className="mt-1 text-sm leading-relaxed text-atfr-fog">
+              Termine une partie pour débloquer ton historique personnel :
+              meilleur score, progression, modes forts et dernières manches.
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardBody className="p-5 space-y-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-display text-lg text-atfr-bone flex items-center gap-2">
+              <BarChart3 size={18} className="text-atfr-gold" />
+              Mes stats GeoGuesseur
+            </h3>
+            <p className="text-xs text-atfr-fog mt-1">
+              Ton historique personnel, tous modes confondus.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">{stats.games} partie(s)</Badge>
+            <Badge variant="gold">{stats.gamesLast7Days} cette semaine</Badge>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <PersonalStatTile
+            icon={<Trophy size={16} />}
+            label="Meilleur score"
+            value={stats.bestScoreM != null ? formatDistance(stats.bestScoreM) : '—'}
+            detail="plus bas score total"
+          />
+          <PersonalStatTile
+            icon={<Target size={16} />}
+            label="Moyenne"
+            value={stats.avgScoreM != null ? formatDistance(stats.avgScoreM) : '—'}
+            detail="par partie terminée"
+          />
+          <PersonalStatTile
+            icon={<MapIcon size={16} />}
+            label="Maps trouvées"
+            value={
+              stats.avgMapAccuracyPct != null
+                ? `${stats.avgMapAccuracyPct}%`
+                : '—'
+            }
+            detail="précision moyenne"
+          />
+          <PersonalStatTile
+            icon={<Flame size={16} />}
+            label="Meilleure série"
+            value={String(stats.bestStreak)}
+            detail="bonnes maps d'affilée"
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[1fr_1.15fr]">
+          <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 p-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
+              Progression
+            </p>
+            {stats.trend ? (
+              <div className="space-y-2">
+                <Badge variant={getTrendBadgeVariant(stats.trend.tone)}>
+                  {stats.trend.label}
+                </Badge>
+                <p className="text-sm leading-relaxed text-atfr-bone">
+                  {stats.trend.detail}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed text-atfr-fog">
+                Joue encore quelques parties pour comparer tes dernières
+                performances avec ton historique.
+              </p>
+            )}
+            {stats.bestMode && (
+              <p className="mt-3 text-xs text-atfr-fog">
+                Mode fort :{' '}
+                <strong className="text-atfr-bone">
+                  {formatGenericModeLabel(stats.bestMode.mode)}
+                </strong>{' '}
+                · meilleur score {formatDistance(stats.bestMode.bestScoreM)}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 p-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
+              Par mode
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {stats.modes.map((mode) => (
+                <div
+                  key={mode.mode}
+                  className="rounded bg-atfr-ink/45 px-3 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant={getModeBadgeVariant(mode.mode)}>
+                      {formatGenericModeLabel(mode.mode)}
+                    </Badge>
+                    <span className="text-[10px] text-atfr-fog">
+                      {mode.games} partie(s)
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-atfr-bone">
+                    Best {formatDistance(mode.bestScoreM)}
+                  </p>
+                  <p className="text-xs text-atfr-fog">
+                    Moy. {formatDistance(mode.avgScoreM)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
+            Dernières parties
+          </p>
+          <div className="grid gap-2">
+            {stats.recent.map((score) => (
+              <div
+                key={score.id}
+                className="flex flex-wrap items-center gap-3 rounded-md border border-atfr-gold/10 bg-atfr-ink/35 px-3 py-2"
+              >
+                <Badge variant={getModeBadgeVariant(score.mode)}>
+                  {formatScoreModeLabel(score.mode, score.dailyKey)}
+                </Badge>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-atfr-bone tabular-nums">
+                    {formatDistance(score.scoreM)}
+                  </p>
+                  <p className="text-xs text-atfr-fog">
+                    {formatScoreDate(score.createdAt)}
+                    {score.rounds ? ` · ${score.rounds} manche(s)` : ''}
+                    {score.mapAccuracyPct != null
+                      ? ` · ${score.mapAccuracyPct}% maps`
+                      : ''}
+                  </p>
+                </div>
+                <span className="text-xs text-atfr-fog tabular-nums">
+                  {Math.round(score.ratio * 100)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function PersonalStatTile({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-ink/45 p-3 min-w-0">
+      <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-md border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
+        {icon}
+      </div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="font-display text-xl text-atfr-bone mt-1 truncate">
+        {value}
+      </p>
+      <p className="text-xs text-atfr-fog mt-1 truncate">{detail}</p>
+    </div>
   );
 }
 

@@ -39,6 +39,71 @@ export function useLeaderboard(args: {
   });
 }
 
+export function usePlayerModuleScores(args: {
+  moduleSlug: string;
+  playerAnonId: string;
+  playerAccountId?: number | null;
+  limit?: number;
+}) {
+  const { moduleSlug, playerAnonId, playerAccountId, limit = 120 } = args;
+  return useQuery({
+    queryKey: [
+      'module_scores',
+      'player',
+      moduleSlug,
+      playerAnonId,
+      playerAccountId ?? 'anon',
+      limit,
+    ],
+    enabled: !!playerAnonId,
+    queryFn: async (): Promise<LeaderboardEntry[]> => {
+      const queries = [
+        supabase
+          .from('module_scores')
+          .select('*')
+          .eq('module_slug', moduleSlug)
+          .eq('player_anon_id', playerAnonId)
+          .order('created_at', { ascending: false })
+          .limit(limit),
+      ];
+
+      if (playerAccountId != null) {
+        queries.push(
+          supabase
+            .from('module_scores')
+            .select('*')
+            .eq('module_slug', moduleSlug)
+            .eq('player_account_id', playerAccountId)
+            .order('created_at', { ascending: false })
+            .limit(limit),
+        );
+      }
+
+      const responses = await Promise.all(queries);
+      const rows: ScoreRow[] = [];
+      for (const { data, error } of responses) {
+        if (error) throw error;
+        rows.push(...(data ?? []));
+      }
+
+      const unique = new Map<string, ScoreRow>();
+      for (const row of rows) unique.set(row.id, row);
+
+      return [...unique.values()]
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
+        .slice(0, limit)
+        .map((row) => ({
+          ...row,
+          ratio: row.max_score > 0 ? row.score / row.max_score : 0,
+        }));
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useSubmitScore() {
   const qc = useQueryClient();
   return useMutation({
@@ -51,6 +116,9 @@ export function useSubmitScore() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({
         queryKey: ['module_scores', vars.module_slug],
+      });
+      qc.invalidateQueries({
+        queryKey: ['module_scores', 'player', vars.module_slug],
       });
     },
   });
