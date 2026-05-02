@@ -85,7 +85,12 @@ export function MediaPicker({ label, kind, value, onChange }: MediaPickerProps) 
               <Icon size={18} className="text-atfr-gold" strokeWidth={1.6} />
               Aucun {kind === 'video' ? 'média vidéo' : 'média image'} sélectionné.
             </div>
-            <Button size="sm" variant="outline" onClick={() => setPanel((p) => !p)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPanel((p) => !p)}
+            >
               Choisir / Uploader
             </Button>
           </div>
