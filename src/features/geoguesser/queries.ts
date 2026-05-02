@@ -263,6 +263,16 @@ export const DEFAULT_GEO_SETTINGS: SettingsRow = {
   wrong_map_malus_m: 2000,
   timeout_malus_m: 2000,
   daily_challenge_rounds: 5,
+  random_rounds: 5,
+  sprint_rounds: 10,
+  sprint_round_time_s: 20,
+  sprint_time_penalty_m: 12,
+  blind_rounds: 5,
+  blind_preview_seconds: 5,
+  min_maps_daily: 5,
+  min_maps_random: 5,
+  min_maps_sprint: 10,
+  min_maps_blind: 5,
   updated_at: new Date(0).toISOString(),
 };
 

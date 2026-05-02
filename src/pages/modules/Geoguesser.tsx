@@ -67,12 +67,6 @@ import {
 } from '@/types/database';
 
 const MODULE_SLUG = 'wot-geoguesser';
-const ROUNDS_PER_GAME = 5;
-const SPRINT_ROUNDS_PER_GAME = 10;
-const SPRINT_ROUND_TIME_S = 20;
-const SPRINT_TIME_PENALTY_M = 12;
-const BLIND_ROUNDS_PER_GAME = 5;
-const BLIND_PREVIEW_SECONDS = 5;
 const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
 type DifficultyFilter = QuizDifficulty | 'all';
 type GameMode = 'daily' | 'random' | 'sprint' | 'blind';
@@ -99,7 +93,22 @@ interface DifficultyAvailability {
   mapCount: number;
   shotCount: number;
   requiredMapCount: number;
+  requiredShotCount: number;
   disabled: boolean;
+}
+
+interface GeoguesserModeSettings {
+  dailyRounds: number;
+  randomRounds: number;
+  sprintRounds: number;
+  sprintRoundTimeS: number;
+  sprintTimePenaltyM: number;
+  blindRounds: number;
+  blindPreviewSeconds: number;
+  minMapsDaily: number;
+  minMapsRandom: number;
+  minMapsSprint: number;
+  minMapsBlind: number;
 }
 
 export default function Geoguesser() {
@@ -122,9 +131,14 @@ export default function Geoguesser() {
 
   const cfg = settings.data ?? DEFAULT_GEO_SETTINGS;
   const roundTimeS = cfg.round_time_s;
-  const dailyRounds = clampNumber(cfg.daily_challenge_rounds, 1, 20);
-  const roundTarget = getRoundTargetForMode(gameMode, dailyRounds);
-  const roundTimeLimitS = getRoundTimeLimit(gameMode, roundTimeS);
+  const modeSettings = useMemo(() => getModeSettings(cfg), [cfg]);
+  const roundTarget = getRoundTargetForMode(gameMode, modeSettings);
+  const minMapRequirement = getMinMapRequirement(gameMode, modeSettings);
+  const roundTimeLimitS = getRoundTimeLimit(gameMode, roundTimeS, modeSettings);
+  const blindPreviewSeconds = getBlindPreviewSeconds(
+    modeSettings,
+    roundTimeLimitS,
+  );
   const malus: RoundScoreSettings = {
     wrongMapMalusM: cfg.wrong_map_malus_m,
     timeoutMalusM: cfg.timeout_malus_m,
@@ -142,7 +156,9 @@ export default function Geoguesser() {
   const [activeChallengeKey, setActiveChallengeKey] = useState(
     getDailyChallengeKey(),
   );
-  const [activeRoundTarget, setActiveRoundTarget] = useState(dailyRounds);
+  const [activeRoundTarget, setActiveRoundTarget] = useState(
+    modeSettings.dailyRounds,
+  );
   const [shareCopied, setShareCopied] = useState(false);
 
   const current = pool[index];
@@ -159,6 +175,7 @@ export default function Geoguesser() {
     difficulty,
     displayChallengeKey,
     displayRoundTarget,
+    modeSettings,
   );
   const totalScore = useMemo(
     () => results.reduce((acc, r) => acc + r.score, 0),
@@ -182,8 +199,13 @@ export default function Geoguesser() {
     [playerScores.data],
   );
   const difficultyAvailability = useMemo(
-    () => buildDifficultyAvailability(allShots.data ?? [], roundTarget),
-    [allShots.data, roundTarget],
+    () =>
+      buildDifficultyAvailability(
+        allShots.data ?? [],
+        minMapRequirement,
+        roundTarget,
+      ),
+    [allShots.data, minMapRequirement, roundTarget],
   );
   const selectedDifficultyAvailability = difficultyAvailability[difficulty];
   const canStartGame =
@@ -191,11 +213,10 @@ export default function Geoguesser() {
     !!selectedDifficultyAvailability &&
     !selectedDifficultyAvailability.disabled &&
     !shots.isLoading;
-  const startDisabledReason = !identity.nickname
-    ? 'Choisis d’abord un pseudo'
-    : selectedDifficultyAvailability?.disabled
-      ? `Il faut ${selectedDifficultyAvailability.requiredMapCount} maps minimum pour ce mode.`
-      : null;
+  const startDisabledReason = getStartDisabledReason(
+    !!identity.nickname,
+    selectedDifficultyAvailability,
+  );
 
   // Reset per-round picks + timer when advancing.
   useEffect(() => {
@@ -293,7 +314,12 @@ export default function Geoguesser() {
       settings: malus,
     });
     const elapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
-    const timePenalty = getSprintTimePenalty(gameMode, r.kind, elapsedSeconds);
+    const timePenalty = getSprintTimePenalty(
+      gameMode,
+      r.kind,
+      elapsedSeconds,
+      modeSettings,
+    );
     setResults((prev) => [
       ...prev,
       {
@@ -356,7 +382,13 @@ export default function Geoguesser() {
     );
     const worst = Math.max(
       1,
-      getWorstTotalForMode(gameMode, pool.length, malus, roundTimeLimitS),
+      getWorstTotalForMode(
+        gameMode,
+        pool.length,
+        malus,
+        roundTimeLimitS,
+        modeSettings,
+      ),
     );
     const finalStats = summarizeResults(results);
     if (identity.nickname && pool.length > 0) {
@@ -373,6 +405,7 @@ export default function Geoguesser() {
             difficulty,
             activeChallengeKey,
             activeRoundTarget,
+            modeSettings,
           ),
           player_anon_id: identity.id,
           player_nickname: identity.nickname,
@@ -488,6 +521,7 @@ export default function Geoguesser() {
                       value={gameMode}
                       onChange={setGameMode}
                       challengeKey={displayChallengeKey}
+                      modeSettings={modeSettings}
                     />
 
                     <DifficultyPicker
@@ -505,8 +539,13 @@ export default function Geoguesser() {
                     playableMapCount={
                       selectedDifficultyAvailability?.mapCount ?? 0
                     }
+                    playableShotCount={
+                      selectedDifficultyAvailability?.shotCount ?? 0
+                    }
+                    requiredMapCount={minMapRequirement}
                     wrongMapMalusM={cfg.wrong_map_malus_m}
                     timeoutMalusM={cfg.timeout_malus_m}
+                    modeSettings={modeSettings}
                     hasNickname={!!identity.nickname}
                     canStart={canStartGame}
                     disabledReason={startDisabledReason}
@@ -554,10 +593,7 @@ export default function Geoguesser() {
     const overlayMap = showReveal && correctMap ? correctMap : selectedMap;
     const canValidate = !!selectedMapId && pickX != null && pickY != null;
     const roundElapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
-    const blindPreviewLimitS = Math.min(
-      BLIND_PREVIEW_SECONDS,
-      roundTimeLimitS,
-    );
+    const blindPreviewLimitS = blindPreviewSeconds;
     const blindPreviewLeft = Math.ceil(
       Math.max(0, blindPreviewLimitS - roundElapsedSeconds),
     );
@@ -670,6 +706,7 @@ export default function Geoguesser() {
                         onClose={dismissTutorial}
                         roundTimeS={roundTimeLimitS}
                         gameMode={gameMode}
+                        modeSettings={modeSettings}
                       />
                     </motion.div>
                   )}
@@ -734,7 +771,13 @@ export default function Geoguesser() {
   const tier = scoreTier(avg);
   const worst = Math.max(
     1,
-    getWorstTotalForMode(gameMode, pool.length, malus, roundTimeLimitS),
+    getWorstTotalForMode(
+      gameMode,
+      pool.length,
+      malus,
+      roundTimeLimitS,
+      modeSettings,
+    ),
   );
   // Clamp pct to 0..100 ; closer to 0 is better.
   const pct = worst > 0 ? Math.min(100, (totalScore / worst) * 100) : 0;
@@ -924,40 +967,85 @@ function formatChallengeDate(key: string): string {
   return month && day ? `${day}/${month}` : key;
 }
 
-function getRoundTargetForMode(mode: GameMode, dailyRounds: number): number {
-  if (mode === 'daily') return dailyRounds;
-  if (mode === 'sprint') return SPRINT_ROUNDS_PER_GAME;
-  if (mode === 'blind') return BLIND_ROUNDS_PER_GAME;
-  return ROUNDS_PER_GAME;
+function getModeSettings(
+  settings: typeof DEFAULT_GEO_SETTINGS,
+): GeoguesserModeSettings {
+  return {
+    dailyRounds: clampNumber(settings.daily_challenge_rounds, 1, 20),
+    randomRounds: clampNumber(settings.random_rounds, 1, 20),
+    sprintRounds: clampNumber(settings.sprint_rounds, 1, 30),
+    sprintRoundTimeS: clampNumber(settings.sprint_round_time_s, 5, 120),
+    sprintTimePenaltyM: clampNumber(settings.sprint_time_penalty_m, 0, 1000),
+    blindRounds: clampNumber(settings.blind_rounds, 1, 20),
+    blindPreviewSeconds: clampNumber(settings.blind_preview_seconds, 1, 60),
+    minMapsDaily: clampNumber(settings.min_maps_daily, 1, 100),
+    minMapsRandom: clampNumber(settings.min_maps_random, 1, 100),
+    minMapsSprint: clampNumber(settings.min_maps_sprint, 1, 100),
+    minMapsBlind: clampNumber(settings.min_maps_blind, 1, 100),
+  };
 }
 
-function getRoundTimeLimit(mode: GameMode, roundTimeS: number): number {
+function getRoundTargetForMode(
+  mode: GameMode,
+  settings: GeoguesserModeSettings,
+): number {
+  if (mode === 'daily') return settings.dailyRounds;
+  if (mode === 'sprint') return settings.sprintRounds;
+  if (mode === 'blind') return settings.blindRounds;
+  return settings.randomRounds;
+}
+
+function getMinMapRequirement(
+  mode: GameMode,
+  settings: GeoguesserModeSettings,
+): number {
+  if (mode === 'daily') return settings.minMapsDaily;
+  if (mode === 'sprint') return settings.minMapsSprint;
+  if (mode === 'blind') return settings.minMapsBlind;
+  return settings.minMapsRandom;
+}
+
+function getRoundTimeLimit(
+  mode: GameMode,
+  roundTimeS: number,
+  settings: GeoguesserModeSettings,
+): number {
   if (mode === 'sprint') {
-    return Math.max(5, Math.min(roundTimeS, SPRINT_ROUND_TIME_S));
+    return settings.sprintRoundTimeS;
   }
   return roundTimeS;
+}
+
+function getBlindPreviewSeconds(
+  settings: GeoguesserModeSettings,
+  roundTimeS: number,
+): number {
+  return Math.min(settings.blindPreviewSeconds, roundTimeS);
 }
 
 function getSprintTimePenalty(
   mode: GameMode,
   kind: RoundScoreResult['kind'],
   elapsedSeconds: number,
+  settings: GeoguesserModeSettings,
 ): number {
   if (mode !== 'sprint' || kind !== 'distance') return 0;
-  return Math.round(Math.max(0, elapsedSeconds) * SPRINT_TIME_PENALTY_M);
+  return Math.round(Math.max(0, elapsedSeconds) * settings.sprintTimePenaltyM);
 }
 
 function getWorstTotalForMode(
   mode: GameMode,
   rounds: number,
-  settings: RoundScoreSettings,
+  scoreSettings: RoundScoreSettings,
   roundTimeS: number,
+  modeSettings: GeoguesserModeSettings,
 ): number {
-  const baseWorst = worstTotalFor(rounds, settings);
+  const baseWorst = worstTotalFor(rounds, scoreSettings);
   if (mode !== 'sprint') return baseWorst;
   const sprintWorst =
     rounds *
-    (settings.timeoutMalusM + roundTimeS * SPRINT_TIME_PENALTY_M);
+    (scoreSettings.timeoutMalusM +
+      roundTimeS * modeSettings.sprintTimePenaltyM);
   return Math.max(baseWorst, sprintWorst);
 }
 
@@ -1003,11 +1091,13 @@ function getDifficultyDotClass(difficulty: DifficultyFilter): string {
 function buildDifficultyAvailability(
   shots: ShotWithMap[],
   requiredMapCount: number,
+  requiredShotCount: number,
 ): Record<DifficultyFilter, DifficultyAvailability> {
   const empty = (): DifficultyAvailability => ({
     mapCount: 0,
     shotCount: 0,
     requiredMapCount,
+    requiredShotCount,
     disabled: requiredMapCount > 0,
   });
   const result: Record<DifficultyFilter, DifficultyAvailability> = {
@@ -1045,7 +1135,9 @@ function buildDifficultyAvailability(
       mapCount,
       shotCount: shotCounts[key],
       requiredMapCount,
-      disabled: mapCount < requiredMapCount,
+      requiredShotCount,
+      disabled:
+        mapCount < requiredMapCount || shotCounts[key] < requiredShotCount,
     };
   }
 
@@ -1055,8 +1147,28 @@ function buildDifficultyAvailability(
 function getFirstAvailableDifficulty(
   availability: Record<DifficultyFilter, DifficultyAvailability>,
 ): DifficultyFilter | null {
-  const preferred: DifficultyFilter[] = ['all', 'easy', 'medium', 'hard', 'expert'];
-  return preferred.find((difficulty) => !availability[difficulty].disabled) ?? null;
+  const preferred: DifficultyFilter[] = [
+    'all',
+    'easy',
+    'medium',
+    'hard',
+    'expert',
+  ];
+  return (
+    preferred.find((difficulty) => !availability[difficulty].disabled) ?? null
+  );
+}
+
+function getStartDisabledReason(
+  hasNickname: boolean,
+  availability: DifficultyAvailability | undefined,
+): string | null {
+  if (!hasNickname) return 'Choisis d’abord un pseudo';
+  if (!availability?.disabled) return null;
+  if (availability.mapCount < availability.requiredMapCount) {
+    return `Il faut ${availability.requiredMapCount} maps minimum pour ce mode.`;
+  }
+  return `Il faut ${availability.requiredShotCount} screenshots minimum pour ce mode.`;
 }
 
 function getRoundActionStatus(
@@ -1119,18 +1231,21 @@ function getLeaderboardSubmode(
   difficulty: DifficultyFilter,
   challengeKey: string,
   dailyRounds: number,
+  settings: GeoguesserModeSettings,
 ): string {
   const difficultyKey = difficulty === 'all' ? 'default' : difficulty;
   if (mode === 'daily') {
     return `daily:${challengeKey}:${difficultyKey}:${dailyRounds}`;
   }
   if (mode === 'sprint') {
-    return `sprint:${difficultyKey}:${SPRINT_ROUNDS_PER_GAME}`;
+    return `sprint:${difficultyKey}:${settings.sprintRounds}`;
   }
   if (mode === 'blind') {
-    return `blind:${difficultyKey}:${BLIND_ROUNDS_PER_GAME}`;
+    return `blind:${difficultyKey}:${settings.blindRounds}`;
   }
-  return difficultyKey;
+  return settings.randomRounds === 5
+    ? difficultyKey
+    : `random:${difficultyKey}:${settings.randomRounds}`;
 }
 
 function createSeededRandom(seed: string): () => number {
@@ -1562,10 +1677,12 @@ function GameModeSelector({
   value,
   onChange,
   challengeKey,
+  modeSettings,
 }: {
   value: GameMode;
   onChange: (mode: GameMode) => void;
   challengeKey: string;
+  modeSettings: GeoguesserModeSettings;
 }) {
   return (
     <div className="space-y-3">
@@ -1584,21 +1701,21 @@ function GameModeSelector({
           active={value === 'random'}
           icon={<Shuffle size={16} />}
           title="Série libre"
-          detail={`${ROUNDS_PER_GAME} manches tirées au hasard`}
+          detail={`${modeSettings.randomRounds} manches tirées au hasard`}
           onClick={() => onChange('random')}
         />
         <ModeButton
           active={value === 'sprint'}
           icon={<Zap size={16} />}
           title="Sprint"
-          detail={`${SPRINT_ROUNDS_PER_GAME} manches · ${SPRINT_ROUND_TIME_S}s max`}
+          detail={`${modeSettings.sprintRounds} manches · ${modeSettings.sprintRoundTimeS}s`}
           onClick={() => onChange('sprint')}
         />
         <ModeButton
           active={value === 'blind'}
           icon={<EyeOff size={16} />}
           title="Blind Guess"
-          detail={`Screen visible ${BLIND_PREVIEW_SECONDS}s puis mémoire`}
+          detail={`Screen visible ${modeSettings.blindPreviewSeconds}s puis mémoire`}
           onClick={() => onChange('blind')}
         />
       </div>
@@ -1647,6 +1764,10 @@ function DifficultyPicker({
           const active = value === option.value;
           const status = availability[option.value];
           const disabled = status.disabled;
+          const disabledDetail =
+            status.mapCount < status.requiredMapCount
+              ? `${status.mapCount}/${status.requiredMapCount} maps nécessaires`
+              : `${status.shotCount}/${status.requiredShotCount} screens nécessaires`;
           return (
             <button
               key={option.value}
@@ -1655,7 +1776,7 @@ function DifficultyPicker({
               disabled={disabled}
               title={
                 disabled
-                  ? `${status.mapCount}/${status.requiredMapCount} maps disponibles`
+                  ? disabledDetail
                   : undefined
               }
               onClick={() => {
@@ -1681,7 +1802,7 @@ function DifficultyPicker({
               </span>
               <span className="mt-2 block text-xs text-atfr-fog">
                 {disabled
-                  ? `${status.mapCount}/${status.requiredMapCount} maps nécessaires`
+                  ? disabledDetail
                   : `${status.mapCount} maps · ${status.shotCount} screens`}
               </span>
               <span className="mt-1 block text-[10px] text-atfr-fog/80">
@@ -1701,8 +1822,11 @@ function SetupSummaryPanel({
   roundTimeS,
   roundTarget,
   playableMapCount,
+  playableShotCount,
+  requiredMapCount,
   wrongMapMalusM,
   timeoutMalusM,
+  modeSettings,
   hasNickname,
   canStart,
   disabledReason,
@@ -1713,8 +1837,11 @@ function SetupSummaryPanel({
   roundTimeS: number;
   roundTarget: number;
   playableMapCount: number;
+  playableShotCount: number;
+  requiredMapCount: number;
   wrongMapMalusM: number;
   timeoutMalusM: number;
+  modeSettings: GeoguesserModeSettings;
   hasNickname: boolean;
   canStart: boolean;
   disabledReason: string | null;
@@ -1740,8 +1867,13 @@ function SetupSummaryPanel({
         <SetupMetric label="Manches" value={String(roundTarget)} />
         <SetupMetric
           label="Maps jouables"
-          value={`${playableMapCount}/${roundTarget}`}
-          tone={playableMapCount >= roundTarget ? 'default' : 'warning'}
+          value={`${playableMapCount}/${requiredMapCount}`}
+          tone={playableMapCount >= requiredMapCount ? 'default' : 'warning'}
+        />
+        <SetupMetric
+          label="Screens"
+          value={`${playableShotCount}/${roundTarget}`}
+          tone={playableShotCount >= roundTarget ? 'default' : 'warning'}
         />
         <SetupMetric label="Timer" value={`${roundTimeS}s`} />
         <SetupMetric
@@ -1755,7 +1887,11 @@ function SetupSummaryPanel({
       </div>
 
       <div className="mt-4">
-        <ModeRules gameMode={gameMode} roundTimeS={roundTimeS} />
+        <ModeRules
+          gameMode={gameMode}
+          roundTimeS={roundTimeS}
+          modeSettings={modeSettings}
+        />
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-atfr-fog">
@@ -1812,18 +1948,20 @@ function SetupMetric({
 function ModeRules({
   gameMode,
   roundTimeS,
+  modeSettings,
 }: {
   gameMode: GameMode;
   roundTimeS: number;
+  modeSettings: GeoguesserModeSettings;
 }) {
   if (gameMode === 'sprint') {
     return (
       <div className="rounded-md border border-atfr-warning/30 bg-atfr-warning/10 p-4 text-sm text-atfr-bone leading-relaxed">
         <p className="font-medium text-atfr-warning">Sprint</p>
         <p className="mt-1 text-atfr-fog">
-          {SPRINT_ROUNDS_PER_GAME} manches, {roundTimeS}s par screen. Une bonne
-          map reçoit une pénalité chrono de {SPRINT_TIME_PENALTY_M} m par
-          seconde écoulée.
+          {modeSettings.sprintRounds} manches, {roundTimeS}s par screen. Une
+          bonne map reçoit une pénalité chrono de{' '}
+          {modeSettings.sprintTimePenaltyM} m par seconde écoulée.
         </p>
       </div>
     );
@@ -1834,9 +1972,9 @@ function ModeRules({
       <div className="rounded-md border border-atfr-gold/20 bg-atfr-graphite/40 p-4 text-sm text-atfr-bone leading-relaxed">
         <p className="font-medium text-atfr-gold">Blind Guess</p>
         <p className="mt-1 text-atfr-fog">
-          Le screenshot reste visible {Math.min(BLIND_PREVIEW_SECONDS, roundTimeS)}s,
-          puis il disparaît. Tu dois choisir la map et placer le point de
-          mémoire.
+          Le screenshot reste visible{' '}
+          {getBlindPreviewSeconds(modeSettings, roundTimeS)}s, puis il
+          disparaît. Tu dois choisir la map et placer le point de mémoire.
         </p>
       </div>
     );
@@ -2748,10 +2886,12 @@ function TutorialCard({
   onClose,
   roundTimeS,
   gameMode,
+  modeSettings,
 }: {
   onClose: () => void;
   roundTimeS: number;
   gameMode: GameMode;
+  modeSettings: GeoguesserModeSettings;
 }) {
   return (
     <Card className="max-w-md w-full">
@@ -2799,7 +2939,7 @@ function TutorialCard({
         {gameMode === 'blind' && (
           <p className="rounded-md border border-atfr-gold/20 bg-atfr-graphite/50 p-3 text-xs text-atfr-bone">
             Mode Blind Guess : mémorise le screenshot au lancement, il sera
-            masqué après {Math.min(BLIND_PREVIEW_SECONDS, roundTimeS)}s.
+            masqué après {getBlindPreviewSeconds(modeSettings, roundTimeS)}s.
           </p>
         )}
         <Button

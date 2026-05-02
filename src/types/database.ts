@@ -829,6 +829,16 @@ export interface Database {
           wrong_map_malus_m: number;
           timeout_malus_m: number;
           daily_challenge_rounds: number;
+          random_rounds: number;
+          sprint_rounds: number;
+          sprint_round_time_s: number;
+          sprint_time_penalty_m: number;
+          blind_rounds: number;
+          blind_preview_seconds: number;
+          min_maps_daily: number;
+          min_maps_random: number;
+          min_maps_sprint: number;
+          min_maps_blind: number;
           updated_at: string;
         };
         Insert: {
@@ -837,6 +847,16 @@ export interface Database {
           wrong_map_malus_m?: number;
           timeout_malus_m?: number;
           daily_challenge_rounds?: number;
+          random_rounds?: number;
+          sprint_rounds?: number;
+          sprint_round_time_s?: number;
+          sprint_time_penalty_m?: number;
+          blind_rounds?: number;
+          blind_preview_seconds?: number;
+          min_maps_daily?: number;
+          min_maps_random?: number;
+          min_maps_sprint?: number;
+          min_maps_blind?: number;
           updated_at?: string;
         };
         Update: {
@@ -845,6 +865,16 @@ export interface Database {
           wrong_map_malus_m?: number;
           timeout_malus_m?: number;
           daily_challenge_rounds?: number;
+          random_rounds?: number;
+          sprint_rounds?: number;
+          sprint_round_time_s?: number;
+          sprint_time_penalty_m?: number;
+          blind_rounds?: number;
+          blind_preview_seconds?: number;
+          min_maps_daily?: number;
+          min_maps_random?: number;
+          min_maps_sprint?: number;
+          min_maps_blind?: number;
           updated_at?: string;
         };
         Relationships: [];
