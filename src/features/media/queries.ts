@@ -6,15 +6,24 @@ type MediaRow = Database['public']['Tables']['media_assets']['Row'];
 
 const BUCKET = 'public-media';
 
-export function useMediaAssets(kind?: MediaKind) {
+interface MediaAssetOptions {
+  galleryOnly?: boolean;
+}
+
+export function useMediaAssets(kind?: MediaKind, opts: MediaAssetOptions = {}) {
   return useQuery({
-    queryKey: ['media_assets', kind ?? 'all'],
+    queryKey: [
+      'media_assets',
+      kind ?? 'all',
+      opts.galleryOnly ? 'gallery' : 'all',
+    ],
     queryFn: async (): Promise<MediaRow[]> => {
       let q = supabase
         .from('media_assets')
         .select('*')
         .order('created_at', { ascending: false });
       if (kind) q = q.eq('kind', kind);
+      if (opts.galleryOnly) q = q.eq('is_gallery_visible', true);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -94,6 +103,7 @@ export function useUploadMedia() {
           height: dims?.height ?? null,
           caption: caption ?? null,
           tags: tags ?? [],
+          is_gallery_visible: false,
         })
         .select()
         .single();
@@ -111,6 +121,7 @@ export function useUpdateMedia() {
       id: string;
       caption?: string | null;
       tags?: string[];
+      is_gallery_visible?: boolean;
     }) => {
       const { id, ...rest } = args;
       const { error } = await supabase
