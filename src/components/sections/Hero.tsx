@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, ChevronDown, Radio, Star, Users } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  ArrowRight,
+  BookOpen,
+  ChevronDown,
+  Radio,
+  ShieldCheck,
+  Star,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { env } from '@/lib/env';
 import { useClanInfo } from '@/features/clan/queries';
@@ -11,6 +19,7 @@ export function Hero() {
   const { data: clan } = useClanInfo();
   const { get } = useContent();
   const { data: pendingCount = 0 } = usePendingApplicationsCount();
+  const reduceMotion = useReducedMotion();
 
   const videoUrl = get('hero_video_url');
   const posterUrl = get('hero_poster_url');
@@ -51,7 +60,7 @@ export function Hero() {
         aria-hidden
       />
       <div
-        className="absolute -top-40 left-1/2 -translate-x-1/2 h-[520px] w-[520px] rounded-full blur-[120px] bg-atfr-gold/20"
+        className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-atfr-gold/10 to-transparent"
         aria-hidden
       />
 
@@ -99,7 +108,11 @@ export function Hero() {
 
             <div className="mt-10 flex flex-wrap gap-4 justify-center lg:justify-start">
               <Link to="/recrutement">
-                <Button size="lg" trailingIcon={<ArrowRight size={16} />}>
+                <Button
+                  size="lg"
+                  trailingIcon={<ArrowRight size={16} />}
+                  className="group"
+                >
                   {get('hero_cta_primary') || 'Nous rejoindre'}
                 </Button>
               </Link>
@@ -113,6 +126,40 @@ export function Hero() {
                 </Button>
               </a>
             </div>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  icon: ShieldCheck,
+                  label: 'Structure',
+                  value: 'Clan organisé',
+                },
+                { icon: BookOpen, label: 'Académie', value: 'Outils & tests' },
+                { icon: Radio, label: 'Discord', value: 'Vie active' },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.45,
+                    delay: 0.35 + i * 0.08,
+                    ease: [0.2, 0.8, 0.2, 1],
+                  }}
+                  className="rounded-lg border border-atfr-gold/15 bg-atfr-ink/45 px-4 py-3 backdrop-blur"
+                >
+                  <div className="flex items-center justify-center gap-2 lg:justify-start">
+                    <item.icon size={15} className="text-atfr-gold" />
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-atfr-fog">
+                      {item.label}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-atfr-bone">
+                    {item.value}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
 
           <motion.div
@@ -122,7 +169,29 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
           >
             <div className="relative mx-auto max-w-sm">
-              <div className="absolute inset-0 bg-gradient-gold opacity-20 blur-3xl rounded-full" />
+              <motion.div
+                className="absolute inset-3 rounded-full border border-atfr-gold/25"
+                animate={reduceMotion ? undefined : { rotate: 360 }}
+                transition={{
+                  duration: 26,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+                aria-hidden
+              >
+                <span className="absolute -top-1 left-1/2 h-2 w-8 -translate-x-1/2 rounded-sm bg-atfr-gold/70" />
+                <span className="absolute -bottom-1 left-1/2 h-2 w-8 -translate-x-1/2 rounded-sm bg-atfr-gold/40" />
+              </motion.div>
+              <motion.div
+                className="absolute inset-9 rounded-full border border-dashed border-atfr-gold/20"
+                animate={reduceMotion ? undefined : { rotate: -360 }}
+                transition={{
+                  duration: 34,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+                aria-hidden
+              />
               <img
                 src={
                   clan?.emblems?.x195?.portal ??
@@ -132,6 +201,10 @@ export function Hero() {
                 className="relative w-full animate-float drop-shadow-[0_0_40px_rgba(232,176,67,0.4)]"
                 width={320}
                 height={320}
+              />
+              <div
+                className="absolute inset-x-10 bottom-1 h-px bg-gradient-to-r from-transparent via-atfr-gold/60 to-transparent"
+                aria-hidden
               />
             </div>
           </motion.div>
