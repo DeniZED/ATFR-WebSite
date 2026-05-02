@@ -1,6 +1,7 @@
 import { Hero } from '@/components/sections/Hero';
 import { LiveStats } from '@/components/sections/LiveStats';
 import { WhyJoin } from '@/components/sections/WhyJoin';
+import { NextOperation } from '@/components/sections/NextOperation';
 import { About } from '@/components/sections/About';
 import { Activities } from '@/components/sections/Activities';
 import { AcademyPreview } from '@/components/sections/AcademyPreview';
@@ -16,6 +17,7 @@ export default function Home() {
       <Hero />
       <LiveStats />
       <WhyJoin />
+      <NextOperation />
       <About />
       <Activities />
       <AcademyPreview />
