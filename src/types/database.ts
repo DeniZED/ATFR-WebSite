@@ -917,6 +917,22 @@ export interface Database {
         };
         Returns: void;
       };
+      reset_geoguesser_shot_stats: {
+        Args: {
+          p_shot_id: string;
+        };
+        Returns: number;
+      };
+      reset_geoguesser_map_stats: {
+        Args: {
+          p_map_id: string;
+        };
+        Returns: number;
+      };
+      reset_geoguesser_all_stats: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

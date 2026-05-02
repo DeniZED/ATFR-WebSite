@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Alert,
@@ -11,11 +11,13 @@ import {
 } from '@/components/ui';
 import {
   ArrowLeft,
+  BarChart3,
   Camera,
   Download,
   Image as ImageIcon,
   Layers,
   Plus,
+  RotateCcw,
   Trash2,
 } from 'lucide-react';
 import {
@@ -23,19 +25,44 @@ import {
   useBulkUpsertMaps,
   useDeleteMap,
   useGeoMaps,
+  useGeoShots,
+  useResetMapShotStats,
   useUpsertMap,
+  type ShotWithMap,
 } from '@/features/geoguesser/queries';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import {
+  DIFFICULTY_LABELS,
+  type Database,
+  type QuizDifficulty,
+} from '@/types/database';
+
+type MapRow = Database['public']['Tables']['wot_maps']['Row'];
+
+const DIFFICULTIES = Object.keys(DIFFICULTY_LABELS) as QuizDifficulty[];
 
 export default function AdminGeoMaps() {
   const list = useGeoMaps();
+  const shots = useGeoShots();
   const bulkUpsert = useBulkUpsertMaps();
   const upsert = useUpsertMap();
   const remove = useDeleteMap();
+  const resetMapStats = useResetMapShotStats();
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const statsByMap = useMemo(() => {
+    const grouped = new Map<string, ShotWithMap[]>();
+    for (const shot of shots.data ?? []) {
+      const arr = grouped.get(shot.map_id) ?? [];
+      arr.push(shot);
+      grouped.set(shot.map_id, arr);
+    }
+    return grouped;
+  }, [shots.data]);
 
   async function syncFromWg() {
     setSyncMessage(null);
@@ -65,6 +92,24 @@ export default function AdminGeoMaps() {
     } catch (err) {
       setSyncMessage(`Erreur : ${(err as Error).message}`);
     }
+  }
+
+  async function resetStatsForMap(map: MapRow) {
+    const mapShots = statsByMap.get(map.id) ?? [];
+    if (
+      !confirm(
+        `Réinitialiser les stats des ${mapShots.length} screenshot(s) de "${map.name}" ? ` +
+          'Les compteurs repassent à 0 et toutes les difficultés redeviennent Facile.',
+      )
+    ) {
+      return;
+    }
+    const affected = await resetMapStats.mutateAsync(map.id);
+    setResetMessage(
+      affected > 0
+        ? `${affected} screenshot(s) réinitialisé(s) pour ${map.name}.`
+        : `Aucun screenshot modifie pour ${map.name}.`,
+    );
   }
 
   return (
@@ -123,6 +168,14 @@ export default function AdminGeoMaps() {
         </Alert>
       )}
 
+      {resetMessage && <Alert tone="success">{resetMessage}</Alert>}
+
+      {resetMapStats.isError && (
+        <Alert tone="danger" title="Reset impossible">
+          {(resetMapStats.error as Error).message}
+        </Alert>
+      )}
+
       <div className="flex justify-end">
         <Button
           variant="outline"
@@ -153,9 +206,13 @@ export default function AdminGeoMaps() {
         </p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {list.data.map((m) => (
+          {list.data.map((m) => {
+            const mapShots = statsByMap.get(m.id) ?? [];
+            const summary = summarizeMapShots(mapShots);
+            return (
             <Card key={m.id}>
-              <CardBody className="p-4 flex items-start gap-3">
+              <CardBody className="p-4 space-y-4">
+                <div className="flex items-start gap-3">
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-atfr-gold/20 bg-atfr-graphite flex items-center justify-center">
                   {m.image_url ? (
                     <img
@@ -176,9 +233,15 @@ export default function AdminGeoMaps() {
                       {m.source === 'wg' ? 'WG' : 'Manuel'}
                     </Badge>
                     {!m.is_active && <Badge variant="neutral">Inactive</Badge>}
+                    <Badge variant={summary.badgeTone}>
+                      {summary.badgeLabel}
+                    </Badge>
                   </div>
                   <p className="text-xs text-atfr-fog mt-1">
                     id · <code>{m.id}</code>
+                  </p>
+                  <p className="text-xs text-atfr-fog mt-1">
+                    {summary.helper}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
@@ -198,6 +261,15 @@ export default function AdminGeoMaps() {
                       }
                       label={m.is_active ? 'Active' : 'Désactivée'}
                     />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      leadingIcon={<RotateCcw size={14} />}
+                      onClick={() => resetStatsForMap(m)}
+                      disabled={resetMapStats.isPending || summary.total === 0}
+                    >
+                      Reset stats map
+                    </Button>
                     <Button
                       size="sm"
                       variant="danger"
@@ -229,6 +301,40 @@ export default function AdminGeoMaps() {
                     </Link>
                   </div>
                 </div>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <MapStat
+                    label="Screens"
+                    value={`${summary.published}/${summary.total}`}
+                  />
+                  <MapStat label="Tentatives" value={summary.attempts} />
+                  <MapStat
+                    label="Bonne map"
+                    value={
+                      summary.mapRatePct != null
+                        ? `${summary.mapRatePct}%`
+                        : '-'
+                    }
+                  />
+                  <MapStat
+                    label="Perf moy."
+                    value={
+                      summary.perfRatePct != null
+                        ? `${summary.perfRatePct}%`
+                        : '-'
+                    }
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {DIFFICULTIES.map((d) => (
+                    <DifficultyChip
+                      key={d}
+                      difficulty={d}
+                      count={summary.difficultyCounts[d]}
+                    />
+                  ))}
+                </div>
+                <ScreenStrip shots={summary.previewShots} />
               </CardBody>
               {editingId === m.id && (
                 <div className="border-t border-atfr-gold/10">
@@ -239,9 +345,226 @@ export default function AdminGeoMaps() {
                 </div>
               )}
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+interface MapStatsSummary {
+  total: number;
+  published: number;
+  attempts: number;
+  mapRatePct: number | null;
+  perfRatePct: number | null;
+  unplayed: number;
+  difficultyCounts: Record<QuizDifficulty, number>;
+  previewShots: ShotWithMap[];
+  badgeLabel: string;
+  badgeTone: 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'outline';
+  helper: string;
+}
+
+function summarizeMapShots(shots: ShotWithMap[]): MapStatsSummary {
+  const difficultyCounts: Record<QuizDifficulty, number> = {
+    easy: 0,
+    medium: 0,
+    hard: 0,
+    expert: 0,
+  };
+  let attempts = 0;
+  let correctMaps = 0;
+  let perfSum = 0;
+  let maxPerf = 0;
+  let unplayed = 0;
+
+  for (const shot of shots) {
+    difficultyCounts[shot.difficulty] += 1;
+    attempts += shot.attempt_count;
+    correctMaps += shot.correct_map_count;
+    perfSum += shot.success_score_sum;
+    maxPerf += shot.attempt_count * getShotDiagonalM(shot);
+    if (shot.attempt_count === 0) unplayed += 1;
+  }
+
+  const published = shots.filter((s) => s.is_published).length;
+  const mapRatePct =
+    attempts > 0 ? Math.round((correctMaps / attempts) * 100) : null;
+  const perfRatePct =
+    maxPerf > 0 ? Math.round(clamp(perfSum / maxPerf, 0, 1) * 100) : null;
+
+  if (shots.length === 0) {
+    return {
+      total: 0,
+      published: 0,
+      attempts,
+      mapRatePct,
+      perfRatePct,
+      unplayed,
+      difficultyCounts,
+      previewShots: [],
+      badgeLabel: 'Sans screen',
+      badgeTone: 'neutral',
+      helper: 'Ajoute quelques screenshots pour rendre cette map jouable.',
+    };
+  }
+
+  if (published === 0) {
+    return {
+      total: shots.length,
+      published,
+      attempts,
+      mapRatePct,
+      perfRatePct,
+      unplayed,
+      difficultyCounts,
+      previewShots: shots.slice(0, 6),
+      badgeLabel: 'Brouillon',
+      badgeTone: 'warning',
+      helper: 'Aucun screen publie pour les joueurs.',
+    };
+  }
+
+  if (attempts === 0) {
+    return {
+      total: shots.length,
+      published,
+      attempts,
+      mapRatePct,
+      perfRatePct,
+      unplayed,
+      difficultyCounts,
+      previewShots: shots.slice(0, 6),
+      badgeLabel: 'Pas joue',
+      badgeTone: 'neutral',
+      helper: 'Les screens démarreront en Facile, puis monteront automatiquement.',
+    };
+  }
+
+  if (perfRatePct != null && attempts >= 10 && perfRatePct >= 80) {
+    return {
+      total: shots.length,
+      published,
+      attempts,
+      mapRatePct,
+      perfRatePct,
+      unplayed,
+      difficultyCounts,
+      previewShots: shots.slice(0, 6),
+      badgeLabel: 'Facile',
+      badgeTone: 'gold',
+      helper: 'Les joueurs performent bien sur cette map.',
+    };
+  }
+
+  if (perfRatePct != null && attempts >= 10 && perfRatePct < 40) {
+    return {
+      total: shots.length,
+      published,
+      attempts,
+      mapRatePct,
+      perfRatePct,
+      unplayed,
+      difficultyCounts,
+      previewShots: shots.slice(0, 6),
+      badgeLabel: 'Difficile',
+      badgeTone: 'danger',
+      helper: 'La map ou les points semblent exigeants pour les joueurs.',
+    };
+  }
+
+  return {
+    total: shots.length,
+    published,
+    attempts,
+    mapRatePct,
+    perfRatePct,
+    unplayed,
+    difficultyCounts,
+    previewShots: shots.slice(0, 6),
+    badgeLabel: unplayed > 0 ? 'Stats partielles' : 'Stable',
+    badgeTone: unplayed > 0 ? 'outline' : 'success',
+    helper:
+      unplayed > 0
+        ? `${unplayed} screen(s) n'ont pas encore de stats.`
+        : 'Stats suffisantes pour suivre la map.',
+  };
+}
+
+function getShotDiagonalM(shot: ShotWithMap): number {
+  const width = shot.map?.width_m ?? shot.map?.size_m ?? 1000;
+  const height = shot.map?.height_m ?? shot.map?.size_m ?? 1000;
+  return Math.max(1, Math.hypot(width, height));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function MapStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-atfr-fog">
+        {label}
+      </p>
+      <p className="font-display text-lg text-atfr-bone mt-0.5">{value}</p>
+    </div>
+  );
+}
+
+function DifficultyChip({
+  difficulty,
+  count,
+}: {
+  difficulty: QuizDifficulty;
+  count: number;
+}) {
+  return (
+    <Badge variant={count > 0 ? 'outline' : 'neutral'}>
+      {DIFFICULTY_LABELS[difficulty]} {count}
+    </Badge>
+  );
+}
+
+function ScreenStrip({ shots }: { shots: ShotWithMap[] }) {
+  if (shots.length === 0) {
+    return (
+      <p className="text-xs text-atfr-fog flex items-center gap-2">
+        <BarChart3 size={13} className="text-atfr-gold" />
+        Aucun screenshot sur cette map.
+      </p>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1.5 overflow-hidden">
+      {shots.map((shot) => (
+        <Link
+          key={shot.id}
+          to={`/admin/geoguesser/shots/${shot.id}`}
+          className="relative h-10 w-16 shrink-0 overflow-hidden rounded border border-atfr-gold/15 bg-atfr-graphite"
+          title="Ouvrir le screenshot"
+        >
+          <img
+            src={shot.image_url}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+          {shot.attempt_count === 0 && (
+            <span className="absolute inset-x-0 bottom-0 bg-atfr-ink/80 text-[9px] text-atfr-fog text-center">
+              0 stat
+            </span>
+          )}
+        </Link>
+      ))}
     </div>
   );
 }

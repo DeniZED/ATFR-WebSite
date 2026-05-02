@@ -310,3 +310,57 @@ export function useRecordShotAttempt() {
     },
   });
 }
+
+export function useResetShotStats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (shotId: string): Promise<number> => {
+      const { data, error } = await supabase.rpc(
+        'reset_geoguesser_shot_stats',
+        {
+          p_shot_id: shotId,
+        },
+      );
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['geo_shots'] });
+    },
+  });
+}
+
+export function useResetMapShotStats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (mapId: string): Promise<number> => {
+      const { data, error } = await supabase.rpc(
+        'reset_geoguesser_map_stats',
+        {
+          p_map_id: mapId,
+        },
+      );
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['geo_shots'] });
+    },
+  });
+}
+
+export function useResetAllShotStats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc(
+        'reset_geoguesser_all_stats',
+      );
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['geo_shots'] });
+    },
+  });
+}
