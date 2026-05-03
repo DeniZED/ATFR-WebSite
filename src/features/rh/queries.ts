@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import type {
   Database,
+  DiscordGuildMemberRow,
+  DiscordMemberPayload,
   DiscordVoiceSessionRow,
   PlayerActivitySnapshotRow,
   PlayerDiscordLinkRow,
@@ -76,6 +78,11 @@ export interface ImportMembersInput {
   }>;
 }
 
+export interface AutoLinkDiscordInput {
+  guildId?: string | null;
+  members?: DiscordMemberPayload[];
+}
+
 export function useHrPlayers(
   period: ActivityPeriod,
   options: { enabled?: boolean } = {},
@@ -138,6 +145,28 @@ export function useHrPlayers(
       };
     },
     staleTime: 30_000,
+  });
+}
+
+export function useDiscordGuildMembers(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['hr', 'discord-members'],
+    enabled: options.enabled ?? true,
+    queryFn: async (): Promise<DiscordGuildMemberRow[]> => {
+      const { data, error } = await supabase
+        .from('discord_guild_members')
+        .select('*')
+        .order('last_seen_at', { ascending: false });
+
+      if (error) {
+        if (error.code === '42P01' || error.code === 'PGRST205') {
+          return [];
+        }
+        throw error;
+      }
+
+      return (data ?? []) as DiscordGuildMemberRow[];
+    },
   });
 }
 
@@ -381,6 +410,71 @@ export function useImportMembersToPlayers() {
         if (error.code === '42883') {
           throw new Error(
             'Fonction import_members_to_players introuvable. Relance la migration RH complete dans Supabase.',
+          );
+        }
+        throw error;
+      }
+      return data ?? 0;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
+  });
+}
+
+export function useAutoLinkDiscordMembers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AutoLinkDiscordInput = {}): Promise<number> => {
+      const members = input.members ?? [];
+      if (members.length > 0) {
+        const { error: syncError } = await supabase.rpc(
+          'upsert_discord_guild_members',
+          {
+            p_guild_id: input.guildId ?? null,
+            p_members: members,
+          },
+        );
+        if (syncError) {
+          if (syncError.code === '42883') {
+            throw new Error(
+              'Fonction upsert_discord_guild_members introuvable. Relance la migration RH Discord.',
+            );
+          }
+          throw syncError;
+        }
+      }
+
+      const { data, error } = await supabase.rpc('auto_link_discord_members', {
+        p_guild_id: input.guildId ?? null,
+      });
+      if (error) {
+        if (error.code === '42883') {
+          throw new Error(
+            'Fonction auto_link_discord_members introuvable. Relance la migration RH Discord.',
+          );
+        }
+        throw error;
+      }
+      return data ?? 0;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
+  });
+}
+
+export function useRecomputePlayerStatuses() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc('recompute_player_hr_statuses');
+      if (error) {
+        if (error.code === '42883') {
+          throw new Error(
+            'Fonction recompute_player_hr_statuses introuvable. Relance la migration RH Discord.',
           );
         }
         throw error;

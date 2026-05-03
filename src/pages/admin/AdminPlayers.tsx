@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Clock3,
+  Link2,
   RefreshCcw,
   Search,
   ShieldAlert,
@@ -33,17 +34,24 @@ import {
   type PlayerActivitySummary,
 } from '@/features/rh/activity';
 import {
+  useAutoLinkDiscordMembers,
   useCreatePlayer,
+  useDiscordGuildMembers,
   useHrPlayers,
   useImportMembersToPlayers,
+  useRecomputePlayerStatuses,
 } from '@/features/rh/queries';
 import { useClanInfo } from '@/features/clan/queries';
+import { useDiscordWidget } from '@/features/discord/queries';
+import { useContent } from '@/hooks/useContent';
 import { useRole } from '@/hooks/useRole';
-import type { PlayerHrStatus } from '@/types/database';
+import type { DiscordMemberPayload, PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
 
 type PeriodPreset = '7' | '14' | '30' | '90' | 'custom';
 type PresenceFilter = 'all' | 'present' | 'missing';
+type DiscordFilter = 'all' | 'linked' | 'unlinked' | 'suggested';
+type AlertFilter = 'all' | 'with' | 'none';
 
 export default function AdminPlayers() {
   const navigate = useNavigate();
@@ -55,6 +63,8 @@ export default function AdminPlayers() {
   const [activity, setActivity] = useState<ActivityLevel | 'all'>('all');
   const [voice, setVoice] = useState<PresenceFilter>('all');
   const [ingame, setIngame] = useState<PresenceFilter>('all');
+  const [discord, setDiscord] = useState<DiscordFilter>('all');
+  const [alerts, setAlerts] = useState<AlertFilter>('all');
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('30');
   const [customFrom, setCustomFrom] = useState(
     new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10),
@@ -67,10 +77,54 @@ export default function AdminPlayers() {
     return makeRollingPeriod(Number(periodPreset));
   }, [customFrom, customTo, periodPreset]);
 
+  const { get } = useContent();
+  const discordServerId = get('discord_server_id') || null;
   const clanInfo = useClanInfo();
+  const discordWidget = useDiscordWidget(discordServerId);
   const players = useHrPlayers(period, { enabled: canManageRh });
+  const discordMembers = useDiscordGuildMembers({ enabled: canManageRh });
   const importMembers = useImportMembersToPlayers();
+  const autoLinkDiscord = useAutoLinkDiscordMembers();
+  const recomputeStatuses = useRecomputePlayerStatuses();
   const createPlayer = useCreatePlayer();
+
+  const widgetDiscordMembers = useMemo<DiscordMemberPayload[]>(
+    () =>
+      (discordWidget.data?.members ?? []).map((member) => ({
+        discord_user_id: member.id,
+        username: member.username,
+        display_name: member.username,
+        status: member.status,
+        avatar_url: member.avatar_url ?? null,
+        channel_id: member.channel_id ?? null,
+        activity: member.activity ?? null,
+      })),
+    [discordWidget.data],
+  );
+
+  const discordNameKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const member of widgetDiscordMembers) {
+      const key = normalizeDiscordName(
+        member.display_name ??
+          member.nickname ??
+          member.global_name ??
+          member.username ??
+          '',
+      );
+      if (key) keys.add(key);
+    }
+    for (const member of discordMembers.data ?? []) {
+      const key = normalizeDiscordName(
+        member.display_name ??
+          member.nickname ??
+          member.global_name ??
+          member.username,
+      );
+      if (key) keys.add(key);
+    }
+    return keys;
+  }, [discordMembers.data, widgetDiscordMembers]);
 
   const clanOptions = useMemo(() => {
     const values = new Set<string>();
@@ -87,6 +141,8 @@ export default function AdminPlayers() {
     return (players.data?.players ?? []).filter((summary) => {
       const player = summary.player;
       const link = summary.discordLink;
+      const hasDiscordSuggestion =
+        !link && discordNameKeys.has(normalizeDiscordName(player.nickname));
       const matchesSearch =
         !query ||
         player.nickname.toLowerCase().includes(query) ||
@@ -107,6 +163,18 @@ export default function AdminPlayers() {
         (ingame === 'present'
           ? summary.activeDays > 0 || Boolean(summary.latestWotActivityAt)
           : summary.activeDays === 0 && !summary.latestWotActivityAt);
+      const matchesDiscord =
+        discord === 'all' ||
+        (discord === 'linked'
+          ? Boolean(link)
+          : discord === 'unlinked'
+            ? !link
+            : hasDiscordSuggestion);
+      const matchesAlerts =
+        alerts === 'all' ||
+        (alerts === 'with'
+          ? summary.alerts.length > 0
+          : summary.alerts.length === 0);
 
       return (
         matchesSearch &&
@@ -114,10 +182,23 @@ export default function AdminPlayers() {
         matchesStatus &&
         matchesActivity &&
         matchesVoice &&
-        matchesIngame
+        matchesIngame &&
+        matchesDiscord &&
+        matchesAlerts
       );
     });
-  }, [activity, clan, ingame, players.data, search, status, voice]);
+  }, [
+    activity,
+    alerts,
+    clan,
+    discord,
+    ingame,
+    players.data,
+    search,
+    status,
+    voice,
+    discordNameKeys,
+  ]);
 
   const stats = useMemo(() => {
     const rows = players.data?.players ?? [];
@@ -125,10 +206,27 @@ export default function AdminPlayers() {
       total: rows.length,
       active: rows.filter((s) => s.score.value >= 50).length,
       inactive: rows.filter((s) => s.score.value < 25).length,
+      watch: rows.filter((s) => s.player.status === 'watch').length,
+      discordLinked: rows.filter((s) => Boolean(s.discordLink)).length,
+      discordSuggested: rows.filter(
+        (s) =>
+          !s.discordLink &&
+          discordNameKeys.has(normalizeDiscordName(s.player.nickname)),
+      ).length,
       alerts: rows.reduce((sum, s) => sum + s.alerts.length, 0),
       voiceSeconds: rows.reduce((sum, s) => sum + s.voiceSeconds, 0),
     };
-  }, [players.data]);
+  }, [players.data, discordNameKeys]);
+
+  const hasActiveFilter =
+    search.trim().length > 0 ||
+    clan !== 'all' ||
+    status !== 'all' ||
+    activity !== 'all' ||
+    voice !== 'all' ||
+    ingame !== 'all' ||
+    discord !== 'all' ||
+    alerts !== 'all';
 
   async function importRosterToRh() {
     try {
@@ -151,8 +249,31 @@ export default function AdminPlayers() {
         setActivity('all');
         setVoice('all');
         setIngame('all');
+        setDiscord('all');
+        setAlerts('all');
         await players.refetch();
       }
+    } catch {
+      /* surfaced by mutation state */
+    }
+  }
+
+  async function autoLinkDiscordMembers() {
+    try {
+      await autoLinkDiscord.mutateAsync({
+        guildId: discordServerId,
+        members: widgetDiscordMembers,
+      });
+      await players.refetch();
+    } catch {
+      /* surfaced by mutation state */
+    }
+  }
+
+  async function recomputeRhStatuses() {
+    try {
+      await recomputeStatuses.mutateAsync();
+      await players.refetch();
     } catch {
       /* surfaced by mutation state */
     }
@@ -172,18 +293,38 @@ export default function AdminPlayers() {
             Suivi croisé WoT, vocal Discord, notes staff et alertes RH.
           </p>
         </div>
-        <Button
-          onClick={importRosterToRh}
-          leadingIcon={<RefreshCcw size={14} />}
-          disabled={
-            importMembers.isPending ||
-            roleLoading ||
-            !canManageRh ||
-            clanInfo.isLoading
-          }
-        >
-          {importMembers.isPending ? 'Import…' : 'Importer membres'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={importRosterToRh}
+            leadingIcon={<RefreshCcw size={14} />}
+            disabled={
+              importMembers.isPending ||
+              roleLoading ||
+              !canManageRh ||
+              clanInfo.isLoading
+            }
+          >
+            {importMembers.isPending ? 'Import…' : 'Importer membres'}
+          </Button>
+          <Button
+            onClick={autoLinkDiscordMembers}
+            leadingIcon={<Link2 size={14} />}
+            disabled={
+              autoLinkDiscord.isPending || roleLoading || !canManageRh
+            }
+          >
+            {autoLinkDiscord.isPending ? 'Liaison…' : 'Auto-lier Discord'}
+          </Button>
+          <Button
+            onClick={recomputeRhStatuses}
+            leadingIcon={<ShieldAlert size={14} />}
+            disabled={
+              recomputeStatuses.isPending || roleLoading || !canManageRh
+            }
+          >
+            {recomputeStatuses.isPending ? 'Recalcul…' : 'Recalculer statuts'}
+          </Button>
+        </div>
       </div>
 
       {roleLoading ? (
@@ -197,7 +338,7 @@ export default function AdminPlayers() {
       ) : (
         <>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <StatCard
           label="Joueurs suivis"
           value={stats.total}
@@ -211,9 +352,26 @@ export default function AdminPlayers() {
           loading={players.isLoading}
         />
         <StatCard
+          label="À surveiller"
+          value={stats.watch}
+          icon={<ShieldAlert size={20} />}
+          loading={players.isLoading}
+        />
+        <StatCard
           label="Inactifs"
           value={stats.inactive}
           icon={<ShieldAlert size={20} />}
+          loading={players.isLoading}
+        />
+        <StatCard
+          label="Discord liés"
+          value={`${stats.discordLinked}/${stats.total}`}
+          hint={
+            stats.discordSuggested > 0
+              ? `${stats.discordSuggested} suggestion(s)`
+              : undefined
+          }
+          icon={<Link2 size={20} />}
           loading={players.isLoading}
         />
         <StatCard
@@ -252,6 +410,24 @@ export default function AdminPlayers() {
       {importMembers.isError && (
         <Alert tone="danger">{(importMembers.error as Error).message}</Alert>
       )}
+      {autoLinkDiscord.isSuccess && (
+        <Alert tone={(autoLinkDiscord.data ?? 0) > 0 ? 'success' : 'warning'}>
+          {(autoLinkDiscord.data ?? 0) > 0
+            ? `${autoLinkDiscord.data ?? 0} liaison(s) Discord créée(s).`
+            : 'Aucune nouvelle liaison Discord. Le widget ne voit que les membres en ligne ; le bot pourra alimenter le reste.'}
+        </Alert>
+      )}
+      {autoLinkDiscord.isError && (
+        <Alert tone="danger">{(autoLinkDiscord.error as Error).message}</Alert>
+      )}
+      {recomputeStatuses.isSuccess && (
+        <Alert tone="success">
+          {recomputeStatuses.data ?? 0} statut(s) RH recalculé(s).
+        </Alert>
+      )}
+      {recomputeStatuses.isError && (
+        <Alert tone="danger">{(recomputeStatuses.error as Error).message}</Alert>
+      )}
       {createPlayer.isSuccess && (
         <Alert tone="success">Joueur ajouté au suivi RH.</Alert>
       )}
@@ -261,7 +437,7 @@ export default function AdminPlayers() {
 
       <Card>
         <CardBody className="p-5 space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[1.4fr_repeat(5,minmax(0,1fr))]">
+          <div className="grid gap-3 lg:grid-cols-4 xl:grid-cols-[1.4fr_repeat(7,minmax(0,1fr))]">
             <Input
               label="Recherche"
               placeholder="Pseudo, Discord, account_id..."
@@ -321,6 +497,25 @@ export default function AdminPlayers() {
               <option value="all">Tous</option>
               <option value="present">Avec activité</option>
               <option value="missing">Sans activité</option>
+            </Select>
+            <Select
+              label="Discord"
+              value={discord}
+              onChange={(e) => setDiscord(e.target.value as DiscordFilter)}
+            >
+              <option value="all">Tous</option>
+              <option value="linked">Liés</option>
+              <option value="unlinked">Non liés</option>
+              <option value="suggested">Suggestion</option>
+            </Select>
+            <Select
+              label="Alertes"
+              value={alerts}
+              onChange={(e) => setAlerts(e.target.value as AlertFilter)}
+            >
+              <option value="all">Toutes</option>
+              <option value="with">Avec alerte</option>
+              <option value="none">Sans alerte</option>
             </Select>
           </div>
 
@@ -397,9 +592,9 @@ export default function AdminPlayers() {
           </span>
         </Alert>
       ) : filtered.length === 0 ? (
-        <EmptyState hasSearch={search.length > 0} />
+        <EmptyState hasSearch={search.length > 0} hasFilter={hasActiveFilter} />
       ) : (
-        <PlayerTable players={filtered} />
+        <PlayerTable players={filtered} discordNameKeys={discordNameKeys} />
       )}
         </>
       )}
@@ -407,7 +602,13 @@ export default function AdminPlayers() {
   );
 }
 
-function PlayerTable({ players }: { players: PlayerActivitySummary[] }) {
+function PlayerTable({
+  players,
+  discordNameKeys,
+}: {
+  players: PlayerActivitySummary[];
+  discordNameKeys: Set<string>;
+}) {
   return (
     <Card>
       <CardBody className="p-0">
@@ -428,7 +629,16 @@ function PlayerTable({ players }: { players: PlayerActivitySummary[] }) {
             </thead>
             <tbody className="divide-y divide-atfr-gold/10">
               {players.map((summary) => (
-                <PlayerRow key={summary.player.id} summary={summary} />
+                <PlayerRow
+                  key={summary.player.id}
+                  summary={summary}
+                  hasDiscordSuggestion={
+                    !summary.discordLink &&
+                    discordNameKeys.has(
+                      normalizeDiscordName(summary.player.nickname),
+                    )
+                  }
+                />
               ))}
             </tbody>
           </table>
@@ -438,7 +648,13 @@ function PlayerTable({ players }: { players: PlayerActivitySummary[] }) {
   );
 }
 
-function PlayerRow({ summary }: { summary: PlayerActivitySummary }) {
+function PlayerRow({
+  summary,
+  hasDiscordSuggestion,
+}: {
+  summary: PlayerActivitySummary;
+  hasDiscordSuggestion: boolean;
+}) {
   const player = summary.player;
   const alertSeverity = summary.alerts.some((alert) => alert.severity === 'danger')
     ? 'danger'
@@ -478,6 +694,11 @@ function PlayerRow({ summary }: { summary: PlayerActivitySummary }) {
             summary.discordLink?.discord_user_id ??
             'Non lié'}
         </p>
+        {!summary.discordLink && hasDiscordSuggestion && (
+          <Badge variant="gold" className="mt-1">
+            Suggestion
+          </Badge>
+        )}
       </Td>
       <Td>
         <Badge variant={STATUS_BADGE[player.status]}>
@@ -545,17 +766,24 @@ function PlayerRow({ summary }: { summary: PlayerActivitySummary }) {
   );
 }
 
-function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+function EmptyState({
+  hasSearch,
+  hasFilter,
+}: {
+  hasSearch: boolean;
+  hasFilter: boolean;
+}) {
   return (
     <Card>
       <CardBody className="p-10 text-center">
         <Search className="mx-auto text-atfr-gold" size={28} />
         <p className="mt-3 font-display text-xl text-atfr-bone">
-          {hasSearch ? 'Aucun joueur trouvé' : 'Aucun joueur RH'}
+          {hasSearch || hasFilter ? 'Aucun joueur trouvé' : 'Aucun joueur RH'}
         </p>
         <p className="mt-2 text-sm text-atfr-fog max-w-xl mx-auto">
-          Importe les membres existants pour initialiser le suivi, puis lie les
-          comptes Discord et laisse le bot/API alimenter les snapshots.
+          {hasSearch || hasFilter
+            ? 'Aucun joueur ne correspond aux filtres actuels.'
+            : 'Importe les membres existants pour initialiser le suivi, puis lie les comptes Discord et laisse le bot/API alimenter les snapshots.'}
         </p>
       </CardBody>
     </Card>
@@ -568,4 +796,11 @@ function Th({ children }: { children: ReactNode }) {
 
 function Td({ children }: { children: ReactNode }) {
   return <td className="px-4 py-4">{children}</td>;
+}
+
+function normalizeDiscordName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/^\s*[\[(]?(atfr|a[\s-]*t[\s-]*o|ato)[\])]?\s*[-:|]*\s*/i, '')
+    .replace(/[^a-z0-9]+/g, '');
 }
