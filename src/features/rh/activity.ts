@@ -130,8 +130,18 @@ export function makeRollingPeriod(days: number, now = new Date()): ActivityPerio
 }
 
 export function makeCustomPeriod(from: string, to: string): ActivityPeriod {
-  const fromDate = startOfDay(new Date(from));
-  const toDate = endOfDay(new Date(to));
+  const parsedFrom = new Date(from);
+  const parsedTo = new Date(to);
+  if (
+    !isValidDate(parsedFrom) ||
+    !isValidDate(parsedTo) ||
+    parsedFrom > parsedTo
+  ) {
+    return makeRollingPeriod(30);
+  }
+
+  const fromDate = startOfDay(parsedFrom);
+  const toDate = endOfDay(parsedTo);
   const days = Math.max(
     1,
     Math.ceil((toDate.getTime() - fromDate.getTime()) / 86_400_000),
@@ -410,22 +420,26 @@ export function getActivityLevel(value: number): ActivityLevel {
 
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return '—';
+  const date = new Date(value);
+  if (!isValidDate(date)) return '—';
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function formatDate(value: string | null | undefined): string {
   if (!value) return '—';
+  const date = new Date(value);
+  if (!isValidDate(date)) return '—';
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function formatDuration(seconds: number): string {
@@ -512,6 +526,10 @@ function latestDate(values: Array<string | null | undefined>): string | null {
     if (!latest || date > latest) latest = date;
   }
   return latest?.toISOString() ?? null;
+}
+
+function isValidDate(value: Date): boolean {
+  return !Number.isNaN(value.getTime());
 }
 
 function clampScore(value: number): number {

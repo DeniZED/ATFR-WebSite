@@ -100,6 +100,7 @@ export default function AdminPlayers() {
         avatar_url: member.avatar_url ?? null,
         channel_id: member.channel_id ?? null,
         activity: member.activity ?? null,
+        source: 'widget',
       })),
     [discordWidget.data],
   );

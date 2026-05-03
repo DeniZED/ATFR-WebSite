@@ -120,7 +120,7 @@ async function fetchAllDiscordMembers(
     members.push(...batch);
     if (batch.length < 1000) break;
 
-    const lastUserId = batch.at(-1)?.user?.id;
+    const lastUserId = batch[batch.length - 1]?.user?.id;
     if (!lastUserId || lastUserId === after) break;
     after = lastUserId;
   }
@@ -171,7 +171,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
 
   try {
     const members = await fetchAllDiscordMembers(guildId);
-    const payload = members.map(mapMember).filter(Boolean);
+    const payload = members
+      .map(mapMember)
+      .filter((member): member is DiscordMemberPayload => Boolean(member));
     const synced = await rpc<number>('upsert_discord_guild_members', {
       p_guild_id: guildId,
       p_members: payload,
