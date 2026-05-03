@@ -274,7 +274,7 @@ export default function AdminPlayers() {
 
   async function syncFullDiscordMembers() {
     try {
-      await syncAllDiscord.mutateAsync();
+      await syncAllDiscord.mutateAsync({ guildId: discordServerId });
       await players.refetch();
       await discordMembers.refetch();
     } catch {
