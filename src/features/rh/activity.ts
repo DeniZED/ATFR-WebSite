@@ -4,6 +4,7 @@ import type {
   PlayerHrStatus,
   PlayerRow,
   PlayerStaffNoteRow,
+  PlayerTrackingSettingsRow,
   DiscordVoiceSessionRow,
 } from '@/types/database';
 
@@ -50,6 +51,7 @@ export interface VoiceAggregate {
 export interface PlayerActivitySummary {
   player: PlayerRow;
   discordLink: PlayerDiscordLinkRow | null;
+  trackingSettings: PlayerTrackingSettingsRow | null;
   snapshots: PlayerActivitySnapshotRow[];
   previousSnapshots: PlayerActivitySnapshotRow[];
   voiceSessions: DiscordVoiceSessionRow[];
@@ -142,6 +144,7 @@ export function makeCustomPeriod(from: string, to: string): ActivityPeriod {
 export function buildPlayerSummary(input: {
   player: PlayerRow;
   discordLink: PlayerDiscordLinkRow | null;
+  trackingSettings?: PlayerTrackingSettingsRow | null;
   snapshots: PlayerActivitySnapshotRow[];
   previousSnapshots: PlayerActivitySnapshotRow[];
   voiceSessions: DiscordVoiceSessionRow[];
@@ -185,11 +188,13 @@ export function buildPlayerSummary(input: {
     previousVoiceSeconds,
     activeDays,
     previousActiveDays,
+    trackingSettings: input.trackingSettings ?? null,
   });
 
   return {
     player: input.player,
     discordLink: input.discordLink,
+    trackingSettings: input.trackingSettings ?? null,
     snapshots: input.snapshots,
     previousSnapshots: input.previousSnapshots,
     voiceSessions: input.voiceSessions,
@@ -217,6 +222,7 @@ export function buildPlayerSummary(input: {
       previousVoiceSeconds,
       activeDays,
       previousActiveDays,
+      trackingSettings: input.trackingSettings ?? null,
     }),
   };
 }
@@ -228,6 +234,7 @@ export function computeActivityScore(input: {
   previousVoiceSeconds: number;
   activeDays: number;
   previousActiveDays: number;
+  trackingSettings?: PlayerTrackingSettingsRow | null;
 }): ActivityScore {
   const daysSinceGame = input.latestWotActivityAt
     ? daysBetween(new Date(input.latestWotActivityAt), input.period.to)
@@ -241,10 +248,17 @@ export function computeActivityScore(input: {
   }
 
   const voiceHours = input.voiceSeconds / 3600;
-  const voiceScore = Math.min(
-    SCORE_RULES.voice,
-    (voiceHours / SCORE_RULES.targetVoiceHours) * SCORE_RULES.voice,
-  );
+  const targetVoiceHours =
+    (input.trackingSettings?.voice_target_minutes ?? null) != null
+      ? Math.max(0, (input.trackingSettings?.voice_target_minutes ?? 0) / 60)
+      : SCORE_RULES.targetVoiceHours;
+  const voiceScore =
+    targetVoiceHours <= 0
+      ? SCORE_RULES.voice
+      : Math.min(
+          SCORE_RULES.voice,
+          (voiceHours / targetVoiceHours) * SCORE_RULES.voice,
+        );
 
   const regularityScore =
     (Math.min(input.activeDays, input.period.days) / input.period.days) *
@@ -287,10 +301,16 @@ export function computeAlerts(input: {
   previousVoiceSeconds: number;
   activeDays: number;
   previousActiveDays: number;
+  trackingSettings?: PlayerTrackingSettingsRow | null;
 }): StaffAlert[] {
   const alerts: StaffAlert[] = [];
+  const settings = input.trackingSettings;
+  const warningDays =
+    settings?.inactivity_warning_days ?? SCORE_RULES.inactivityWarningDays;
+  const dangerDays =
+    settings?.inactivity_danger_days ?? SCORE_RULES.inactivityDangerDays;
 
-  if (!input.player.account_id) {
+  if (!settings?.ignore_wot_alerts && !input.player.account_id) {
     alerts.push({
       kind: 'no_wot',
       severity: 'warning',
@@ -299,7 +319,7 @@ export function computeAlerts(input: {
     });
   }
 
-  if (!input.discordLink?.discord_user_id) {
+  if (!settings?.ignore_voice_alerts && !input.discordLink?.discord_user_id) {
     alerts.push({
       kind: 'no_discord',
       severity: 'warning',
@@ -312,21 +332,28 @@ export function computeAlerts(input: {
     ? daysBetween(new Date(input.latestWotActivityAt), input.period.to)
     : null;
   if (
+    !settings?.ignore_wot_alerts &&
     inactiveDays != null &&
-    inactiveDays >= SCORE_RULES.inactivityWarningDays &&
+    inactiveDays >= warningDays &&
     input.player.status !== 'former'
   ) {
     alerts.push({
       kind: 'inactive',
-      severity:
-        inactiveDays >= SCORE_RULES.inactivityDangerDays ? 'danger' : 'warning',
+      severity: inactiveDays >= dangerDays ? 'danger' : 'warning',
       title: `Inactif depuis ${inactiveDays} jours`,
       description: 'Dernière activité in-game ancienne pour son statut actuel.',
     });
   }
 
-  if (input.latestWotActivityAt && input.voiceSeconds === 0) {
-    const daysSinceGame = daysBetween(new Date(input.latestWotActivityAt), input.period.to);
+  if (
+    !settings?.ignore_voice_alerts &&
+    input.latestWotActivityAt &&
+    input.voiceSeconds === 0
+  ) {
+    const daysSinceGame = daysBetween(
+      new Date(input.latestWotActivityAt),
+      input.period.to,
+    );
     if (daysSinceGame <= input.period.days) {
       alerts.push({
         kind: 'game_no_voice',
@@ -337,7 +364,11 @@ export function computeAlerts(input: {
     }
   }
 
-  if (!input.player.current_clan_tag && input.voiceSeconds >= 7200) {
+  if (
+    !settings?.ignore_voice_alerts &&
+    !input.player.current_clan_tag &&
+    input.voiceSeconds >= 7200
+  ) {
     alerts.push({
       kind: 'voice_no_clan',
       severity: 'info',

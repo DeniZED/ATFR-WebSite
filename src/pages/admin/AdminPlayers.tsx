@@ -40,6 +40,7 @@ import {
   useHrPlayers,
   useImportMembersToPlayers,
   useRecomputePlayerStatuses,
+  useSyncAllDiscordMembers,
 } from '@/features/rh/queries';
 import { useClanInfo } from '@/features/clan/queries';
 import { useDiscordWidget } from '@/features/discord/queries';
@@ -85,6 +86,7 @@ export default function AdminPlayers() {
   const discordMembers = useDiscordGuildMembers({ enabled: canManageRh });
   const importMembers = useImportMembersToPlayers();
   const autoLinkDiscord = useAutoLinkDiscordMembers();
+  const syncAllDiscord = useSyncAllDiscordMembers();
   const recomputeStatuses = useRecomputePlayerStatuses();
   const createPlayer = useCreatePlayer();
 
@@ -106,8 +108,8 @@ export default function AdminPlayers() {
     const keys = new Set<string>();
     for (const member of widgetDiscordMembers) {
       const key = normalizeDiscordName(
-        member.display_name ??
-          member.nickname ??
+        member.nickname ??
+          member.display_name ??
           member.global_name ??
           member.username ??
           '',
@@ -116,8 +118,8 @@ export default function AdminPlayers() {
     }
     for (const member of discordMembers.data ?? []) {
       const key = normalizeDiscordName(
-        member.display_name ??
-          member.nickname ??
+        member.nickname ??
+          member.display_name ??
           member.global_name ??
           member.username,
       );
@@ -270,6 +272,16 @@ export default function AdminPlayers() {
     }
   }
 
+  async function syncFullDiscordMembers() {
+    try {
+      await syncAllDiscord.mutateAsync();
+      await players.refetch();
+      await discordMembers.refetch();
+    } catch {
+      /* surfaced by mutation state */
+    }
+  }
+
   async function recomputeRhStatuses() {
     try {
       await recomputeStatuses.mutateAsync();
@@ -313,7 +325,16 @@ export default function AdminPlayers() {
               autoLinkDiscord.isPending || roleLoading || !canManageRh
             }
           >
-            {autoLinkDiscord.isPending ? 'Liaison…' : 'Auto-lier Discord'}
+            {autoLinkDiscord.isPending ? 'Liaison…' : 'Auto-lier visibles'}
+          </Button>
+          <Button
+            onClick={syncFullDiscordMembers}
+            leadingIcon={<RefreshCcw size={14} />}
+            disabled={
+              syncAllDiscord.isPending || roleLoading || !canManageRh
+            }
+          >
+            {syncAllDiscord.isPending ? 'Sync…' : 'Sync Discord complet'}
           </Button>
           <Button
             onClick={recomputeRhStatuses}
@@ -419,6 +440,16 @@ export default function AdminPlayers() {
       )}
       {autoLinkDiscord.isError && (
         <Alert tone="danger">{(autoLinkDiscord.error as Error).message}</Alert>
+      )}
+      {syncAllDiscord.isSuccess && (
+        <Alert tone="success">
+          {syncAllDiscord.data.synced} membre(s) Discord synchronisé(s),{' '}
+          {syncAllDiscord.data.linked} liaison(s) créée(s),{' '}
+          {syncAllDiscord.data.statuses} statut(s) recalculé(s).
+        </Alert>
+      )}
+      {syncAllDiscord.isError && (
+        <Alert tone="danger">{(syncAllDiscord.error as Error).message}</Alert>
       )}
       {recomputeStatuses.isSuccess && (
         <Alert tone="success">
@@ -625,6 +656,7 @@ function PlayerTable({
                 <Th>Jours</Th>
                 <Th>Score</Th>
                 <Th>Commentaire</Th>
+                <Th>Action</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-atfr-gold/10">
@@ -761,6 +793,14 @@ function PlayerRow({
         <p className="max-w-64 truncate text-atfr-fog">
           {player.staff_comment || '—'}
         </p>
+      </Td>
+      <Td>
+        <Link
+          to={`/admin/rh/${player.id}`}
+          className="inline-flex items-center justify-center rounded-md border border-atfr-gold/30 px-3 py-1.5 text-xs font-medium text-atfr-gold transition-colors hover:bg-atfr-gold/10"
+        >
+          Éditer
+        </Link>
       </Td>
     </tr>
   );

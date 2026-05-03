@@ -18,6 +18,7 @@ import {
   Input,
   Select,
   Spinner,
+  Switch,
   Textarea,
 } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +37,7 @@ import {
   useDeleteDiscordLink,
   useHrPlayerDetail,
   useSavePlayer,
+  useSavePlayerTrackingSettings,
   useUpsertDiscordLink,
 } from '@/features/rh/queries';
 import { tomatoProfileUrl } from '@/lib/tomato-api';
@@ -73,6 +75,16 @@ interface DiscordFormState {
   guildId: string;
 }
 
+interface TrackingSettingsFormState {
+  manualStatusLock: boolean;
+  ignoreVoiceAlerts: boolean;
+  ignoreWotAlerts: boolean;
+  inactivityWarningDays: string;
+  inactivityDangerDays: string;
+  voiceTargetMinutes: string;
+  note: string;
+}
+
 export default function AdminPlayerDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -86,6 +98,7 @@ export default function AdminPlayerDetail() {
   const detail = useHrPlayerDetail(id, period, { enabled: canManageRh });
   const savePlayer = useSavePlayer();
   const saveDiscord = useUpsertDiscordLink();
+  const saveTrackingSettings = useSavePlayerTrackingSettings();
   const deleteDiscord = useDeleteDiscordLink();
   const addNote = useAddStaffNote();
 
@@ -94,6 +107,8 @@ export default function AdminPlayerDetail() {
   const [discordForm, setDiscordForm] = useState<DiscordFormState>(() =>
     emptyDiscordForm(),
   );
+  const [trackingForm, setTrackingForm] =
+    useState<TrackingSettingsFormState>(() => emptyTrackingSettingsForm());
   const [noteType, setNoteType] = useState<StaffNoteType>('info');
   const [noteContent, setNoteContent] = useState('');
 
@@ -123,7 +138,19 @@ export default function AdminPlayerDetail() {
       discordRole: summary.discordLink?.discord_role ?? '',
       guildId: summary.discordLink?.guild_id ?? '',
     });
-  }, [summary]);
+    const settings = detailData?.trackingSettings ?? summary.trackingSettings;
+    setTrackingForm({
+      manualStatusLock: settings?.manual_status_lock ?? false,
+      ignoreVoiceAlerts: settings?.ignore_voice_alerts ?? false,
+      ignoreWotAlerts: settings?.ignore_wot_alerts ?? false,
+      inactivityWarningDays:
+        settings?.inactivity_warning_days?.toString() ?? '',
+      inactivityDangerDays:
+        settings?.inactivity_danger_days?.toString() ?? '',
+      voiceTargetMinutes: settings?.voice_target_minutes?.toString() ?? '',
+      note: settings?.note ?? '',
+    });
+  }, [detailData?.trackingSettings, summary]);
 
   async function handleSave() {
     if (!player) return;
@@ -161,6 +188,24 @@ export default function AdminPlayerDetail() {
           guildId: discordForm.guildId,
         });
       }
+      await saveTrackingSettings.mutateAsync({
+        playerId: player.id,
+        actorId: user?.id,
+        patch: {
+          manual_status_lock: trackingForm.manualStatusLock,
+          ignore_voice_alerts: trackingForm.ignoreVoiceAlerts,
+          ignore_wot_alerts: trackingForm.ignoreWotAlerts,
+          inactivity_warning_days: nullableNumber(
+            trackingForm.inactivityWarningDays,
+          ),
+          inactivity_danger_days: nullableNumber(
+            trackingForm.inactivityDangerDays,
+          ),
+          voice_target_minutes: nullableNumber(trackingForm.voiceTargetMinutes),
+          note: nullableText(trackingForm.note),
+          updated_by: user?.id ?? null,
+        },
+      });
       setSaved(true);
     } catch {
       /* surfaced by mutation state */
@@ -265,7 +310,11 @@ export default function AdminPlayerDetail() {
           <Button
             onClick={handleSave}
             leadingIcon={<Save size={14} />}
-            disabled={savePlayer.isPending || saveDiscord.isPending}
+            disabled={
+              savePlayer.isPending ||
+              saveDiscord.isPending ||
+              saveTrackingSettings.isPending
+            }
           >
             Enregistrer
           </Button>
@@ -273,9 +322,17 @@ export default function AdminPlayerDetail() {
       </div>
 
       {saved && <Alert tone="success">Fiche joueur enregistrée.</Alert>}
-      {(savePlayer.isError || saveDiscord.isError) && (
+      {(savePlayer.isError ||
+        saveDiscord.isError ||
+        saveTrackingSettings.isError) && (
         <Alert tone="danger">
-          {((savePlayer.error ?? saveDiscord.error) as Error).message}
+          {
+            (
+              (savePlayer.error ??
+                saveDiscord.error ??
+                saveTrackingSettings.error) as Error
+            ).message
+          }
         </Alert>
       )}
       {(addNote.isError || deleteDiscord.isError) && (
@@ -466,7 +523,11 @@ export default function AdminPlayerDetail() {
               <Button
                 onClick={handleSave}
                 leadingIcon={<Link2 size={14} />}
-                disabled={savePlayer.isPending || saveDiscord.isPending}
+                disabled={
+                  savePlayer.isPending ||
+                  saveDiscord.isPending ||
+                  saveTrackingSettings.isPending
+                }
               >
                 Lier / corriger
               </Button>
@@ -485,6 +546,93 @@ export default function AdminPlayerDetail() {
                 </Button>
               )}
             </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody className="p-6 space-y-5">
+            <SectionTitle
+              title="Paramètres de suivi"
+              description="Réglages individuels pour les alertes, le score et le recalcul automatique."
+            />
+            <div className="space-y-4">
+              <Switch
+                checked={trackingForm.manualStatusLock}
+                onChange={(manualStatusLock) =>
+                  setTrackingForm({ ...trackingForm, manualStatusLock })
+                }
+                label="Verrouiller le statut RH"
+                hint="Le recalcul automatique ne changera plus le statut de ce joueur."
+              />
+              <Switch
+                checked={trackingForm.ignoreVoiceAlerts}
+                onChange={(ignoreVoiceAlerts) =>
+                  setTrackingForm({ ...trackingForm, ignoreVoiceAlerts })
+                }
+                label="Ignorer les alertes vocal Discord"
+                hint="Pratique pour les joueurs dispensés de vocal ou liés autrement."
+              />
+              <Switch
+                checked={trackingForm.ignoreWotAlerts}
+                onChange={(ignoreWotAlerts) =>
+                  setTrackingForm({ ...trackingForm, ignoreWotAlerts })
+                }
+                label="Ignorer les alertes WoT / inactivité"
+                hint="Utile pour absence connue, pause longue ou statut staff."
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Alerte après"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={trackingForm.inactivityWarningDays}
+                onChange={(e) =>
+                  setTrackingForm({
+                    ...trackingForm,
+                    inactivityWarningDays: e.target.value,
+                  })
+                }
+                hint="Jours sans activité."
+              />
+              <Input
+                label="Inactif après"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={trackingForm.inactivityDangerDays}
+                onChange={(e) =>
+                  setTrackingForm({
+                    ...trackingForm,
+                    inactivityDangerDays: e.target.value,
+                  })
+                }
+                hint="Jours sans activité."
+              />
+              <Input
+                label="Objectif vocal"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={trackingForm.voiceTargetMinutes}
+                onChange={(e) =>
+                  setTrackingForm({
+                    ...trackingForm,
+                    voiceTargetMinutes: e.target.value,
+                  })
+                }
+                hint="Minutes sur la période."
+              />
+            </div>
+            <Textarea
+              label="Note de suivi"
+              value={trackingForm.note}
+              onChange={(e) =>
+                setTrackingForm({ ...trackingForm, note: e.target.value })
+              }
+              hint="Contexte interne sur ces réglages."
+            />
           </CardBody>
         </Card>
       </div>
@@ -761,6 +909,18 @@ function emptyDiscordForm(): DiscordFormState {
     discordTag: '',
     discordRole: '',
     guildId: '',
+  };
+}
+
+function emptyTrackingSettingsForm(): TrackingSettingsFormState {
+  return {
+    manualStatusLock: false,
+    ignoreVoiceAlerts: false,
+    ignoreWotAlerts: false,
+    inactivityWarningDays: '',
+    inactivityDangerDays: '',
+    voiceTargetMinutes: '',
+    note: '',
   };
 }
 
