@@ -15,7 +15,9 @@ async function wotFetch<T>(path: string, params: Record<string, string | number>
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
   });
 
-  const res = await fetch(`${BASE}${path}?${search}`);
+  const res = await fetch(`${BASE}${path}?${search}`, {
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) {
     throw new Error(`WoT API ${path}: ${res.status}`);
   }

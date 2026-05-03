@@ -38,7 +38,9 @@ export function useClanStats(clanId: string = env.clanId) {
   return useQuery({
     queryKey: ['stats', 'clan', clanId],
     queryFn: async (): Promise<ClanStats> => {
-      const res = await fetch(`/.netlify/functions/clan-stats?clan_id=${clanId}`);
+      const res = await fetch(`/.netlify/functions/clan-stats?clan_id=${clanId}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!res.ok) throw new Error(`Clan stats error: ${res.status}`);
       return (await res.json()) as ClanStats;
     },

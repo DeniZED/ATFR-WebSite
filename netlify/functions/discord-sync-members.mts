@@ -9,6 +9,10 @@ const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (!process.env.ALLOWED_ORIGINS) {
+  console.warn('[discord-sync-members] ALLOWED_ORIGINS is not set — all origins are accepted.');
+}
+
 interface DiscordUser {
   id: string;
   username: string;

@@ -1,9 +1,11 @@
 function required(key: keyof ImportMetaEnv): string {
   const value = import.meta.env[key];
   if (!value || value.length === 0) {
-    // Don't throw at import time in dev so the site still boots if a single
-    // variable is missing — surface a clear warning in the console instead.
-    console.warn(`[env] Missing ${key}. Check your .env file.`);
+    const msg = `[env] Missing required variable ${key}.`;
+    if (import.meta.env.PROD) {
+      throw new Error(msg);
+    }
+    console.warn(msg, 'Check your .env file.');
     return '';
   }
   return value;
