@@ -22,6 +22,8 @@ const Login = lazy(() => import('@/pages/admin/Login'));
 const AdminHome = lazy(() => import('@/pages/admin/AdminHome'));
 const AdminApplications = lazy(() => import('@/pages/admin/AdminApplications'));
 const AdminMembers = lazy(() => import('@/pages/admin/AdminMembers'));
+const AdminPlayers = lazy(() => import('@/pages/admin/AdminPlayers'));
+const AdminPlayerDetail = lazy(() => import('@/pages/admin/AdminPlayerDetail'));
 const AdminEvents = lazy(() => import('@/pages/admin/AdminEvents'));
 const AdminContent = lazy(() => import('@/pages/admin/AdminContent'));
 const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
@@ -87,6 +89,8 @@ export const router = createBrowserRouter([
           { index: true, element: <AdminHome /> },
           { path: 'candidatures', element: <AdminApplications /> },
           { path: 'membres', element: <AdminMembers /> },
+          { path: 'rh', element: <AdminPlayers /> },
+          { path: 'rh/:id', element: <AdminPlayerDetail /> },
           { path: 'evenements', element: <AdminEvents /> },
           { path: 'contenu', element: <AdminContent /> },
           { path: 'galerie', element: <AdminGallery /> },

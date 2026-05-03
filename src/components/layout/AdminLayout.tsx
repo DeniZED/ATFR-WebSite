@@ -17,6 +17,7 @@ import {
   Star,
   Trophy,
   Type,
+  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ const nav: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: Gauge, end: true },
   { to: '/admin/candidatures', label: 'Candidatures', icon: FileText, area: 'applications' },
   { to: '/admin/membres', label: 'Membres', icon: Users, area: 'members' },
+  { to: '/admin/rh', label: 'RH joueurs', icon: UserCog, area: 'members' },
   { to: '/admin/evenements', label: 'Événements', icon: Calendar, area: 'events' },
   { to: '/admin/contenu', label: 'Contenu', icon: Type, area: 'content' },
   { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, area: 'media' },
