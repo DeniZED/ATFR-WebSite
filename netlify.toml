@@ -24,7 +24,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldoftanks.eu https://static.modxvm.com https://cdn.discordapp.com; img-src 'self' data: https:; font-src 'self' data:; frame-ancestors 'none'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldoftanks.eu https://static.modxvm.com https://cdn.discordapp.com; img-src 'self' data: https:; media-src 'self' https://*.supabase.co; font-src 'self' data:; frame-ancestors 'none'; upgrade-insecure-requests"
 
 # index.html doit avoir un cache court pour que les nouveaux déploiements
 # soient pris en compte rapidement.

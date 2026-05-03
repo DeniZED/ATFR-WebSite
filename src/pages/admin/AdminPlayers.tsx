@@ -842,6 +842,6 @@ function Td({ children }: { children: ReactNode }) {
 function normalizeDiscordName(value: string): string {
   return value
     .toLowerCase()
-    .replace(/^\s*[\[(]?(atfr|a[\s-]*t[\s-]*o|ato)[\])]?\s*[-:|]*\s*/i, '')
+    .replace(/^\s*[[(]?(atfr|a[\s-]*t[\s-]*o|ato)[\])]?\s*[-:|]*\s*/i, '')
     .replace(/[^a-z0-9]+/g, '');
 }

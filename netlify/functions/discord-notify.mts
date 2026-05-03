@@ -6,6 +6,10 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
+if (ALLOWED_ORIGINS.length === 0) {
+  console.warn('[discord-notify] ALLOWED_ORIGINS is not set — all origins are accepted.');
+}
+
 interface ApplicationPayload {
   playerName: string;
   discordTag: string;
@@ -17,6 +21,10 @@ interface ApplicationPayload {
   winRate?: number | null;
   battles?: number | null;
   accountId?: number | null;
+}
+
+function isFiniteNumberOrNullish(v: unknown): boolean {
+  return v == null || (typeof v === 'number' && Number.isFinite(v));
 }
 
 function isValid(body: unknown): body is ApplicationPayload {
@@ -33,7 +41,11 @@ function isValid(body: unknown): body is ApplicationPayload {
     typeof b.availability === 'string' &&
     typeof b.motivation === 'string' &&
     b.motivation.length >= 30 &&
-    b.motivation.length <= 2000
+    b.motivation.length <= 2000 &&
+    isFiniteNumberOrNullish(b.wn8) &&
+    isFiniteNumberOrNullish(b.winRate) &&
+    isFiniteNumberOrNullish(b.battles) &&
+    isFiniteNumberOrNullish(b.accountId)
   );
 }
 
