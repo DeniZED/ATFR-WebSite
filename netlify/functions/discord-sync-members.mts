@@ -33,30 +33,36 @@ interface DiscordMemberPayload {
   source: 'bot';
 }
 
-function json(body: unknown, status = 200, extraHeaders: HeadersInit = {}) {
+function json(body: unknown, status = 200, origin: string | null = null) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'content-type': 'application/json',
-      ...corsHeaders(),
-      ...extraHeaders,
+      ...corsHeaders(origin),
     },
   });
 }
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const allowOrigin =
+    allowed.length === 0 || (origin && allowed.includes(origin))
+      ? (origin ?? 'null')
+      : 'null';
   return {
-    'access-control-allow-origin': '*',
+    'access-control-allow-origin': allowOrigin,
     'access-control-allow-methods': 'POST, OPTIONS',
     'access-control-allow-headers':
       'authorization, content-type, x-sync-secret',
+    vary: 'origin',
   };
 }
 
 async function canRun(req: Request): Promise<boolean> {
-  const url = new URL(req.url);
-  const providedSecret =
-    req.headers.get('x-sync-secret') || url.searchParams.get('secret');
+  const providedSecret = req.headers.get('x-sync-secret');
   if (SYNC_SECRET && providedSecret === SYNC_SECRET) return true;
 
   const auth = req.headers.get('authorization');
@@ -90,7 +96,9 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     body: JSON.stringify(args),
   });
   if (!res.ok) {
-    throw new Error(await res.text());
+    const detail = await res.text().catch(() => '');
+    console.error(`[supabase-rpc] ${name} failed (${res.status}):`, detail);
+    throw new Error(`RPC ${name} failed (${res.status})`);
   }
   return (await res.json()) as T;
 }
@@ -146,14 +154,16 @@ function mapMember(member: DiscordGuildMember): DiscordMemberPayload | null {
 }
 
 export default async (req: Request, _ctx: Context): Promise<Response> => {
+  const origin = req.headers.get('origin');
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+    return new Response(null, { status: 204, headers: corsHeaders(origin) });
   }
   if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
+    return json({ error: 'Method not allowed' }, 405, origin);
   }
   if (!(await canRun(req))) {
-    return json({ error: 'Forbidden' }, 403);
+    return json({ error: 'Forbidden' }, 403, origin);
   }
 
   const url = new URL(req.url);
@@ -166,6 +176,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
           'Renseigne discord_server_id dans le contenu admin ou ajoute DISCORD_GUILD_ID dans Netlify.',
       },
       500,
+      origin,
     );
   }
 
@@ -189,7 +200,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       synced,
       linked,
       statuses,
-    });
+    }, 200, origin);
   } catch (err) {
     return json(
       {
@@ -197,6 +208,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         detail: (err as Error).message,
       },
       502,
+      origin,
     );
   }
 };
