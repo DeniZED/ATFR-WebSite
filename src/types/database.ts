@@ -1300,6 +1300,13 @@ export interface Database {
         Args: Record<string, never>;
         Returns: UserRole | null;
       };
+      import_members_to_players: {
+        Args: {
+          p_clan_tag?: string | null;
+          p_clan_id?: number | null;
+        };
+        Returns: number;
+      };
       count_pending_applications: {
         Args: Record<string, never>;
         Returns: number;
