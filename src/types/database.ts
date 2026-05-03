@@ -1304,6 +1304,7 @@ export interface Database {
         Args: {
           p_clan_tag?: string | null;
           p_clan_id?: number | null;
+          p_members?: Array<Record<string, unknown>> | null;
         };
         Returns: number;
       };

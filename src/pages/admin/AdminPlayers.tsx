@@ -37,6 +37,7 @@ import {
   useHrPlayers,
   useImportMembersToPlayers,
 } from '@/features/rh/queries';
+import { useClanInfo } from '@/features/clan/queries';
 import { useRole } from '@/hooks/useRole';
 import type { PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
@@ -66,6 +67,7 @@ export default function AdminPlayers() {
     return makeRollingPeriod(Number(periodPreset));
   }, [customFrom, customTo, periodPreset]);
 
+  const clanInfo = useClanInfo();
   const players = useHrPlayers(period, { enabled: canManageRh });
   const importMembers = useImportMembersToPlayers();
   const createPlayer = useCreatePlayer();
@@ -143,9 +145,26 @@ export default function AdminPlayers() {
           </p>
         </div>
         <Button
-          onClick={() => importMembers.mutate()}
+          onClick={() =>
+            importMembers.mutate({
+              clanTag: clanInfo.data?.tag ?? null,
+              clanId: clanInfo.data?.clan_id ?? null,
+              members:
+                clanInfo.data?.members.map((member) => ({
+                  account_id: member.account_id,
+                  account_name: member.account_name,
+                  role: member.role,
+                  joined_at: member.joined_at,
+                })) ?? [],
+            })
+          }
           leadingIcon={<RefreshCcw size={14} />}
-          disabled={importMembers.isPending || roleLoading || !canManageRh}
+          disabled={
+            importMembers.isPending ||
+            roleLoading ||
+            !canManageRh ||
+            clanInfo.isLoading
+          }
         >
           {importMembers.isPending ? 'Import…' : 'Importer membres'}
         </Button>
@@ -195,11 +214,16 @@ export default function AdminPlayers() {
         />
       </div>
 
-      {importMembers.isSuccess && (
-        <Alert tone="success">
-          {importMembers.data} membre(s) importé(s) ou mis à jour dans le suivi RH.
-        </Alert>
-      )}
+      {importMembers.isSuccess &&
+        (importMembers.data > 0 ? (
+          <Alert tone="success">
+            {importMembers.data} membre(s) importé(s) ou mis à jour dans le suivi RH.
+          </Alert>
+        ) : (
+          <Alert tone="warning">
+            Aucun membre importé. Le roster WoT live et la table Supabase members sont vides.
+          </Alert>
+        ))}
       {importMembers.isError && (
         <Alert tone="danger">{(importMembers.error as Error).message}</Alert>
       )}

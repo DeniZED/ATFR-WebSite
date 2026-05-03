@@ -65,6 +65,17 @@ export interface AddStaffNoteInput {
   authorId?: string | null;
 }
 
+export interface ImportMembersInput {
+  clanTag?: string | null;
+  clanId?: number | null;
+  members?: Array<{
+    account_id: number;
+    account_name: string;
+    role: string;
+    joined_at?: number | null;
+  }>;
+}
+
 export function useHrPlayers(
   period: ActivityPeriod,
   options: { enabled?: boolean } = {},
@@ -354,10 +365,11 @@ export function useAddStaffNote() {
 export function useImportMembersToPlayers() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<number> => {
+    mutationFn: async (input: ImportMembersInput = {}): Promise<number> => {
       const { data, error } = await supabase.rpc('import_members_to_players', {
-        p_clan_tag: env.clanTag || null,
-        p_clan_id: Number(env.clanId) || null,
+        p_clan_tag: input.clanTag ?? env.clanTag ?? null,
+        p_clan_id: (input.clanId ?? Number(env.clanId)) || null,
+        p_members: input.members ?? [],
       });
       if (error) {
         if (error.code === '42883') {
