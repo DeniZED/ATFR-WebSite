@@ -257,7 +257,10 @@ export function useCreatePlayer() {
       if (error) throw error;
       return data as PlayerRow;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
   });
 }
 
@@ -327,7 +330,10 @@ export function useUpsertDiscordLink() {
           } satisfies DiscordLinkInsert);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
   });
 }
 
@@ -381,7 +387,10 @@ export function useImportMembersToPlayers() {
       }
       return data ?? 0;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
   });
 }
 

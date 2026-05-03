@@ -130,6 +130,34 @@ export default function AdminPlayers() {
     };
   }, [players.data]);
 
+  async function importRosterToRh() {
+    try {
+      const imported = await importMembers.mutateAsync({
+        clanTag: clanInfo.data?.tag ?? null,
+        clanId: clanInfo.data?.clan_id ?? null,
+        members:
+          clanInfo.data?.members.map((member) => ({
+            account_id: member.account_id,
+            account_name: member.account_name,
+            role: member.role,
+            joined_at: member.joined_at,
+          })) ?? [],
+      });
+
+      if (imported > 0) {
+        setSearch('');
+        setClan('all');
+        setStatus('all');
+        setActivity('all');
+        setVoice('all');
+        setIngame('all');
+        await players.refetch();
+      }
+    } catch {
+      /* surfaced by mutation state */
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -145,19 +173,7 @@ export default function AdminPlayers() {
           </p>
         </div>
         <Button
-          onClick={() =>
-            importMembers.mutate({
-              clanTag: clanInfo.data?.tag ?? null,
-              clanId: clanInfo.data?.clan_id ?? null,
-              members:
-                clanInfo.data?.members.map((member) => ({
-                  account_id: member.account_id,
-                  account_name: member.account_name,
-                  role: member.role,
-                  joined_at: member.joined_at,
-                })) ?? [],
-            })
-          }
+          onClick={importRosterToRh}
           leadingIcon={<RefreshCcw size={14} />}
           disabled={
             importMembers.isPending ||
@@ -224,6 +240,15 @@ export default function AdminPlayers() {
             Aucun membre importé. Le roster WoT live et la table Supabase members sont vides.
           </Alert>
         ))}
+      {importMembers.isSuccess &&
+        importMembers.data > 0 &&
+        !players.isFetching &&
+        (players.data?.players.length ?? 0) === 0 && (
+          <Alert tone="warning">
+            L'import a traité des membres, mais la liste RH ne voit encore aucun joueur.
+            Vérifie que les policies RLS du module RH ont bien été appliquées dans Supabase.
+          </Alert>
+        )}
       {importMembers.isError && (
         <Alert tone="danger">{(importMembers.error as Error).message}</Alert>
       )}
