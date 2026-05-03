@@ -2,6 +2,11 @@
 --
 -- A executer dans le SQL Editor Supabase apres 0018_geoguesser_mode_settings.sql.
 -- Le module reste reserve aux utilisateurs authentifies cote admin.
+--
+-- Important pour le SQL Editor Supabase :
+-- - executer ce fichier complet depuis la premiere ligne ;
+-- - ne pas relancer uniquement depuis une ligne en erreur ;
+-- - le script est idempotent et peut etre relance en entier apres un echec.
 
 create table if not exists public.players (
   id uuid primary key default gen_random_uuid(),
