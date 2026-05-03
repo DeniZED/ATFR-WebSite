@@ -355,31 +355,19 @@ export function useImportMembersToPlayers() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (): Promise<number> => {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .is('left_at', null);
-      if (error) throw error;
-      const members = data ?? [];
-      if (members.length === 0) return 0;
-
-      const rows: PlayerInsert[] = members.map((member) => ({
-        account_id: member.account_id,
-        nickname: member.account_name,
-        current_clan_tag: env.clanTag,
-        current_clan_id: Number(env.clanId) || null,
-        internal_role: member.role,
-        joined_at: member.joined_at,
-        status: 'active',
-        source: 'member_sync',
-        last_wot_activity_at: null,
-      }));
-
-      const { error: upsertError } = await supabase
-        .from('players')
-        .upsert(rows, { onConflict: 'account_id' });
-      if (upsertError) throw upsertError;
-      return rows.length;
+      const { data, error } = await supabase.rpc('import_members_to_players', {
+        p_clan_tag: env.clanTag || null,
+        p_clan_id: Number(env.clanId) || null,
+      });
+      if (error) {
+        if (error.code === '42883') {
+          throw new Error(
+            'Fonction import_members_to_players introuvable. Relance la migration RH complete dans Supabase.',
+          );
+        }
+        throw error;
+      }
+      return data ?? 0;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
   });

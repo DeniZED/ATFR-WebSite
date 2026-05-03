@@ -258,3 +258,67 @@ create policy "auth can manage player alerts"
   to authenticated
   using (public.is_admin())
   with check (public.is_admin());
+
+create or replace function public.import_members_to_players(
+  p_clan_tag text default null,
+  p_clan_id bigint default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  affected_count integer := 0;
+begin
+  if not public.is_admin() then
+    raise exception 'Admin role required to import members into players'
+      using errcode = '42501';
+  end if;
+
+  insert into public.players as existing (
+    account_id,
+    nickname,
+    current_clan_tag,
+    current_clan_id,
+    internal_role,
+    joined_at,
+    status,
+    source,
+    last_wot_activity_at,
+    updated_by
+  )
+  select
+    m.account_id,
+    m.account_name,
+    nullif(p_clan_tag, ''),
+    p_clan_id,
+    m.role,
+    m.joined_at,
+    'active',
+    'member_sync',
+    null,
+    auth.uid()
+  from public.members m
+  where m.left_at is null
+  on conflict (account_id) do update
+    set nickname = excluded.nickname,
+        current_clan_tag = excluded.current_clan_tag,
+        current_clan_id = excluded.current_clan_id,
+        internal_role = excluded.internal_role,
+        joined_at = coalesce(existing.joined_at, excluded.joined_at),
+        status = case
+          when existing.status in ('former', 'prospect') then excluded.status
+          else existing.status
+        end,
+        source = excluded.source,
+        updated_by = excluded.updated_by,
+        updated_at = now();
+
+  get diagnostics affected_count = row_count;
+  return affected_count;
+end
+$$;
+
+grant execute on function public.import_members_to_players(text, bigint)
+  to authenticated;
