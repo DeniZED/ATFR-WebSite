@@ -12,6 +12,7 @@ import type {
   PlayerRow,
   PlayerStaffNoteRow,
   PlayerStatusHistoryRow,
+  PlayerTrackingSettingsRow,
   StaffNoteType,
 } from '@/types/database';
 import {
@@ -28,6 +29,10 @@ type DiscordLinkUpdate =
   Database['public']['Tables']['player_discord_links']['Update'];
 type StaffNoteInsert =
   Database['public']['Tables']['player_staff_notes']['Insert'];
+type TrackingSettingsInsert =
+  Database['public']['Tables']['player_tracking_settings']['Insert'];
+type TrackingSettingsUpdate =
+  Database['public']['Tables']['player_tracking_settings']['Update'];
 
 export interface HrListData {
   period: ActivityPeriod;
@@ -37,6 +42,7 @@ export interface HrListData {
 export interface HrPlayerDetailData {
   period: ActivityPeriod;
   summary: PlayerActivitySummary;
+  trackingSettings: PlayerTrackingSettingsRow | null;
   statusHistory: PlayerStatusHistoryRow[];
   memberHistory: Database['public']['Tables']['members_history']['Row'][];
   persistedAlerts: Database['public']['Tables']['player_alerts']['Row'][];
@@ -67,6 +73,12 @@ export interface AddStaffNoteInput {
   authorId?: string | null;
 }
 
+export interface SaveTrackingSettingsInput {
+  playerId: string;
+  patch: TrackingSettingsUpdate;
+  actorId?: string | null;
+}
+
 export interface ImportMembersInput {
   clanTag?: string | null;
   clanId?: number | null;
@@ -83,6 +95,13 @@ export interface AutoLinkDiscordInput {
   members?: DiscordMemberPayload[];
 }
 
+export interface DiscordFullSyncResult {
+  synced: number;
+  linked: number;
+  statuses: number;
+  guildId: string;
+}
+
 export function useHrPlayers(
   period: ActivityPeriod,
   options: { enabled?: boolean } = {},
@@ -97,6 +116,7 @@ export function useHrPlayers(
         snapshotsResult,
         voiceResult,
         notesResult,
+        settingsResult,
       ] = await Promise.all([
         supabase.from('players').select('*').order('nickname'),
         supabase.from('player_discord_links').select('*'),
@@ -115,6 +135,7 @@ export function useHrPlayers(
           .select('*')
           .order('created_at', { ascending: false })
           .limit(500),
+        supabase.from('player_tracking_settings').select('*'),
       ]);
 
       throwIfError(playersResult.error);
@@ -122,6 +143,9 @@ export function useHrPlayers(
       throwIfError(snapshotsResult.error);
       throwIfError(voiceResult.error);
       throwIfError(notesResult.error);
+      if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
+        throw settingsResult.error;
+      }
 
       const rows = (playersResult.data ?? []) as PlayerRow[];
       const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
@@ -129,6 +153,8 @@ export function useHrPlayers(
         (snapshotsResult.data ?? []) as PlayerActivitySnapshotRow[];
       const voiceSessions = (voiceResult.data ?? []) as DiscordVoiceSessionRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
+      const settings =
+        (settingsResult.data ?? []) as PlayerTrackingSettingsRow[];
 
       return {
         period,
@@ -140,6 +166,7 @@ export function useHrPlayers(
             snapshots,
             voiceSessions,
             notes,
+            trackingSettings: settings,
           }),
         ),
       };
@@ -193,6 +220,7 @@ export function useHrPlayerDetail(
         notesResult,
         historyResult,
         alertsResult,
+        settingsResult,
       ] = await Promise.all([
         supabase.from('players').select('*').eq('id', playerId!).single(),
         supabase
@@ -228,6 +256,11 @@ export function useHrPlayerDetail(
           .eq('player_id', playerId!)
           .is('resolved_at', null)
           .order('detected_at', { ascending: false }),
+        supabase
+          .from('player_tracking_settings')
+          .select('*')
+          .eq('player_id', playerId!)
+          .maybeSingle(),
       ]);
 
       throwIfError(playerResult.error);
@@ -237,6 +270,9 @@ export function useHrPlayerDetail(
       throwIfError(notesResult.error);
       throwIfError(historyResult.error);
       throwIfError(alertsResult.error);
+      if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
+        throw settingsResult.error;
+      }
 
       const player = playerResult.data as PlayerRow;
       const memberHistoryResult = player.account_id
@@ -252,6 +288,8 @@ export function useHrPlayerDetail(
         (snapshotsResult.data ?? []) as PlayerActivitySnapshotRow[];
       const voiceSessions = (voiceResult.data ?? []) as DiscordVoiceSessionRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
+      const trackingSettings =
+        (settingsResult.data ?? null) as PlayerTrackingSettingsRow | null;
 
       return {
         period,
@@ -262,7 +300,9 @@ export function useHrPlayerDetail(
           snapshots,
           voiceSessions,
           notes,
+          trackingSettings: trackingSettings ? [trackingSettings] : [],
         }),
+        trackingSettings,
         statusHistory:
           (historyResult.data ?? []) as PlayerStatusHistoryRow[],
         memberHistory:
@@ -397,6 +437,41 @@ export function useAddStaffNote() {
   });
 }
 
+export function useSavePlayerTrackingSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      playerId,
+      patch,
+      actorId,
+    }: SaveTrackingSettingsInput) => {
+      const payload: TrackingSettingsInsert = {
+        player_id: playerId,
+        manual_status_lock: patch.manual_status_lock ?? false,
+        ignore_voice_alerts: patch.ignore_voice_alerts ?? false,
+        ignore_wot_alerts: patch.ignore_wot_alerts ?? false,
+        inactivity_warning_days: patch.inactivity_warning_days ?? null,
+        inactivity_danger_days: patch.inactivity_danger_days ?? null,
+        voice_target_minutes: patch.voice_target_minutes ?? null,
+        note: patch.note ?? null,
+        updated_by: actorId ?? null,
+      };
+
+      const { error } = await supabase
+        .from('player_tracking_settings')
+        .upsert(payload, { onConflict: 'player_id' });
+      if (error) throw error;
+    },
+    onSuccess: async (_data, variables) => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.invalidateQueries({
+        queryKey: ['hr', 'player', variables.playerId],
+      });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
+  });
+}
+
 export function useImportMembersToPlayers() {
   const qc = useQueryClient();
   return useMutation({
@@ -488,6 +563,47 @@ export function useRecomputePlayerStatuses() {
   });
 }
 
+export function useSyncAllDiscordMembers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<DiscordFullSyncResult> => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        throw new Error('Session admin introuvable. Reconnecte-toi.');
+      }
+
+      const res = await fetch('/.netlify/functions/discord-sync-members', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+      const payload = (await res.json().catch(() => null)) as
+        | DiscordFullSyncResult
+        | { error?: string; detail?: string }
+        | null;
+
+      if (!res.ok) {
+        const message =
+          payload && 'error' in payload && payload.error
+            ? payload.detail
+              ? `${payload.error}: ${payload.detail}`
+              : payload.error
+            : `Synchronisation Discord impossible (${res.status}).`;
+        throw new Error(message);
+      }
+
+      return payload as DiscordFullSyncResult;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.invalidateQueries({ queryKey: ['hr', 'discord-members'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
+  });
+}
+
 function buildSummaryForPlayer(input: {
   player: PlayerRow;
   period: ActivityPeriod;
@@ -495,6 +611,7 @@ function buildSummaryForPlayer(input: {
   snapshots: PlayerActivitySnapshotRow[];
   voiceSessions: DiscordVoiceSessionRow[];
   notes: PlayerStaffNoteRow[];
+  trackingSettings: PlayerTrackingSettingsRow[];
 }): PlayerActivitySummary {
   const link =
     input.links.find((candidate) => candidate.player_id === input.player.id) ??
@@ -527,10 +644,15 @@ function buildSummaryForPlayer(input: {
         input.period.previousTo,
       ),
   );
+  const trackingSettings =
+    input.trackingSettings.find(
+      (settings) => settings.player_id === input.player.id,
+    ) ?? null;
 
   return buildPlayerSummary({
     player: input.player,
     discordLink: link,
+    trackingSettings,
     snapshots: currentSnapshots,
     previousSnapshots,
     voiceSessions: currentVoice,
@@ -566,4 +688,15 @@ function isoDate(date: Date): string {
 
 function throwIfError(error: { message: string } | null) {
   if (error) throw error;
+}
+
+function isMissingRelationError(error: {
+  code?: string;
+  message?: string;
+}): boolean {
+  return (
+    error.code === '42P01' ||
+    error.code === 'PGRST205' ||
+    error.message?.includes('player_tracking_settings') === true
+  );
 }

@@ -46,6 +46,7 @@ export interface DiscordMemberPayload {
   channel_id?: string | null;
   activity?: Record<string, unknown> | null;
   roles?: string[] | null;
+  source?: string | null;
 }
 
 export const DIFFICULTY_LABELS: Record<QuizDifficulty, string> = {
@@ -539,6 +540,55 @@ export interface Database {
           meta?: Record<string, unknown>;
         };
         Relationships: [];
+      };
+      player_tracking_settings: {
+        Row: {
+          player_id: string;
+          created_at: string;
+          updated_at: string;
+          manual_status_lock: boolean;
+          ignore_voice_alerts: boolean;
+          ignore_wot_alerts: boolean;
+          inactivity_warning_days: number | null;
+          inactivity_danger_days: number | null;
+          voice_target_minutes: number | null;
+          note: string | null;
+          updated_by: string | null;
+        };
+        Insert: {
+          player_id: string;
+          created_at?: string;
+          updated_at?: string;
+          manual_status_lock?: boolean;
+          ignore_voice_alerts?: boolean;
+          ignore_wot_alerts?: boolean;
+          inactivity_warning_days?: number | null;
+          inactivity_danger_days?: number | null;
+          voice_target_minutes?: number | null;
+          note?: string | null;
+          updated_by?: string | null;
+        };
+        Update: {
+          player_id?: string;
+          created_at?: string;
+          updated_at?: string;
+          manual_status_lock?: boolean;
+          ignore_voice_alerts?: boolean;
+          ignore_wot_alerts?: boolean;
+          inactivity_warning_days?: number | null;
+          inactivity_danger_days?: number | null;
+          voice_target_minutes?: number | null;
+          note?: string | null;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_tracking_settings_player_id_fkey';
+            columns: ['player_id'];
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       player_staff_notes: {
         Row: {
@@ -1382,6 +1432,17 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      record_discord_voice_event: {
+        Args: {
+          p_guild_id?: string | null;
+          p_discord_user_id: string;
+          p_channel_id?: string | null;
+          p_channel_name?: string | null;
+          p_event?: string | null;
+          p_occurred_at?: string | null;
+        };
+        Returns: string | null;
+      };
       count_pending_applications: {
         Args: Record<string, never>;
         Returns: number;
@@ -1426,6 +1487,8 @@ export type DiscordVoiceSessionRow =
   Database['public']['Tables']['discord_voice_sessions']['Row'];
 export type DiscordGuildMemberRow =
   Database['public']['Tables']['discord_guild_members']['Row'];
+export type PlayerTrackingSettingsRow =
+  Database['public']['Tables']['player_tracking_settings']['Row'];
 export type PlayerStaffNoteRow =
   Database['public']['Tables']['player_staff_notes']['Row'];
 export type PlayerStatusHistoryRow =
