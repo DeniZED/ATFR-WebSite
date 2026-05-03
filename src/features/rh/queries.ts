@@ -95,7 +95,12 @@ export interface AutoLinkDiscordInput {
   members?: DiscordMemberPayload[];
 }
 
+export interface SyncAllDiscordInput {
+  guildId?: string | null;
+}
+
 export interface DiscordFullSyncResult {
+  fetched?: number;
   synced: number;
   linked: number;
   statuses: number;
@@ -566,14 +571,24 @@ export function useRecomputePlayerStatuses() {
 export function useSyncAllDiscordMembers() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<DiscordFullSyncResult> => {
+    mutationFn: async (
+      input: SyncAllDiscordInput = {},
+    ): Promise<DiscordFullSyncResult> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) {
         throw new Error('Session admin introuvable. Reconnecte-toi.');
       }
 
-      const res = await fetch('/.netlify/functions/discord-sync-members', {
+      const url = new URL(
+        '/.netlify/functions/discord-sync-members',
+        window.location.origin,
+      );
+      if (input.guildId) {
+        url.searchParams.set('guild_id', input.guildId);
+      }
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${token}`,

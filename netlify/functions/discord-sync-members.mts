@@ -159,7 +159,14 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   const url = new URL(req.url);
   const guildId = url.searchParams.get('guild_id') || DEFAULT_GUILD_ID;
   if (!guildId) {
-    return json({ error: 'DISCORD_GUILD_ID is not configured' }, 500);
+    return json(
+      {
+        error: 'Discord guild id missing',
+        detail:
+          'Renseigne discord_server_id dans le contenu admin ou ajoute DISCORD_GUILD_ID dans Netlify.',
+      },
+      500,
+    );
   }
 
   try {
