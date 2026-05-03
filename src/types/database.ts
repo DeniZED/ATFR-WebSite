@@ -35,6 +35,18 @@ export type PlayerAlertKind =
   | 'activity_drop'
   | 'watch'
   | 'custom';
+export interface DiscordMemberPayload {
+  discord_user_id: string;
+  username?: string | null;
+  display_name?: string | null;
+  global_name?: string | null;
+  nickname?: string | null;
+  status?: string | null;
+  avatar_url?: string | null;
+  channel_id?: string | null;
+  activity?: Record<string, unknown> | null;
+  roles?: string[] | null;
+}
 
 export const DIFFICULTY_LABELS: Record<QuizDifficulty, string> = {
   easy: 'Facile',
@@ -482,6 +494,51 @@ export interface Database {
             referencedColumns: ['id'];
           },
         ];
+      };
+      discord_guild_members: {
+        Row: {
+          discord_user_id: string;
+          guild_id: string | null;
+          username: string;
+          display_name: string | null;
+          global_name: string | null;
+          nickname: string | null;
+          status: string | null;
+          avatar_url: string | null;
+          roles: string[];
+          last_seen_at: string;
+          source: string;
+          meta: Record<string, unknown>;
+        };
+        Insert: {
+          discord_user_id: string;
+          guild_id?: string | null;
+          username: string;
+          display_name?: string | null;
+          global_name?: string | null;
+          nickname?: string | null;
+          status?: string | null;
+          avatar_url?: string | null;
+          roles?: string[];
+          last_seen_at?: string;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Update: {
+          discord_user_id?: string;
+          guild_id?: string | null;
+          username?: string;
+          display_name?: string | null;
+          global_name?: string | null;
+          nickname?: string | null;
+          status?: string | null;
+          avatar_url?: string | null;
+          roles?: string[];
+          last_seen_at?: string;
+          source?: string;
+          meta?: Record<string, unknown>;
+        };
+        Relationships: [];
       };
       player_staff_notes: {
         Row: {
@@ -1308,6 +1365,23 @@ export interface Database {
         };
         Returns: number;
       };
+      upsert_discord_guild_members: {
+        Args: {
+          p_guild_id?: string | null;
+          p_members?: DiscordMemberPayload[] | null;
+        };
+        Returns: number;
+      };
+      auto_link_discord_members: {
+        Args: {
+          p_guild_id?: string | null;
+        };
+        Returns: number;
+      };
+      recompute_player_hr_statuses: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
       count_pending_applications: {
         Args: Record<string, never>;
         Returns: number;
@@ -1350,6 +1424,8 @@ export type PlayerActivitySnapshotRow =
   Database['public']['Tables']['player_activity_snapshots']['Row'];
 export type DiscordVoiceSessionRow =
   Database['public']['Tables']['discord_voice_sessions']['Row'];
+export type DiscordGuildMemberRow =
+  Database['public']['Tables']['discord_guild_members']['Row'];
 export type PlayerStaffNoteRow =
   Database['public']['Tables']['player_staff_notes']['Row'];
 export type PlayerStatusHistoryRow =
