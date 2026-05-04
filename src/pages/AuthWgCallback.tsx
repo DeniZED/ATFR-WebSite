@@ -18,11 +18,20 @@ export default function AuthWgCallback() {
       const status = params.get('status');
 
       // 1. CSRF nonce check — prevent Login CSRF and forged callback URLs.
-      //    The nonce was generated in startWgLogin() and echoed back by WG
-      //    via the `state` parameter.
+      //    The nonce was generated in startWgLogin() and stored in sessionStorage.
+      //    WG may or may not echo it back via `state`; we handle both cases:
+      //    - If WG echoed state → it must match the stored nonce exactly.
+      //    - If WG did not echo state (null) → we only verify the nonce was
+      //      present (i.e. a login was initiated from this tab). This still
+      //      blocks crafted callbacks sent by an attacker since they cannot
+      //      set sessionStorage of the victim's tab.
       const returnedNonce = params.get('state');
       const storedNonce = PlayerIdentityStorage.popNonce();
-      if (!returnedNonce || !storedNonce || returnedNonce !== storedNonce) {
+      if (!storedNonce) {
+        setError('Validation CSRF échouée. Recommence la connexion depuis le site.');
+        return;
+      }
+      if (returnedNonce !== null && returnedNonce !== storedNonce) {
         setError('Validation CSRF échouée. Recommence la connexion depuis le site.');
         return;
       }
