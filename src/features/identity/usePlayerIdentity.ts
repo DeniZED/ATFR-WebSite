@@ -5,12 +5,18 @@ const KEYS = {
   id: 'atfr.player.id',
   nickname: 'atfr.player.nickname',
   accountId: 'atfr.player.account_id',
-  accessToken: 'atfr.player.access_token',
   expiresAt: 'atfr.player.access_expires',
   verified: 'atfr.player.verified',
 } as const;
 
+// access_token is kept in sessionStorage only: it is not needed across sessions
+// (WG logout is best-effort), and sessionStorage limits XSS blast radius.
+const SESSION_KEYS = {
+  accessToken: 'atfr.player.access_token',
+} as const;
+
 const RETURN_KEY = 'atfr.player.wg_return';
+const NONCE_KEY = 'atfr.player.wg_nonce';
 const WG_LOGIN_URL = 'https://api.worldoftanks.eu/wot/auth/login/';
 const WG_LOGOUT_URL = 'https://api.worldoftanks.eu/wot/auth/logout/';
 
@@ -43,7 +49,7 @@ function readIdentity(): PlayerIdentity {
   const nickname = localStorage.getItem(KEYS.nickname) ?? '';
   const accountIdRaw = localStorage.getItem(KEYS.accountId);
   const accountId = accountIdRaw ? Number(accountIdRaw) : null;
-  const accessToken = localStorage.getItem(KEYS.accessToken);
+  const accessToken = sessionStorage.getItem(SESSION_KEYS.accessToken);
   const expiresAtRaw = localStorage.getItem(KEYS.expiresAt);
   const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : null;
   const verifiedRaw = localStorage.getItem(KEYS.verified);
@@ -79,10 +85,16 @@ export function usePlayerIdentity() {
     if (!env.wotApplicationId) {
       throw new Error('VITE_WOT_APPLICATION_ID manquant — login WG impossible.');
     }
+    // Store the page to return to after successful login.
     sessionStorage.setItem(
       RETURN_KEY,
       window.location.pathname + window.location.search,
     );
+    // Generate a one-time CSRF nonce. WG echoes it back in the callback
+    // `state` param so we can verify the response was not forged.
+    const nonce = crypto.randomUUID();
+    sessionStorage.setItem(NONCE_KEY, nonce);
+
     const url = new URL(WG_LOGIN_URL);
     url.searchParams.set('application_id', env.wotApplicationId);
     url.searchParams.set(
@@ -91,15 +103,16 @@ export function usePlayerIdentity() {
     );
     url.searchParams.set('display', 'page');
     url.searchParams.set('nofollow', '0');
+    url.searchParams.set('state', nonce);
     window.location.href = url.toString();
   }, []);
 
   const logoutVerified = useCallback(async () => {
     const token = state.accessToken;
     localStorage.removeItem(KEYS.accountId);
-    localStorage.removeItem(KEYS.accessToken);
     localStorage.removeItem(KEYS.expiresAt);
     localStorage.removeItem(KEYS.verified);
+    sessionStorage.removeItem(SESSION_KEYS.accessToken);
     setState((prev) => ({
       ...prev,
       accountId: null,
@@ -136,13 +149,21 @@ export const PlayerIdentityStorage = {
   }) {
     localStorage.setItem(KEYS.accountId, String(args.accountId));
     localStorage.setItem(KEYS.nickname, args.nickname);
-    localStorage.setItem(KEYS.accessToken, args.accessToken);
     localStorage.setItem(KEYS.expiresAt, String(args.expiresAt));
     localStorage.setItem(KEYS.verified, 'true');
+    // access_token goes to sessionStorage only — never persisted to localStorage.
+    sessionStorage.setItem(SESSION_KEYS.accessToken, args.accessToken);
   },
   popReturnUrl(): string {
-    const v = sessionStorage.getItem(RETURN_KEY) ?? '/';
+    const raw = sessionStorage.getItem(RETURN_KEY) ?? '/';
     sessionStorage.removeItem(RETURN_KEY);
+    // Only allow same-origin relative paths (prevent open-redirect).
+    const safe = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+    return safe;
+  },
+  popNonce(): string | null {
+    const v = sessionStorage.getItem(NONCE_KEY);
+    sessionStorage.removeItem(NONCE_KEY);
     return v;
   },
 };
