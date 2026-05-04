@@ -108,7 +108,7 @@ export function FloatingMapPicker({
         ref={wrapRef}
         className={cn(
           'absolute z-20 inset-x-2 bottom-2 sm:inset-x-auto sm:right-4 sm:bottom-4',
-          'sm:w-[min(56vw,620px)] lg:w-[min(44vw,680px)]',
+          'sm:w-[min(56vw,620px,calc(100vh_-_5rem))] lg:w-[min(44vw,680px,calc(100vh_-_5rem))]',
           disabled && 'pointer-events-none opacity-80',
         )}
       >
@@ -150,7 +150,7 @@ export function FloatingMapPicker({
             ref={placeRef}
             onClick={handlePlaceClick}
             className={cn(
-              'relative aspect-square w-full bg-atfr-ink select-none max-h-[min(55vh,520px)]',
+              'relative aspect-square w-full bg-atfr-ink select-none',
               onPlace ? 'cursor-crosshair' : 'cursor-default',
             )}
           >
