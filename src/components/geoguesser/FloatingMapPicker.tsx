@@ -108,7 +108,7 @@ export function FloatingMapPicker({
         ref={wrapRef}
         className={cn(
           'absolute z-20 inset-x-2 bottom-2 sm:inset-x-auto sm:right-4 sm:bottom-4',
-          'sm:w-[min(56vw,620px,calc(72vh_-_4rem))] lg:w-[min(44vw,680px,calc(72vh_-_4rem))]',
+          'sm:w-[min(56vw,620px,calc(72vh_-_7rem))] lg:w-[min(44vw,680px,calc(72vh_-_7rem))]',
           disabled && 'pointer-events-none opacity-80',
         )}
       >
