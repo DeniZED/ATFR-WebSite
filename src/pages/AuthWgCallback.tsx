@@ -17,6 +17,10 @@ export default function AuthWgCallback() {
       const params = new URLSearchParams(window.location.search);
       const status = params.get('status');
 
+      // Strip sensitive params (access_token, etc.) from the URL immediately
+      // so they don't appear in browser history, referrer headers, or server logs.
+      window.history.replaceState(null, '', window.location.pathname);
+
       // 1. CSRF nonce check — prevent Login CSRF and forged callback URLs.
       //    The nonce was generated in startWgLogin() and stored in sessionStorage.
       //    WG may or may not echo it back via `state`; we handle both cases:
