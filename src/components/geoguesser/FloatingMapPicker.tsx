@@ -150,7 +150,7 @@ export function FloatingMapPicker({
             ref={placeRef}
             onClick={handlePlaceClick}
             className={cn(
-              'relative aspect-square w-full bg-atfr-ink select-none',
+              'relative aspect-square w-full bg-atfr-ink select-none max-h-[min(55vh,520px)]',
               onPlace ? 'cursor-crosshair' : 'cursor-default',
             )}
           >
