@@ -7,7 +7,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 
 if (ALLOWED_ORIGINS.length === 0) {
-  console.warn('[discord-notify] ALLOWED_ORIGINS is not set — all origins are accepted.');
+  console.warn('[discord-notify] ALLOWED_ORIGINS is not set — all cross-origin requests will be rejected.');
 }
 
 interface ApplicationPayload {
@@ -50,11 +50,9 @@ function isValid(body: unknown): body is ApplicationPayload {
 }
 
 function cors(origin: string | null): Record<string, string> {
-  const allowed =
-    ALLOWED_ORIGINS.length === 0 ||
-    (origin && ALLOWED_ORIGINS.includes(origin));
+  const allowed = origin != null && ALLOWED_ORIGINS.includes(origin);
   return {
-    'access-control-allow-origin': allowed && origin ? origin : 'null',
+    'access-control-allow-origin': allowed ? origin : 'null',
     'access-control-allow-headers': 'content-type',
     'access-control-allow-methods': 'POST, OPTIONS',
     vary: 'origin',

@@ -17,6 +17,11 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     return json({ error: 'Method not allowed' }, 405);
   }
 
+  const ct = req.headers.get('content-type') ?? '';
+  if (!ct.includes('application/json')) {
+    return json({ error: 'Content-Type must be application/json' }, 415);
+  }
+
   let body: unknown;
   try {
     body = await req.json();
