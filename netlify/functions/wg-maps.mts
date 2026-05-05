@@ -1,6 +1,6 @@
 import type { Context } from '@netlify/functions';
 
-const APP_ID = process.env.WOT_APPLICATION_ID;
+const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
 
 // Fallback CDN pour reconstruire l'URL d'une minimap quand WG ne renvoie

@@ -5,6 +5,11 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # WOT_APPLICATION_ID and CLAN_ID are intentionally public values — WG's API
+  # design requires the application_id in client-side code and Vite embeds it
+  # via VITE_WOT_APPLICATION_ID / VITE_CLAN_ID. Exclude them from secrets
+  # scanning to avoid false positives when the same value is set server-side.
+  SECRETS_SCAN_OMIT_KEYS = "WOT_APPLICATION_ID,CLAN_ID"
 
 [functions]
   node_bundler = "esbuild"
