@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
+const SUBMIT_SCORE_URL = '/.netlify/functions/submit-score';
+
 type ScoreRow = Database['public']['Tables']['module_scores']['Row'];
 
 export interface LeaderboardEntry extends ScoreRow {
@@ -104,14 +106,43 @@ export function usePlayerModuleScores(args: {
   });
 }
 
+export interface SubmitScoreInput {
+  module_slug: string;
+  submode?: string;
+  score: number;
+  max_score: number;
+  player_anon_id: string;
+  player_nickname: string;
+  /** HMAC-signed identity token from wg-auth-verify. When provided, the
+   *  submit-score function sets is_verified=true with the validated account_id.
+   *  When absent the score is stored as anonymous (is_verified=false). */
+  player_token?: string | null;
+  meta?: Record<string, unknown>;
+}
+
 export function useSubmitScore() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (
-      input: Database['public']['Tables']['module_scores']['Insert'],
-    ) => {
-      const { error } = await supabase.from('module_scores').insert(input);
-      if (error) throw error;
+    mutationFn: async (input: SubmitScoreInput) => {
+      const res = await fetch(SUBMIT_SCORE_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          module_slug: input.module_slug,
+          submode: input.submode ?? 'default',
+          score: input.score,
+          max_score: input.max_score,
+          player_anon_id: input.player_anon_id,
+          player_nickname: input.player_nickname,
+          player_token: input.player_token ?? null,
+          meta: input.meta ?? {},
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `submit-score ${res.status}`);
+      }
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({

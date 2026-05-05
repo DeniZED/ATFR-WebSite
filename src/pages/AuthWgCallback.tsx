@@ -63,7 +63,7 @@ export default function AuthWgCallback() {
       // 2. Server-side verification — call our Netlify function which uses
       //    WG prolongate to confirm the token genuinely belongs to account_id.
       //    This prevents an attacker from forging (account_id, access_token).
-      let verified: { ok: boolean; account_id: number; access_token: string; expires_at: number | null };
+      let verified: { ok: boolean; account_id: number; access_token: string; expires_at: number | null; player_token: string };
       try {
         const res = await fetch('/.netlify/functions/wg-auth-verify', {
           method: 'POST',
@@ -90,11 +90,16 @@ export default function AuthWgCallback() {
         setError('Le token ne correspond pas au compte déclaré.');
         return;
       }
+      if (!verified.player_token) {
+        setError('Réponse serveur incomplète. Réessaie.');
+        return;
+      }
 
       PlayerIdentityStorage.saveVerified({
         accountId: verified.account_id,
         nickname,
         accessToken: verified.access_token,
+        playerToken: verified.player_token,
         // Use server-verified expiry only. Never trust the URL-supplied value
         // (attacker-controlled). Fall back to 14 days if server returns null.
         expiresAt: verified.expires_at ?? Math.floor(Date.now() / 1000) + 14 * 24 * 3600,
