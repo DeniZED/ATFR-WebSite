@@ -409,8 +409,7 @@ export default function Geoguesser() {
           ),
           player_anon_id: identity.id,
           player_nickname: identity.nickname,
-          player_account_id: identity.accountId,
-          is_verified: identity.isVerified,
+          player_token: identity.playerToken,
           score: Math.max(0, worst - finalScore),
           max_score: worst,
           meta: {

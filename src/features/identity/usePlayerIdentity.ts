@@ -9,10 +9,12 @@ const KEYS = {
   verified: 'atfr.player.verified',
 } as const;
 
-// access_token is kept in sessionStorage only: it is not needed across sessions
-// (WG logout is best-effort), and sessionStorage limits XSS blast radius.
+// access_token and player_token are sessionStorage-only: not persisted across sessions,
+// limiting XSS blast radius. player_token is the HMAC-signed credential sent to
+// the submit-score function — it is issued server-side and proves WG identity.
 const SESSION_KEYS = {
   accessToken: 'atfr.player.access_token',
+  playerToken: 'atfr.player.player_token',
 } as const;
 
 const RETURN_KEY = 'atfr.player.wg_return';
@@ -27,6 +29,10 @@ export interface PlayerIdentity {
   nickname: string;
   accountId: number | null;
   accessToken: string | null;
+  /** Short-lived HMAC token issued by wg-auth-verify after WG verification.
+   *  Sent to submit-score instead of the WG access_token to avoid re-calling
+   *  WG prolongate on every score write. */
+  playerToken: string | null;
   expiresAt: number | null;
   isVerified: boolean;
 }
@@ -50,12 +56,13 @@ function readIdentity(): PlayerIdentity {
   const accountIdRaw = localStorage.getItem(KEYS.accountId);
   const accountId = accountIdRaw ? Number(accountIdRaw) : null;
   const accessToken = sessionStorage.getItem(SESSION_KEYS.accessToken);
+  const playerToken = sessionStorage.getItem(SESSION_KEYS.playerToken);
   const expiresAtRaw = localStorage.getItem(KEYS.expiresAt);
   const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : null;
   const verifiedRaw = localStorage.getItem(KEYS.verified);
   const expired = expiresAt != null && expiresAt * 1000 < Date.now();
   const isVerified = verifiedRaw === 'true' && accountId != null && !expired;
-  return { id, nickname, accountId, accessToken, expiresAt, isVerified };
+  return { id, nickname, accountId, accessToken, playerToken, expiresAt, isVerified };
 }
 
 export function usePlayerIdentity() {
@@ -113,10 +120,12 @@ export function usePlayerIdentity() {
     localStorage.removeItem(KEYS.expiresAt);
     localStorage.removeItem(KEYS.verified);
     sessionStorage.removeItem(SESSION_KEYS.accessToken);
+    sessionStorage.removeItem(SESSION_KEYS.playerToken);
     setState((prev) => ({
       ...prev,
       accountId: null,
       accessToken: null,
+      playerToken: null,
       expiresAt: null,
       isVerified: false,
     }));
@@ -145,14 +154,16 @@ export const PlayerIdentityStorage = {
     accountId: number;
     nickname: string;
     accessToken: string;
+    playerToken: string;
     expiresAt: number;
   }) {
     localStorage.setItem(KEYS.accountId, String(args.accountId));
     localStorage.setItem(KEYS.nickname, args.nickname);
     localStorage.setItem(KEYS.expiresAt, String(args.expiresAt));
     localStorage.setItem(KEYS.verified, 'true');
-    // access_token goes to sessionStorage only — never persisted to localStorage.
+    // Sensitive tokens go to sessionStorage only — never persisted to localStorage.
     sessionStorage.setItem(SESSION_KEYS.accessToken, args.accessToken);
+    sessionStorage.setItem(SESSION_KEYS.playerToken, args.playerToken);
   },
   popReturnUrl(): string {
     const raw = sessionStorage.getItem(RETURN_KEY) ?? '/';
