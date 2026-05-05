@@ -1,13 +1,12 @@
 import type { Context } from '@netlify/functions';
 
 const SYNC_SECRET = process.env.DISCORD_SYNC_SECRET;
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!process.env.ALLOWED_ORIGINS) {
-  console.warn('[discord-voice-event] ALLOWED_ORIGINS is not set — all origins are accepted.');
+  console.warn('[discord-voice-event] ALLOWED_ORIGINS is not set — all cross-origin requests will be rejected.');
 }
 
 interface VoiceEventPayload {
@@ -35,8 +34,8 @@ function corsHeaders(origin: string | null): Record<string, string> {
     .map((s) => s.trim())
     .filter(Boolean);
   const allowOrigin =
-    allowed.length === 0 || (origin && allowed.includes(origin))
-      ? (origin ?? 'null')
+    origin != null && allowed.length > 0 && allowed.includes(origin)
+      ? origin
       : 'null';
   return {
     'access-control-allow-origin': allowOrigin,
@@ -98,6 +97,8 @@ async function recordVoiceEvent(payload: VoiceEventPayload): Promise<string | nu
 
 // Discord snowflake IDs are 17-20 digit numeric strings.
 const DISCORD_ID_RE = /^\d{17,20}$/;
+// ISO-8601 date-time (loose check — Postgres will validate the rest).
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 function isValidPayload(body: unknown): body is VoiceEventPayload {
   if (!body || typeof body !== 'object') return false;
@@ -108,7 +109,11 @@ function isValidPayload(body: unknown): body is VoiceEventPayload {
     (!payload.event ||
       payload.event === 'join' ||
       payload.event === 'leave' ||
-      payload.event === 'move')
+      payload.event === 'move') &&
+    (payload.guild_id == null || (typeof payload.guild_id === 'string' && DISCORD_ID_RE.test(payload.guild_id))) &&
+    (payload.channel_id == null || (typeof payload.channel_id === 'string' && DISCORD_ID_RE.test(payload.channel_id))) &&
+    (payload.channel_name == null || (typeof payload.channel_name === 'string' && payload.channel_name.length <= 100)) &&
+    (payload.occurred_at == null || (typeof payload.occurred_at === 'string' && ISO_DATE_RE.test(payload.occurred_at)))
   );
 }
 

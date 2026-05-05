@@ -1,7 +1,7 @@
 import type { Context } from '@netlify/functions';
 
-const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
-const CLAN_ID = process.env.CLAN_ID || process.env.VITE_CLAN_ID;
+const APP_ID = process.env.WOT_APPLICATION_ID;
+const CLAN_ID = process.env.CLAN_ID;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
 const EXP_URL = 'https://static.modxvm.com/wn8-data-exp/json/wn8exp.json';
 

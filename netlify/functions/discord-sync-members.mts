@@ -4,13 +4,12 @@ const DISCORD_API = 'https://discord.com/api/v10';
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DEFAULT_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const SYNC_SECRET = process.env.DISCORD_SYNC_SECRET;
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!process.env.ALLOWED_ORIGINS) {
-  console.warn('[discord-sync-members] ALLOWED_ORIGINS is not set — all origins are accepted.');
+  console.warn('[discord-sync-members] ALLOWED_ORIGINS is not set — all cross-origin requests will be rejected.');
 }
 
 interface DiscordUser {
@@ -53,8 +52,8 @@ function corsHeaders(origin: string | null): Record<string, string> {
     .map((s) => s.trim())
     .filter(Boolean);
   const allowOrigin =
-    allowed.length === 0 || (origin && allowed.includes(origin))
-      ? (origin ?? 'null')
+    origin != null && allowed.length > 0 && allowed.includes(origin)
+      ? origin
       : 'null';
   return {
     'access-control-allow-origin': allowOrigin,

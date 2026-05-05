@@ -95,7 +95,9 @@ export default function AuthWgCallback() {
         accountId: verified.account_id,
         nickname,
         accessToken: verified.access_token,
-        expiresAt: verified.expires_at ?? Number(params.get('expires_at') ?? 0),
+        // Use server-verified expiry only. Never trust the URL-supplied value
+        // (attacker-controlled). Fall back to 14 days if server returns null.
+        expiresAt: verified.expires_at ?? Math.floor(Date.now() / 1000) + 14 * 24 * 3600,
       });
 
       const ret = PlayerIdentityStorage.popReturnUrl();
