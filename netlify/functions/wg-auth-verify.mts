@@ -2,7 +2,7 @@ import type { Context } from '@netlify/functions';
 
 // Use a dedicated server-side variable — never the VITE_ prefixed one
 // (which belongs to the frontend bundle and carries different trust assumptions).
-const WG_APP_ID = process.env.WOT_APPLICATION_ID;
+const WG_APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const WG_PROLONGATE = 'https://api.worldoftanks.eu/wot/auth/prolongate/';
 
 function json(body: unknown, status = 200) {
