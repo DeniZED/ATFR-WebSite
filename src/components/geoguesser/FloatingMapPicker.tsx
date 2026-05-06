@@ -58,7 +58,7 @@ export function FloatingMapPicker({
 
   // Zoom / pan state — held in refs for event handlers, mirrored to state for re-render.
   const viewRef = useRef({ zoom: 1, offsetX: 0, offsetY: 0 });
-  const [viewTick, setViewTick] = useState(0);
+  const [, setViewTick] = useState(0);
   const forceViewUpdate = () => setViewTick((n) => n + 1);
 
   // Drag tracking (not state — no re-render needed during drag).
