@@ -1973,12 +1973,12 @@ function SetupSummaryPanel({
         </span>
         <span>·</span>
         <span>
-          Mauvaise map{‘ ‘}
+          Mauvaise map{' '}
           <strong className="text-atfr-bone">+{formatDistance(wrongMapMalusM)}</strong>
         </span>
         <span>·</span>
         <span>
-          Time out{‘ ‘}
+          Time out{' '}
           <strong className="text-atfr-bone">+{formatDistance(timeoutMalusM)}</strong>
         </span>
       </div>
@@ -1990,11 +1990,11 @@ function SetupSummaryPanel({
         disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
       >
-        {gameMode === ‘daily’ && dailyDone
-          ? ‘Challenge déjà effectué aujourd’hui’
+        {gameMode === 'daily' && dailyDone
+          ? "Challenge déjà effectué aujourd’hui"
           : hasNickname
             ? getStartButtonLabel(gameMode)
-            : ‘Choisis d’abord un pseudo’}
+            : "Choisis d’abord un pseudo"}
       </Button>
       {disabledReason && (
         <p className="text-xs text-atfr-warning">{disabledReason}</p>
