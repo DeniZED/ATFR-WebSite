@@ -260,6 +260,11 @@ export default function Geoguesser() {
     return () => clearInterval(id);
   }, [stage, index, showTutorial]);
 
+  // Daily mode n'a pas de sélection de difficulté (même pool pour tous).
+  useEffect(() => {
+    if (gameMode === 'daily') setDifficulty('all');
+  }, [gameMode]);
+
   useEffect(() => {
     if (stage !== 'intro' || !allShots.data) return;
     if (!selectedDifficultyAvailability?.disabled) return;
@@ -535,55 +540,47 @@ export default function Geoguesser() {
             </Alert>
           ) : (
             <Card>
-              <CardBody className="p-5 sm:p-7 space-y-6">
-                <div className="grid gap-3 text-center sm:grid-cols-3">
-                  <Stat label="Maps actives" value={maps.data?.length ?? 0} />
-                  <Stat label="Screenshots dispo" value={shots.data.length} />
-                  <Stat
-                    label={gameMode === 'daily' ? 'Screens défi' : 'Manches'}
-                    value={roundTarget}
-                  />
-                </div>
+              <CardBody className="p-5 sm:p-7 space-y-5">
+                <GameModeSelector
+                  value={gameMode}
+                  onChange={setGameMode}
+                  challengeKey={displayChallengeKey}
+                  modeSettings={modeSettings}
+                  dailyDone={isDailyDone}
+                />
 
-                <div className="grid gap-5 lg:grid-cols-[1.35fr_0.85fr]">
-                  <div className="space-y-5">
-                    <GameModeSelector
-                      value={gameMode}
-                      onChange={setGameMode}
-                      challengeKey={displayChallengeKey}
-                      modeSettings={modeSettings}
-                      dailyDone={isDailyDone}
-                    />
+                <AnimatePresence initial={false}>
+                  {gameMode !== 'daily' && (
+                    <motion.div
+                      key="difficulty"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <DifficultyPicker
+                        value={difficulty}
+                        onChange={setDifficulty}
+                        availability={difficultyAvailability}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                    <DifficultyPicker
-                      value={difficulty}
-                      onChange={setDifficulty}
-                      availability={difficultyAvailability}
-                    />
-                  </div>
-
-                  <SetupSummaryPanel
-                    gameMode={gameMode}
-                    difficulty={difficulty}
-                    roundTimeS={roundTimeLimitS}
-                    roundTarget={roundTarget}
-                    playableMapCount={
-                      selectedDifficultyAvailability?.mapCount ?? 0
-                    }
-                    playableShotCount={
-                      selectedDifficultyAvailability?.shotCount ?? 0
-                    }
-                    requiredMapCount={minMapRequirement}
-                    wrongMapMalusM={cfg.wrong_map_malus_m}
-                    timeoutMalusM={cfg.timeout_malus_m}
-                    modeSettings={modeSettings}
-                    hasNickname={!!identity.nickname}
-                    dailyDone={isDailyDone}
-                    canStart={canStartGame}
-                    disabledReason={startDisabledReason}
-                    onStart={startGame}
-                  />
-                </div>
+                <SetupSummaryPanel
+                  gameMode={gameMode}
+                  roundTimeS={roundTimeLimitS}
+                  roundTarget={roundTarget}
+                  wrongMapMalusM={cfg.wrong_map_malus_m}
+                  timeoutMalusM={cfg.timeout_malus_m}
+                  modeSettings={modeSettings}
+                  hasNickname={!!identity.nickname}
+                  dailyDone={isDailyDone}
+                  canStart={canStartGame}
+                  disabledReason={startDisabledReason}
+                  onStart={startGame}
+                />
               </CardBody>
             </Card>
           )}
@@ -1694,16 +1691,6 @@ function getEntryGameMode(entry: LeaderboardEntry): GameMode {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-atfr-gold/15 bg-atfr-graphite/40 p-3">
-      <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog">
-        {label}
-      </p>
-      <p className="font-display text-2xl text-atfr-bone mt-1">{value}</p>
-    </div>
-  );
-}
 
 function GameModeSelector({
   value,
@@ -1718,49 +1705,134 @@ function GameModeSelector({
   modeSettings: GeoguesserModeSettings;
   dailyDone: boolean;
 }) {
+  const dailyActive = value === 'daily';
   return (
-    <div className="space-y-3">
-      <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-        Mode
-      </p>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <ModeButton
-          active={value === 'daily'}
-          done={dailyDone}
-          icon={<CalendarDays size={16} />}
-          title="Challenge du jour"
-          detail={
-            dailyDone
-              ? `Déjà effectué · ${formatChallengeDate(challengeKey)}`
-              : `Même série pour tous · ${formatChallengeDate(challengeKey)}`
-          }
-          onClick={() => onChange('daily')}
-        />
-        <ModeButton
-          active={value === 'random'}
-          icon={<Shuffle size={16} />}
-          title="Série libre"
-          detail={`${modeSettings.randomRounds} manches tirées au hasard`}
-          onClick={() => onChange('random')}
-        />
-        <ModeButton
-          active={value === 'sprint'}
-          icon={<Zap size={16} />}
-          title="Sprint"
-          detail={`${modeSettings.sprintRounds} manches · ${modeSettings.sprintRoundTimeS}s`}
-          onClick={() => onChange('sprint')}
-        />
-        <ModeButton
-          active={value === 'blind'}
-          icon={<EyeOff size={16} />}
-          title="Blind Guess"
-          detail={`Screen visible ${modeSettings.blindPreviewSeconds}s puis mémoire`}
-          onClick={() => onChange('blind')}
-        />
+    <div className="space-y-4">
+      {/* ── Challenge du jour — carte hero ── */}
+      <button
+        type="button"
+        aria-pressed={dailyActive}
+        onClick={() => onChange('daily')}
+        className={cn(
+          'relative w-full rounded-xl border-2 p-4 text-left transition-all duration-200',
+          dailyActive
+            ? 'border-atfr-gold/60 bg-gradient-to-br from-atfr-gold/12 via-atfr-gold/5 to-transparent shadow-lg shadow-atfr-gold/5'
+            : dailyDone
+              ? 'border-atfr-gold/10 bg-atfr-graphite/20 opacity-70'
+              : 'border-atfr-gold/20 bg-atfr-graphite/30 hover:border-atfr-gold/40 hover:bg-atfr-graphite/40',
+        )}
+      >
+        {dailyDone && (
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-atfr-success/40 bg-atfr-success/10 px-2 py-0.5 text-[10px] text-atfr-success">
+            <CheckCircle2 size={10} /> Effectué
+          </span>
+        )}
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-xl border',
+              dailyActive
+                ? 'border-atfr-gold/50 bg-atfr-gold/20 text-atfr-gold'
+                : dailyDone
+                  ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/50'
+                  : 'border-atfr-gold/20 bg-atfr-ink/50 text-atfr-fog',
+            )}
+          >
+            <CalendarDays size={20} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  'font-display text-base',
+                  dailyDone && !dailyActive ? 'text-atfr-fog' : 'text-atfr-bone',
+                )}
+              >
+                Challenge du jour
+              </span>
+              <Badge variant="gold">{formatChallengeDate(challengeKey)}</Badge>
+            </div>
+            <p className={cn('text-xs mt-0.5', dailyDone && !dailyActive ? 'text-atfr-fog/60' : 'text-atfr-fog')}>
+              {modeSettings.dailyRounds} manches identiques pour tout le clan · Difficulté mixte · Classement commun
+            </p>
+          </div>
+        </div>
+      </button>
+
+      {/* ── Modes entraînement ── */}
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog/70 mb-2">
+          Entraînement
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          <TrainingModeButton
+            active={value === 'random'}
+            icon={<Shuffle size={15} />}
+            title="Série libre"
+            detail={`${modeSettings.randomRounds} manches aléatoires`}
+            onClick={() => onChange('random')}
+          />
+          <TrainingModeButton
+            active={value === 'sprint'}
+            icon={<Zap size={15} />}
+            title="Sprint"
+            detail={`${modeSettings.sprintRounds} m. · ${modeSettings.sprintRoundTimeS}s · chrono`}
+            onClick={() => onChange('sprint')}
+          />
+          <TrainingModeButton
+            active={value === 'blind'}
+            icon={<EyeOff size={15} />}
+            title="Blind Guess"
+            detail={`${modeSettings.blindRounds} m. · screen ${modeSettings.blindPreviewSeconds}s`}
+            onClick={() => onChange('blind')}
+          />
+        </div>
       </div>
     </div>
   );
 }
+
+function TrainingModeButton({
+  active,
+  icon,
+  title,
+  detail,
+  onClick,
+}: {
+  active: boolean;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'rounded-lg border p-3 text-left transition-all',
+        active
+          ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-bone'
+          : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/30 hover:text-atfr-bone',
+      )}
+    >
+      <div
+        className={cn(
+          'inline-flex h-7 w-7 items-center justify-center rounded-md border mb-2',
+          active
+            ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
+            : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
+        )}
+      >
+        {icon}
+      </div>
+      <p className="text-sm font-medium leading-tight">{title}</p>
+      <p className="text-[10px] text-atfr-fog mt-0.5 leading-snug">{detail}</p>
+    </button>
+  );
+}
+
 
 function DifficultyPicker({
   value,
@@ -1857,12 +1929,8 @@ function DifficultyPicker({
 
 function SetupSummaryPanel({
   gameMode,
-  difficulty,
   roundTimeS,
   roundTarget,
-  playableMapCount,
-  playableShotCount,
-  requiredMapCount,
   wrongMapMalusM,
   timeoutMalusM,
   modeSettings,
@@ -1873,12 +1941,8 @@ function SetupSummaryPanel({
   onStart,
 }: {
   gameMode: GameMode;
-  difficulty: DifficultyFilter;
   roundTimeS: number;
   roundTarget: number;
-  playableMapCount: number;
-  playableShotCount: number;
-  requiredMapCount: number;
   wrongMapMalusM: number;
   timeoutMalusM: number;
   modeSettings: GeoguesserModeSettings;
@@ -1889,60 +1953,39 @@ function SetupSummaryPanel({
   onStart: () => void;
 }) {
   return (
-    <div className="rounded-md border border-atfr-gold/15 bg-atfr-ink/45 p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
-            Partie prête
-          </p>
-          <h3 className="mt-1 font-display text-xl text-atfr-bone">
-            {formatGenericModeLabel(gameMode)}
-          </h3>
-        </div>
-        <Badge variant={getModeBadgeVariant(gameMode)}>
-          {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
-        </Badge>
-      </div>
+    <div className="space-y-3">
+      <ModeRules
+        gameMode={gameMode}
+        roundTimeS={roundTimeS}
+        modeSettings={modeSettings}
+      />
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <SetupMetric label="Manches" value={String(roundTarget)} />
-        <SetupMetric
-          label="Maps jouables"
-          value={`${playableMapCount}/${requiredMapCount}`}
-          tone={playableMapCount >= requiredMapCount ? 'default' : 'warning'}
-        />
-        <SetupMetric
-          label="Screens"
-          value={`${playableShotCount}/${roundTarget}`}
-          tone={playableShotCount >= roundTarget ? 'default' : 'warning'}
-        />
-        <SetupMetric label="Timer" value={`${roundTimeS}s`} />
-        <SetupMetric
-          label="Mauvaise map"
-          value={`+${formatDistance(wrongMapMalusM)}`}
-        />
-        <SetupMetric
-          label="Time out"
-          value={`+${formatDistance(timeoutMalusM)}`}
-        />
+      {/* Métriques condensées */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-atfr-fog">
+        <span className="inline-flex items-center gap-1">
+          <Camera size={11} />
+          {roundTarget} manches
+        </span>
+        <span>·</span>
+        <span className="inline-flex items-center gap-1">
+          <Clock size={11} />
+          {roundTimeS}s / manche
+        </span>
+        <span>·</span>
+        <span>
+          Mauvaise map{‘ ‘}
+          <strong className="text-atfr-bone">+{formatDistance(wrongMapMalusM)}</strong>
+        </span>
+        <span>·</span>
+        <span>
+          Time out{‘ ‘}
+          <strong className="text-atfr-bone">+{formatDistance(timeoutMalusM)}</strong>
+        </span>
       </div>
-
-      <div className="mt-4">
-        <ModeRules
-          gameMode={gameMode}
-          roundTimeS={roundTimeS}
-          modeSettings={modeSettings}
-        />
-      </div>
-
-      <p className="mt-4 text-sm leading-relaxed text-atfr-fog">
-        Le score le plus bas gagne. Choisis la map, place ton pin, puis valide
-        avant la fin du timer.
-      </p>
 
       <Button
         size="lg"
-        className="mt-5 w-full"
+        className="w-full"
         onClick={onStart}
         disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
@@ -1954,39 +1997,12 @@ function SetupSummaryPanel({
             : ‘Choisis d’abord un pseudo’}
       </Button>
       {disabledReason && (
-        <p className="mt-2 text-xs text-atfr-warning">{disabledReason}</p>
+        <p className="text-xs text-atfr-warning">{disabledReason}</p>
       )}
     </div>
   );
 }
 
-function SetupMetric({
-  label,
-  value,
-  tone = 'default',
-}: {
-  label: string;
-  value: string;
-  tone?: 'default' | 'warning';
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded px-3 py-2',
-        tone === 'warning'
-          ? 'border border-atfr-warning/30 bg-atfr-warning/10'
-          : 'bg-atfr-graphite/55',
-      )}
-    >
-      <p className="text-[9px] uppercase tracking-[0.16em] text-atfr-fog">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-medium text-atfr-bone tabular-nums">
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function ModeRules({
   gameMode,
@@ -2037,59 +2053,6 @@ function ModeRules({
   );
 }
 
-function ModeButton({
-  active,
-  done,
-  icon,
-  title,
-  detail,
-  onClick,
-}: {
-  active: boolean;
-  done?: boolean;
-  icon: ReactNode;
-  title: string;
-  detail: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        'relative rounded-md border p-3 text-left transition-colors',
-        done && !active
-          ? 'border-atfr-gold/10 bg-atfr-graphite/25 text-atfr-fog/60'
-          : active
-            ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
-            : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
-      )}
-    >
-      {done && (
-        <span className="absolute top-2 right-2">
-          <CheckCircle2 size={13} className="text-atfr-success/70" />
-        </span>
-      )}
-      <span className="flex items-center gap-2 text-sm font-medium">
-        <span
-          className={cn(
-            'inline-flex h-8 w-8 items-center justify-center rounded-md border',
-            done && !active
-              ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/40'
-              : active
-                ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
-                : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
-          )}
-        >
-          {icon}
-        </span>
-        {title}
-      </span>
-      <span className="mt-2 block text-xs text-atfr-fog">{detail}</span>
-    </button>
-  );
-}
 
 function RoundStatusBar({
   stats,
