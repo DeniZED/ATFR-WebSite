@@ -68,6 +68,28 @@ import {
 
 const MODULE_SLUG = 'wot-geoguesser';
 const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
+const DAILY_DONE_KEY = 'atfr.geoguesser.daily.done.v1';
+
+function getDailyDoneKeys(): Set<string> {
+  try {
+    if (typeof window === 'undefined') return new Set();
+    const raw = localStorage.getItem(DAILY_DONE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return new Set(parsed as string[]);
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function markDailyDone(key: string): void {
+  try {
+    const done = getDailyDoneKeys();
+    done.add(key);
+    // Keep only the 14 most recent entries to avoid unbounded growth.
+    const arr = [...done].slice(-14);
+    localStorage.setItem(DAILY_DONE_KEY, JSON.stringify(arr));
+  } catch { /* ignore */ }
+}
 type DifficultyFilter = QuizDifficulty | 'all';
 type GameMode = 'daily' | 'random' | 'sprint' | 'blind';
 
@@ -160,6 +182,7 @@ export default function Geoguesser() {
     modeSettings.dailyRounds,
   );
   const [shareCopied, setShareCopied] = useState(false);
+  const [dailyDoneKeys, setDailyDoneKeys] = useState<Set<string>>(() => getDailyDoneKeys());
 
   const current = pool[index];
   const total = pool.length;
@@ -208,15 +231,17 @@ export default function Geoguesser() {
     [allShots.data, minMapRequirement, roundTarget],
   );
   const selectedDifficultyAvailability = difficultyAvailability[difficulty];
+  const isDailyDone = dailyDoneKeys.has(todayChallengeKey);
   const canStartGame =
     !!identity.nickname &&
     !!selectedDifficultyAvailability &&
     !selectedDifficultyAvailability.disabled &&
-    !shots.isLoading;
-  const startDisabledReason = getStartDisabledReason(
-    !!identity.nickname,
-    selectedDifficultyAvailability,
-  );
+    !shots.isLoading &&
+    !(gameMode === 'daily' && isDailyDone);
+  const startDisabledReason =
+    gameMode === 'daily' && isDailyDone
+      ? 'Tu as déjà fait le challenge du jour. Reviens demain !'
+      : getStartDisabledReason(!!identity.nickname, selectedDifficultyAvailability);
 
   // Reset per-round picks + timer when advancing.
   useEffect(() => {
@@ -435,6 +460,12 @@ export default function Geoguesser() {
         /* best-effort */
       }
     }
+    // Persiste la clé du jour dès que la partie daily est terminée,
+    // avant d'afficher les résultats — résiste au rechargement de page.
+    if (gameMode === 'daily') {
+      markDailyDone(activeChallengeKey);
+      setDailyDoneKeys(getDailyDoneKeys());
+    }
     setStage('result');
   }
 
@@ -521,6 +552,7 @@ export default function Geoguesser() {
                       onChange={setGameMode}
                       challengeKey={displayChallengeKey}
                       modeSettings={modeSettings}
+                      dailyDone={isDailyDone}
                     />
 
                     <DifficultyPicker
@@ -546,6 +578,7 @@ export default function Geoguesser() {
                     timeoutMalusM={cfg.timeout_malus_m}
                     modeSettings={modeSettings}
                     hasNickname={!!identity.nickname}
+                    dailyDone={isDailyDone}
                     canStart={canStartGame}
                     disabledReason={startDisabledReason}
                     onStart={startGame}
@@ -1677,11 +1710,13 @@ function GameModeSelector({
   onChange,
   challengeKey,
   modeSettings,
+  dailyDone,
 }: {
   value: GameMode;
   onChange: (mode: GameMode) => void;
   challengeKey: string;
   modeSettings: GeoguesserModeSettings;
+  dailyDone: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -1691,9 +1726,14 @@ function GameModeSelector({
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <ModeButton
           active={value === 'daily'}
+          done={dailyDone}
           icon={<CalendarDays size={16} />}
           title="Challenge du jour"
-          detail={`Même série pour tous · ${formatChallengeDate(challengeKey)}`}
+          detail={
+            dailyDone
+              ? `Déjà effectué · ${formatChallengeDate(challengeKey)}`
+              : `Même série pour tous · ${formatChallengeDate(challengeKey)}`
+          }
           onClick={() => onChange('daily')}
         />
         <ModeButton
@@ -1827,6 +1867,7 @@ function SetupSummaryPanel({
   timeoutMalusM,
   modeSettings,
   hasNickname,
+  dailyDone,
   canStart,
   disabledReason,
   onStart,
@@ -1842,6 +1883,7 @@ function SetupSummaryPanel({
   timeoutMalusM: number;
   modeSettings: GeoguesserModeSettings;
   hasNickname: boolean;
+  dailyDone: boolean;
   canStart: boolean;
   disabledReason: string | null;
   onStart: () => void;
@@ -1905,9 +1947,11 @@ function SetupSummaryPanel({
         disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
       >
-        {hasNickname
-          ? getStartButtonLabel(gameMode)
-          : 'Choisis d’abord un pseudo'}
+        {gameMode === ‘daily’ && dailyDone
+          ? ‘Challenge déjà effectué aujourd’hui’
+          : hasNickname
+            ? getStartButtonLabel(gameMode)
+            : ‘Choisis d’abord un pseudo’}
       </Button>
       {disabledReason && (
         <p className="mt-2 text-xs text-atfr-warning">{disabledReason}</p>
@@ -1995,12 +2039,14 @@ function ModeRules({
 
 function ModeButton({
   active,
+  done,
   icon,
   title,
   detail,
   onClick,
 }: {
   active: boolean;
+  done?: boolean;
   icon: ReactNode;
   title: string;
   detail: string;
@@ -2012,19 +2058,28 @@ function ModeButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-md border p-3 text-left transition-colors',
-        active
-          ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
-          : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
+        'relative rounded-md border p-3 text-left transition-colors',
+        done && !active
+          ? 'border-atfr-gold/10 bg-atfr-graphite/25 text-atfr-fog/60'
+          : active
+            ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
+            : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
       )}
     >
+      {done && (
+        <span className="absolute top-2 right-2">
+          <CheckCircle2 size={13} className="text-atfr-success/70" />
+        </span>
+      )}
       <span className="flex items-center gap-2 text-sm font-medium">
         <span
           className={cn(
             'inline-flex h-8 w-8 items-center justify-center rounded-md border',
-            active
-              ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
-              : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
+            done && !active
+              ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/40'
+              : active
+                ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
+                : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
           )}
         >
           {icon}

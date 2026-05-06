@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Crosshair, Map as MapIcon, Search, X } from 'lucide-react';
+import { ArrowLeft, Crosshair, Map as MapIcon, Minus, Plus, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Database } from '@/types/database';
 
@@ -34,7 +34,7 @@ interface FloatingMapPickerProps {
  * pinned to the bottom-right of its relative parent:
  *  1. PICK    — small thumb, hover/tap expands a searchable grid of maps.
  *  2. PLACE   — selected map's minimap, click to drop the pin. "← Map"
- *               button to revert.
+ *               button to revert. Scroll to zoom, drag to pan.
  *  3. REVEAL  — same minimap with player+correct pins and dashed line.
  *
  * Search query auto-resets when the panel closes or a map is picked,
@@ -55,6 +55,21 @@ export function FloatingMapPicker({
   const [query, setQuery] = useState('');
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const placeRef = useRef<HTMLDivElement | null>(null);
+
+  // Zoom / pan state — held in refs for event handlers, mirrored to state for re-render.
+  const viewRef = useRef({ zoom: 1, offsetX: 0, offsetY: 0 });
+  const [viewTick, setViewTick] = useState(0);
+  const forceViewUpdate = () => setViewTick((n) => n + 1);
+
+  // Drag tracking (not state — no re-render needed during drag).
+  const dragRef = useRef<{
+    active: boolean;
+    startMouseX: number;
+    startMouseY: number;
+    startOffsetX: number;
+    startOffsetY: number;
+    hasMoved: boolean;
+  }>({ active: false, startMouseX: 0, startMouseY: 0, startOffsetX: 0, startOffsetY: 0, hasMoved: false });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,8 +94,7 @@ export function FloatingMapPicker({
     };
   }, [open]);
 
-  // Reset the search when the panel closes or a map is selected, so the
-  // previous query never sticks between rounds.
+  // Reset search when the panel closes or a map is selected.
   useEffect(() => {
     if (!open) setQuery('');
   }, [open]);
@@ -88,21 +102,144 @@ export function FloatingMapPicker({
     if (selectedMap) setQuery('');
   }, [selectedMap]);
 
+  // Reset zoom/pan when the selected map changes.
+  useEffect(() => {
+    viewRef.current = { zoom: 1, offsetX: 0, offsetY: 0 };
+    forceViewUpdate();
+  }, [selectedMap?.id]);
+
+  // Wheel-to-zoom (must be non-passive to call preventDefault).
+  useEffect(() => {
+    const el = placeRef.current;
+    if (!el) return;
+
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault();
+      const rect = el!.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      const factor = e.deltaY < 0 ? 1.25 : 1 / 1.25;
+      const { zoom, offsetX, offsetY } = viewRef.current;
+      const newZoom = Math.max(1, Math.min(6, zoom * factor));
+
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      // Keep the point under the cursor fixed after rescaling.
+      const contentX = (cursorX - offsetX) / zoom;
+      const contentY = (cursorY - offsetY) / zoom;
+      const rawOffsetX = cursorX - contentX * newZoom;
+      const rawOffsetY = cursorY - contentY * newZoom;
+
+      viewRef.current = {
+        zoom: newZoom,
+        ...clampOffset(rawOffsetX, rawOffsetY, newZoom, rect.width, rect.height),
+      };
+      forceViewUpdate();
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [selectedMap?.id]);
+
+  // ---- Drag to pan ----
+  function handleMouseDown(e: MouseEvent<HTMLDivElement>) {
+    // Only primary button.
+    if (e.button !== 0) return;
+    dragRef.current = {
+      active: true,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startOffsetX: viewRef.current.offsetX,
+      startOffsetY: viewRef.current.offsetY,
+      hasMoved: false,
+    };
+  }
+
+  useEffect(() => {
+    function handleMouseMove(e: globalThis.MouseEvent) {
+      const dr = dragRef.current;
+      if (!dr.active) return;
+      const dx = e.clientX - dr.startMouseX;
+      const dy = e.clientY - dr.startMouseY;
+      if (!dr.hasMoved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      dr.hasMoved = true;
+
+      const el = placeRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const { zoom } = viewRef.current;
+      const rawOffsetX = dr.startOffsetX + dx;
+      const rawOffsetY = dr.startOffsetY + dy;
+      viewRef.current = {
+        zoom,
+        ...clampOffset(rawOffsetX, rawOffsetY, zoom, rect.width, rect.height),
+      };
+      forceViewUpdate();
+    }
+
+    function handleMouseUp() {
+      dragRef.current.active = false;
+    }
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   function handlePlaceClick(e: MouseEvent<HTMLDivElement>) {
+    // Don't place a pin if the user was dragging.
+    if (dragRef.current.hasMoved) {
+      dragRef.current.hasMoved = false;
+      return;
+    }
     if (!onPlace || !selectedMap) return;
     const el = placeRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    onPlace(Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, y)));
+
+    const { zoom, offsetX, offsetY } = viewRef.current;
+    // Convert screen click → content coordinates → [0..1].
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    const contentX = (rawX - offsetX) / zoom;
+    const contentY = (rawY - offsetY) / zoom;
+    const x = Math.max(0, Math.min(1, contentX / rect.width));
+    const y = Math.max(0, Math.min(1, contentY / rect.height));
+    onPlace(x, y);
+  }
+
+  function adjustZoom(delta: number) {
+    const el = placeRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const { zoom, offsetX, offsetY } = viewRef.current;
+    const newZoom = Math.max(1, Math.min(6, zoom * delta));
+    // Zoom centered on the container centre.
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const contentX = (cx - offsetX) / zoom;
+    const contentY = (cy - offsetY) / zoom;
+    const rawOffsetX = cx - contentX * newZoom;
+    const rawOffsetY = cy - contentY * newZoom;
+    viewRef.current = {
+      zoom: newZoom,
+      ...clampOffset(rawOffsetX, rawOffsetY, newZoom, rect.width, rect.height),
+    };
+    forceViewUpdate();
   }
 
   // ---------- PLACE / REVEAL ----------
   if (selectedMap) {
     const showCorrect = !!correct;
     const showLine = player && correct;
+    const { zoom, offsetX, offsetY } = viewRef.current;
+    const isZoomed = zoom > 1.01;
+
     return (
       <div
         ref={wrapRef}
@@ -149,50 +286,96 @@ export function FloatingMapPicker({
           <div
             ref={placeRef}
             onClick={handlePlaceClick}
+            onMouseDown={handleMouseDown}
             className={cn(
-              'relative aspect-square w-full bg-atfr-ink select-none',
-              onPlace ? 'cursor-crosshair' : 'cursor-default',
+              'relative aspect-square w-full bg-atfr-ink select-none overflow-hidden',
+              isZoomed ? 'cursor-grab active:cursor-grabbing' : onPlace ? 'cursor-crosshair' : 'cursor-default',
             )}
           >
-            <img
-              src={selectedMap.image_url}
-              alt=""
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover pointer-events-none"
-            />
+            {/* Zoomable / pannable content layer */}
             <div
-              className="absolute inset-0 bg-grid pointer-events-none opacity-15"
-              style={{ backgroundSize: '20px 20px' }}
-              aria-hidden
-            />
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
+                transformOrigin: '0 0',
+                willChange: 'transform',
+              }}
+            >
+              <img
+                src={selectedMap.image_url}
+                alt=""
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div
+                className="absolute inset-0 bg-grid opacity-15"
+                style={{ backgroundSize: '20px 20px' }}
+                aria-hidden
+              />
 
-            {showLine && (
-              <svg
-                className="absolute inset-0 h-full w-full pointer-events-none"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
+              {showLine && (
+                <svg
+                  className="absolute inset-0 h-full w-full"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <motion.line
+                    x1={player.x * 100}
+                    y1={player.y * 100}
+                    x2={correct!.x * 100}
+                    y2={correct!.y * 100}
+                    stroke="rgba(232,176,67,0.85)"
+                    strokeWidth={0.5}
+                    strokeDasharray="1.5 1.2"
+                    vectorEffect="non-scaling-stroke"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.6 }}
+                  />
+                </svg>
+              )}
+
+              {player && (
+                <PinAt x={player.x} y={player.y} tone="gold" zoom={zoom} />
+              )}
+              {correct && (
+                <PinAt x={correct.x} y={correct.y} tone="emerald" zoom={zoom} />
+              )}
+            </div>
+
+            {/* Zoom controls (always visible in PLACE/REVEAL) */}
+            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); adjustZoom(1.25); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="flex h-6 w-6 items-center justify-center rounded border border-atfr-gold/30 bg-atfr-ink/80 text-atfr-fog hover:text-atfr-bone backdrop-blur"
+                title="Zoom +"
+                aria-label="Zoom avant"
               >
-                <motion.line
-                  x1={player.x * 100}
-                  y1={player.y * 100}
-                  x2={correct!.x * 100}
-                  y2={correct!.y * 100}
-                  stroke="rgba(232,176,67,0.85)"
-                  strokeWidth={0.5}
-                  strokeDasharray="1.5 1.2"
-                  vectorEffect="non-scaling-stroke"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.6 }}
-                />
-              </svg>
-            )}
+                <Plus size={12} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); adjustZoom(1 / 1.25); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                disabled={!isZoomed}
+                className={cn(
+                  'flex h-6 w-6 items-center justify-center rounded border border-atfr-gold/30 bg-atfr-ink/80 backdrop-blur',
+                  isZoomed ? 'text-atfr-fog hover:text-atfr-bone' : 'text-atfr-fog/30 cursor-default',
+                )}
+                title="Zoom −"
+                aria-label="Zoom arrière"
+              >
+                <Minus size={12} />
+              </button>
+            </div>
 
-            {player && (
-              <PinAt x={player.x} y={player.y} tone="gold" />
-            )}
-            {correct && (
-              <PinAt x={correct.x} y={correct.y} tone="emerald" />
+            {/* Zoom level indicator */}
+            {isZoomed && (
+              <div className="absolute bottom-2 left-2 z-10 rounded border border-atfr-gold/20 bg-atfr-ink/75 px-1.5 py-0.5 text-[9px] text-atfr-fog backdrop-blur tabular-nums">
+                ×{zoom.toFixed(1)}
+              </div>
             )}
           </div>
         </div>
@@ -295,25 +478,45 @@ export function FloatingMapPicker({
   );
 }
 
+// Clamp pan offset so the content never exposes empty space.
+function clampOffset(
+  ox: number,
+  oy: number,
+  zoom: number,
+  w: number,
+  h: number,
+): { offsetX: number; offsetY: number } {
+  const minX = Math.min(0, w * (1 - zoom));
+  const minY = Math.min(0, h * (1 - zoom));
+  return {
+    offsetX: Math.max(minX, Math.min(0, ox)),
+    offsetY: Math.max(minY, Math.min(0, oy)),
+  };
+}
+
 function PinAt({
   x,
   y,
   tone,
+  zoom,
 }: {
   x: number;
   y: number;
   tone: 'gold' | 'emerald';
+  zoom: number;
 }) {
   const ring = tone === 'gold' ? 'border-atfr-gold' : 'border-emerald-400';
   const halo = tone === 'gold' ? 'bg-atfr-gold/30' : 'bg-emerald-400/40';
   const dot = tone === 'gold' ? 'bg-atfr-gold' : 'bg-emerald-400';
+  // Scale the pin down as zoom increases so it doesn't look huge.
+  const pinScale = 1 / Math.sqrt(zoom);
   return (
     <div
       className="absolute pointer-events-none"
       style={{
         left: `${x * 100}%`,
         top: `${y * 100}%`,
-        transform: 'translate(-50%, -50%)',
+        transform: `translate(-50%, -50%) scale(${pinScale})`,
       }}
     >
       <div className="relative h-5 w-5">
