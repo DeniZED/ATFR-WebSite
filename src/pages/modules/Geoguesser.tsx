@@ -811,72 +811,104 @@ export default function Geoguesser() {
   // Clamp pct to 0..100 ; closer to 0 is better.
   const pct = worst > 0 ? Math.min(100, (totalScore / worst) * 100) : 0;
 
+  // Performance color
+  const perfColor =
+    pct <= 20
+      ? 'text-atfr-success'
+      : pct <= 50
+        ? 'text-atfr-gold'
+        : 'text-atfr-fog';
+
   return (
-    <Section eyebrow="Résultat final" title={tier.title}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <Card>
-          <CardBody className="p-8 text-center space-y-5">
-            <div className="flex justify-center gap-2 flex-wrap">
-              <Badge variant={getModeBadgeVariant(gameMode)}>
-                {formatModeLabel(gameMode, activeChallengeKey)}
-              </Badge>
-              <Badge variant="outline">
-                {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
-              </Badge>
-            </div>
-            <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80">
-              {gameMode === 'sprint'
-                ? 'Score sprint (distance + chrono)'
-                : 'Score (plus bas = meilleur)'}
-            </p>
-            <p className="font-display text-5xl sm:text-6xl text-atfr-bone">
-              {formatDistance(totalScore)}
-            </p>
-            <p className="text-sm text-atfr-fog">
-              Moyenne par manche : {formatDistance(avg)}
-            </p>
-            {gameMode === 'sprint' && (
-              <p className="text-xs text-atfr-fog">
-                Distance brute {formatDistance(baseTotalScore)} · chrono{' '}
-                {formatDuration(totalElapsedSeconds)} · pénalité{' '}
-                {formatDistance(totalTimePenalty)}
-              </p>
-            )}
-            <div className="h-2 w-full max-w-md mx-auto rounded-full bg-atfr-graphite overflow-hidden">
-              <motion.div
-                initial={{ width: '100%' }}
-                animate={{ width: `${100 - pct}%` }}
-                transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
-                className="h-full bg-gradient-gold"
-              />
-            </div>
-            <p className="text-atfr-fog max-w-xl mx-auto leading-relaxed">
-              {tier.message}
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 pt-2">
-              <Button
-                onClick={startGame}
-                leadingIcon={<RotateCcw size={14} />}
-              >
-                Rejouer même difficulté
-              </Button>
-              <Button
-                onClick={copyClanChallenge}
-                leadingIcon={<Copy size={14} />}
-                variant="outline"
-              >
-                {shareCopied ? 'Défi copié' : 'Défier le clan'}
-              </Button>
-              <Button
-                onClick={restart}
-                leadingIcon={<RotateCcw size={14} />}
-                variant="outline"
-              >
-                Changer de mode
-              </Button>
-              <Link to="/modules">
-                <Button variant="ghost">Retour à l'académie</Button>
-              </Link>
+    <Section eyebrow="Résultat final" title="">
+      <div className="max-w-5xl mx-auto space-y-5">
+
+        {/* Hero score card */}
+        <Card className="overflow-hidden">
+          <CardBody className="p-0">
+            {/* Color stripe at top */}
+            <div className={cn(
+              'h-1.5 w-full',
+              pct <= 20 ? 'bg-atfr-success' : pct <= 50 ? 'bg-gradient-gold' : 'bg-atfr-fog/30',
+            )} />
+            <div className="p-6 sm:p-8">
+              {/* Mode/difficulty badges */}
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                <Badge variant={getModeBadgeVariant(gameMode)}>
+                  {formatModeLabel(gameMode, activeChallengeKey)}
+                </Badge>
+                <Badge variant="outline">
+                  {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
+                </Badge>
+                <Badge variant="outline">{pool.length} manches</Badge>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+                {/* Score principal */}
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80 mb-2">
+                    {gameMode === 'sprint' ? 'Score sprint (dist + chrono)' : 'Score total · plus bas = meilleur'}
+                  </p>
+                  <p className="font-display text-6xl sm:text-7xl text-atfr-bone leading-none tabular-nums">
+                    {formatDistance(totalScore)}
+                  </p>
+                  <p className="text-sm text-atfr-fog mt-2">
+                    Moyenne : <strong className="text-atfr-bone">{formatDistance(avg)}</strong> par manche
+                  </p>
+                  {gameMode === 'sprint' && (
+                    <p className="text-xs text-atfr-fog mt-1">
+                      Distance brute {formatDistance(baseTotalScore)} · chrono {formatDuration(totalElapsedSeconds)} · pénalité {formatDistance(totalTimePenalty)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Performance gauge */}
+                <div className="sm:text-right">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog mb-1">Performance</p>
+                  <p className={cn('font-display text-5xl tabular-nums', perfColor)}>
+                    {Math.round(100 - pct)}%
+                  </p>
+                  <div className="mt-2 h-2 w-full sm:w-32 rounded-full bg-atfr-graphite overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${100 - pct}%` }}
+                      transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1], delay: 0.2 }}
+                      className={cn(
+                        'h-full rounded-full',
+                        pct <= 20 ? 'bg-atfr-success' : 'bg-gradient-gold',
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tier */}
+              <div className="mt-5 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/40 px-4 py-3">
+                <p className="font-display text-lg text-atfr-bone">{tier.title}</p>
+                <p className="text-sm text-atfr-fog mt-0.5 leading-relaxed">{tier.message}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2.5 mt-5">
+                <Button onClick={startGame} leadingIcon={<RotateCcw size={14} />}>
+                  Rejouer
+                </Button>
+                <Button
+                  onClick={copyClanChallenge}
+                  leadingIcon={<Copy size={14} />}
+                  variant="outline"
+                >
+                  {shareCopied ? 'Copié !' : 'Défier le clan'}
+                </Button>
+                <Button onClick={restart} leadingIcon={<Shuffle size={14} />} variant="outline">
+                  Changer de mode
+                </Button>
+                <Link to="/modules">
+                  <Button variant="ghost">
+                    <ArrowLeft size={14} /> Académie
+                  </Button>
+                </Link>
+              </div>
             </div>
           </CardBody>
         </Card>
@@ -893,63 +925,66 @@ export default function Geoguesser() {
           <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-3">
             Détail des manches
           </p>
-          <div className="grid gap-3">
-            {results.map((r, i) => (
-              <Card key={i}>
-                <CardBody className="p-4 flex items-start gap-3 flex-wrap">
-                  <div className="h-16 w-24 shrink-0 overflow-hidden rounded-md bg-atfr-graphite">
-                    <img
-                      src={r.shot.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-atfr-bone">
-                      Manche {i + 1} —{' '}
-                      <strong>{r.shot.map?.name ?? '?'}</strong>
-                    </p>
-                    <p className="text-xs text-atfr-fog mt-1 flex items-center gap-2 flex-wrap">
-                      {r.kind === 'distance' && (
-                        <span className="inline-flex items-center gap-1 text-atfr-success">
-                          <CheckCircle2 size={12} /> Bonne map
+          <div className="grid gap-2">
+            {results.map((r, i) => {
+              const kindColor =
+                r.kind === 'distance'
+                  ? 'border-l-atfr-success'
+                  : r.kind === 'timeout'
+                    ? 'border-l-atfr-warning'
+                    : 'border-l-atfr-danger';
+              return (
+                <Card key={i} className={cn('overflow-hidden border-l-4', kindColor)}>
+                  <CardBody className="p-3 sm:p-4 flex items-center gap-3">
+                    <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-atfr-graphite">
+                      <img src={r.shot.image_url} alt="" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-atfr-fog/60">#{i + 1}</span>
+                        <span className="text-sm font-semibold text-atfr-bone truncate">
+                          {r.shot.map?.name ?? '?'}
                         </span>
-                      )}
-                      {r.kind === 'wrong-map' && (
-                        <span className="inline-flex items-center gap-1 text-atfr-danger">
-                          <XCircle size={12} /> Mauvaise map
-                        </span>
-                      )}
-                      {r.kind === 'timeout' && (
-                        <span className="inline-flex items-center gap-1 text-atfr-warning">
-                          <Clock size={12} /> Time out
-                        </span>
-                      )}
-                      {r.distanceM != null && (
-                        <span>· Distance {formatDistance(r.distanceM)}</span>
-                      )}
-                      {r.timePenalty > 0 && (
-                        <span>
-                          · Chrono +{formatDistance(r.timePenalty)} (
-                          {formatDuration(r.elapsedSeconds)})
-                        </span>
-                      )}
-                      <Badge variant="outline">
-                        {DIFFICULTY_LABELS[r.shot.difficulty]}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-display text-xl text-atfr-bone tabular-nums">
-                      {formatDistance(r.score)}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-                      score
-                    </p>
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
+                        <Badge variant="outline" className="text-[9px]">
+                          {DIFFICULTY_LABELS[r.shot.difficulty]}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {r.kind === 'distance' && (
+                          <span className="inline-flex items-center gap-1 text-atfr-success">
+                            <CheckCircle2 size={11} /> Bonne map
+                          </span>
+                        )}
+                        {r.kind === 'wrong-map' && (
+                          <span className="inline-flex items-center gap-1 text-atfr-danger">
+                            <XCircle size={11} /> Mauvaise map
+                          </span>
+                        )}
+                        {r.kind === 'timeout' && (
+                          <span className="inline-flex items-center gap-1 text-atfr-warning">
+                            <Clock size={11} /> Time out
+                          </span>
+                        )}
+                        {r.distanceM != null && (
+                          <span className="text-atfr-fog">· {formatDistance(r.distanceM)}</span>
+                        )}
+                        {r.timePenalty > 0 && (
+                          <span className="text-atfr-fog">
+                            · +{formatDistance(r.timePenalty)} chrono
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-display text-xl text-atfr-bone tabular-nums">
+                        {formatDistance(r.score)}
+                      </p>
+                      <p className="text-[9px] uppercase tracking-wider text-atfr-fog">score</p>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -1707,83 +1742,96 @@ function GameModeSelector({
 }) {
   const dailyActive = value === 'daily';
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* ── Challenge du jour — carte hero ── */}
       <button
         type="button"
         aria-pressed={dailyActive}
         onClick={() => onChange('daily')}
         className={cn(
-          'relative w-full rounded-xl border-2 p-4 text-left transition-all duration-200',
+          'relative w-full rounded-xl border-2 p-5 text-left transition-all duration-200 overflow-hidden group',
           dailyActive
-            ? 'border-atfr-gold/60 bg-gradient-to-br from-atfr-gold/12 via-atfr-gold/5 to-transparent shadow-lg shadow-atfr-gold/5'
+            ? 'border-atfr-gold/70 bg-gradient-to-br from-atfr-gold/15 via-atfr-gold/6 to-atfr-ink shadow-lg shadow-atfr-gold/10'
             : dailyDone
-              ? 'border-atfr-gold/10 bg-atfr-graphite/20 opacity-70'
-              : 'border-atfr-gold/20 bg-atfr-graphite/30 hover:border-atfr-gold/40 hover:bg-atfr-graphite/40',
+              ? 'border-atfr-gold/10 bg-atfr-graphite/20 opacity-60'
+              : 'border-atfr-gold/25 bg-atfr-graphite/30 hover:border-atfr-gold/50 hover:bg-atfr-graphite/50',
         )}
       >
+        {/* Decorative glow for active state */}
+        {dailyActive && (
+          <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-atfr-gold/10 blur-xl pointer-events-none" />
+        )}
         {dailyDone && (
-          <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-atfr-success/40 bg-atfr-success/10 px-2 py-0.5 text-[10px] text-atfr-success">
+          <span className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 rounded-full border border-atfr-success/40 bg-atfr-success/10 px-2.5 py-0.5 text-[10px] font-medium text-atfr-success">
             <CheckCircle2 size={10} /> Effectué
           </span>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div
             className={cn(
-              'shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-xl border',
+              'shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-xl border transition-all',
               dailyActive
-                ? 'border-atfr-gold/50 bg-atfr-gold/20 text-atfr-gold'
+                ? 'border-atfr-gold/60 bg-atfr-gold/20 text-atfr-gold shadow-sm shadow-atfr-gold/20'
                 : dailyDone
-                  ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/50'
-                  : 'border-atfr-gold/20 bg-atfr-ink/50 text-atfr-fog',
+                  ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/40'
+                  : 'border-atfr-gold/20 bg-atfr-ink/60 text-atfr-fog group-hover:border-atfr-gold/40 group-hover:text-atfr-bone',
             )}
           >
-            <CalendarDays size={20} />
+            <CalendarDays size={22} />
           </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <span
                 className={cn(
-                  'font-display text-base',
+                  'font-display text-lg leading-tight',
                   dailyDone && !dailyActive ? 'text-atfr-fog' : 'text-atfr-bone',
                 )}
               >
                 Challenge du jour
               </span>
-              <Badge variant="gold">{formatChallengeDate(challengeKey)}</Badge>
+              <Badge variant="gold" className="text-xs">{formatChallengeDate(challengeKey)}</Badge>
             </div>
-            <p className={cn('text-xs mt-0.5', dailyDone && !dailyActive ? 'text-atfr-fog/60' : 'text-atfr-fog')}>
-              {modeSettings.dailyRounds} manches identiques pour tout le clan · Difficulté mixte · Classement commun
+            <p className={cn('text-xs leading-relaxed', dailyDone && !dailyActive ? 'text-atfr-fog/50' : 'text-atfr-fog')}>
+              {modeSettings.dailyRounds} manches · même pool pour tout le clan · classement commun
             </p>
           </div>
+          {dailyActive && (
+            <ArrowRight size={16} className="shrink-0 text-atfr-gold" />
+          )}
         </div>
       </button>
 
       {/* ── Modes entraînement ── */}
       <div>
-        <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog/70 mb-2">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-atfr-fog/60 mb-2 px-0.5">
           Entraînement
         </p>
         <div className="grid grid-cols-3 gap-2">
           <TrainingModeButton
             active={value === 'random'}
-            icon={<Shuffle size={15} />}
+            icon={<Shuffle size={16} />}
             title="Série libre"
-            detail={`${modeSettings.randomRounds} manches aléatoires`}
+            detail={`${modeSettings.randomRounds} manches`}
+            subDetail="Pool aléatoire"
+            accentClass="border-atfr-success/30 bg-atfr-success/8 text-atfr-success"
             onClick={() => onChange('random')}
           />
           <TrainingModeButton
             active={value === 'sprint'}
-            icon={<Zap size={15} />}
+            icon={<Zap size={16} />}
             title="Sprint"
-            detail={`${modeSettings.sprintRounds} m. · ${modeSettings.sprintRoundTimeS}s · chrono`}
+            detail={`${modeSettings.sprintRounds} m · ${modeSettings.sprintRoundTimeS}s`}
+            subDetail="Chrono & vitesse"
+            accentClass="border-atfr-warning/30 bg-atfr-warning/8 text-atfr-warning"
             onClick={() => onChange('sprint')}
           />
           <TrainingModeButton
             active={value === 'blind'}
-            icon={<EyeOff size={15} />}
-            title="Blind Guess"
-            detail={`${modeSettings.blindRounds} m. · screen ${modeSettings.blindPreviewSeconds}s`}
+            icon={<EyeOff size={16} />}
+            title="Blind"
+            detail={`${modeSettings.blindRounds} m · ${modeSettings.blindPreviewSeconds}s`}
+            subDetail="De mémoire"
+            accentClass="border-atfr-fog/20 bg-atfr-graphite/50 text-atfr-fog"
             onClick={() => onChange('blind')}
           />
         </div>
@@ -1797,12 +1845,16 @@ function TrainingModeButton({
   icon,
   title,
   detail,
+  subDetail,
+  accentClass,
   onClick,
 }: {
   active: boolean;
   icon: ReactNode;
   title: string;
   detail: string;
+  subDetail: string;
+  accentClass: string;
   onClick: () => void;
 }) {
   return (
@@ -1811,24 +1863,25 @@ function TrainingModeButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-lg border p-3 text-left transition-all',
+        'rounded-xl border p-3 text-left transition-all duration-200 group',
         active
-          ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-bone'
-          : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/30 hover:text-atfr-bone',
+          ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-bone shadow-sm shadow-atfr-gold/10'
+          : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/30 hover:bg-atfr-graphite/60 hover:text-atfr-bone',
       )}
     >
       <div
         className={cn(
-          'inline-flex h-7 w-7 items-center justify-center rounded-md border mb-2',
+          'inline-flex h-8 w-8 items-center justify-center rounded-lg border mb-2.5 transition-all',
           active
             ? 'border-atfr-gold/40 bg-atfr-gold/15 text-atfr-gold'
-            : 'border-atfr-gold/15 bg-atfr-ink/50 text-atfr-fog',
+            : cn('border-atfr-gold/10 bg-atfr-ink/50', accentClass, 'opacity-70 group-hover:opacity-100'),
         )}
       >
         {icon}
       </div>
-      <p className="text-sm font-medium leading-tight">{title}</p>
-      <p className="text-[10px] text-atfr-fog mt-0.5 leading-snug">{detail}</p>
+      <p className="text-sm font-semibold leading-tight text-atfr-bone">{title}</p>
+      <p className="text-[10px] text-atfr-fog mt-1 leading-snug">{detail}</p>
+      <p className="text-[9px] text-atfr-fog/60 mt-0.5 leading-snug uppercase tracking-wide">{subDetail}</p>
     </button>
   );
 }
@@ -1861,7 +1914,7 @@ function DifficultyPicker({
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
           Difficulté
@@ -1877,47 +1930,45 @@ function DifficultyPicker({
           const disabled = status.disabled;
           const disabledDetail =
             status.mapCount < status.requiredMapCount
-              ? `${status.mapCount}/${status.requiredMapCount} maps nécessaires`
-              : `${status.shotCount}/${status.requiredShotCount} screens nécessaires`;
+              ? `${status.mapCount}/${status.requiredMapCount} maps`
+              : `${status.shotCount}/${status.requiredShotCount} screens`;
           return (
             <button
               key={option.value}
               type="button"
               aria-pressed={active}
               disabled={disabled}
-              title={
-                disabled
-                  ? disabledDetail
-                  : undefined
-              }
+              title={disabled ? disabledDetail : undefined}
               onClick={() => {
                 if (!disabled) onChange(option.value);
               }}
               className={cn(
-                'rounded-md border p-3 text-left transition-colors',
+                'rounded-xl border p-3 text-left transition-all duration-150 group',
                 disabled
-                  ? 'cursor-not-allowed border-atfr-gold/10 bg-atfr-graphite/25 text-atfr-fog opacity-45 grayscale'
+                  ? 'cursor-not-allowed border-atfr-gold/8 bg-atfr-graphite/20 opacity-40 grayscale'
                   : active
-                    ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone'
-                    : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/40 hover:text-atfr-bone',
+                    ? 'border-atfr-gold/70 bg-atfr-gold/10 text-atfr-bone shadow-sm shadow-atfr-gold/10'
+                    : 'border-atfr-gold/15 bg-atfr-graphite/40 text-atfr-fog hover:border-atfr-gold/35 hover:bg-atfr-graphite/60 hover:text-atfr-bone',
               )}
             >
-              <span className="flex items-center gap-2 text-sm font-medium">
+              <div className="flex items-center gap-2 mb-2">
                 <span
                   className={cn(
-                    'h-2.5 w-2.5 rounded-full border',
+                    'h-2.5 w-2.5 flex-shrink-0 rounded-full border shadow-sm',
                     getDifficultyDotClass(option.value),
                   )}
                 />
-                {option.label}
-              </span>
-              <span className="mt-2 block text-xs text-atfr-fog">
-                {disabled
-                  ? disabledDetail
-                  : `${status.mapCount} maps · ${status.shotCount} screens`}
-              </span>
-              <span className="mt-1 block text-[10px] text-atfr-fog/80">
+                <span className="text-sm font-semibold text-atfr-bone leading-tight">
+                  {option.label}
+                </span>
+              </div>
+              <span className="block text-[10px] text-atfr-fog/80 leading-relaxed">
                 {option.detail}
+              </span>
+              <span className="mt-1.5 block text-[10px] text-atfr-fog/50">
+                {disabled
+                  ? `Manque ${disabledDetail}`
+                  : `${status.mapCount} maps · ${status.shotCount} screens`}
               </span>
             </button>
           );
@@ -2068,25 +2119,38 @@ function RoundStatusBar({
   difficulty: DifficultyFilter;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-atfr-gold/10 bg-atfr-carbon/70 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-atfr-gold/15 bg-atfr-carbon/80 px-4 py-2.5 backdrop-blur">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={getModeBadgeVariant(gameMode)}>
           {formatModeLabel(gameMode, challengeKey)}
         </Badge>
-        <Badge variant="outline">
-          {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
-        </Badge>
+        {difficulty !== 'all' && (
+          <Badge variant="outline" className="text-[10px]">
+            {DIFFICULTY_LABELS[difficulty]}
+          </Badge>
+        )}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-atfr-fog">
-        <span className="inline-flex items-center gap-1">
-          <Flame size={13} className="text-atfr-gold" />
-          Série {stats.currentStreak}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Trophy size={13} className="text-atfr-gold" />
-          Best {stats.bestStreak}
-        </span>
-        <span className="tabular-nums">{formatDistance(totalScore)}</span>
+      <div className="flex items-center gap-4">
+        {/* Streak indicator */}
+        <div className="flex items-center gap-1.5">
+          <Flame
+            size={13}
+            className={stats.currentStreak > 0 ? 'text-atfr-warning' : 'text-atfr-fog/30'}
+          />
+          <span className={cn(
+            'text-xs tabular-nums font-medium',
+            stats.currentStreak > 0 ? 'text-atfr-bone' : 'text-atfr-fog/40',
+          )}>
+            ×{stats.currentStreak}
+          </span>
+        </div>
+        {/* Score courant */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] uppercase tracking-widest text-atfr-fog/60">Score</span>
+          <span className="font-display text-base text-atfr-gold tabular-nums">
+            {formatDistance(totalScore)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -2117,52 +2181,88 @@ function RoundActionDock({
   onValidate: () => void;
   onNext: () => void;
 }) {
-  const status = getRoundActionStatus(selectedMapName, hasPick, showReveal);
+  const step = showReveal ? 3 : !selectedMapName ? 1 : !hasPick ? 2 : 3;
+  const stepLabel = showReveal
+    ? 'Révélation'
+    : step === 1
+      ? 'Choisis la map'
+      : step === 2
+        ? 'Place le pin'
+        : 'Prêt à valider';
+  const stepDetail = showReveal
+    ? 'Analyse la correction, puis passe à la suite.'
+    : !selectedMapName
+      ? 'Ouvre le sélecteur en bas à droite et choisis la minimap.'
+      : !hasPick
+        ? `${selectedMapName} — clique sur la minimap pour poser le pin.`
+        : `${selectedMapName} — pin posé. Tu peux encore le déplacer.`;
+
   return (
-    <div className="sticky bottom-3 z-30 rounded-lg border border-atfr-gold/25 bg-atfr-ink/95 p-3 shadow-2xl backdrop-blur">
+    <div className="sticky bottom-3 z-30 rounded-xl border border-atfr-gold/30 bg-atfr-ink/95 p-4 shadow-2xl shadow-black/40 backdrop-blur">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={showReveal ? 'gold' : getModeBadgeVariant(gameMode)}>
-              {showReveal ? 'Révélation' : status.label}
-            </Badge>
-            <span className="text-xs text-atfr-fog tabular-nums">
+        <div className="min-w-0 flex-1">
+          {/* Step pills */}
+          {!showReveal && (
+            <div className="flex items-center gap-1.5 mb-2">
+              {[
+                { n: 1, label: 'Map' },
+                { n: 2, label: 'Pin' },
+                { n: 3, label: 'Valider' },
+              ].map(({ n, label }) => (
+                <span
+                  key={n}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all',
+                    step > n
+                      ? 'bg-atfr-success/20 text-atfr-success border border-atfr-success/30'
+                      : step === n
+                        ? 'bg-atfr-gold/20 text-atfr-gold border border-atfr-gold/40'
+                        : 'bg-atfr-graphite/40 text-atfr-fog/40 border border-atfr-gold/10',
+                  )}
+                >
+                  {step > n ? <CheckCircle2 size={9} /> : <span>{n}</span>}
+                  {label}
+                </span>
+              ))}
+              <span className="text-[10px] text-atfr-fog/50 tabular-nums ml-1">
+                {secondsLeft}s
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {showReveal && (
+              <Badge variant="gold">Révélation</Badge>
+            )}
+            <span className="text-xs text-atfr-fog">
               Manche {currentIndex + 1}/{total}
             </span>
             {!showReveal && (
-              <span className="text-xs text-atfr-fog tabular-nums">
-                {secondsLeft}s
+              <span className="text-xs text-atfr-fog">
+                · Score : <strong className="text-atfr-gold">{formatDistance(totalScore)}</strong>
               </span>
             )}
           </div>
-          <p className="mt-1 truncate text-sm text-atfr-bone">
-            {showReveal
-              ? 'Analyse la correction puis passe à la suite.'
-              : status.detail}
-          </p>
-          <p className="mt-0.5 text-xs text-atfr-fog">
-            Score actuel : {formatDistance(totalScore)}
+          <p className="mt-1 text-sm text-atfr-bone leading-snug">
+            {showReveal ? stepDetail : <span className="text-atfr-fog">{stepDetail}</span>}
           </p>
         </div>
 
         {showReveal ? (
           <Button
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto shrink-0"
             onClick={onNext}
             trailingIcon={<ArrowRight size={14} />}
           >
-            {currentIndex < total - 1
-              ? 'Manche suivante'
-              : 'Voir le score final'}
+            {currentIndex < total - 1 ? 'Manche suivante' : 'Voir le résultat'}
           </Button>
         ) : (
           <Button
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto shrink-0"
             onClick={onValidate}
             disabled={!canValidate}
             trailingIcon={<ArrowRight size={14} />}
           >
-            {status.cta}
+            Valider
           </Button>
         )}
       </div>
@@ -2260,14 +2360,14 @@ function PersonalStatsPanel({
     return (
       <Card>
         <CardBody className="p-5 flex items-start gap-4">
-          <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
+          <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
             <BarChart3 size={20} />
           </div>
           <div>
             <h3 className="font-display text-lg text-atfr-bone">Mes stats</h3>
             <p className="mt-1 text-sm leading-relaxed text-atfr-fog">
-              Termine une partie pour débloquer ton historique personnel :
-              meilleur score, progression, modes forts et dernières manches.
+              Termine une partie pour débloquer ton historique : meilleur score,
+              progression, modes forts et dernières manches.
             </p>
           </div>
         </CardBody>
@@ -2278,85 +2378,60 @@ function PersonalStatsPanel({
   return (
     <Card>
       <CardBody className="p-5 space-y-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="font-display text-lg text-atfr-bone flex items-center gap-2">
-              <BarChart3 size={18} className="text-atfr-gold" />
-              Mes stats GeoGuesseur
-            </h3>
-            <p className="text-xs text-atfr-fog mt-1">
-              Ton historique personnel, tous modes confondus.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{stats.games} partie(s)</Badge>
-            <Badge variant="gold">{stats.gamesLast7Days} cette semaine</Badge>
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h3 className="font-display text-lg text-atfr-bone flex items-center gap-2">
+            <BarChart3 size={18} className="text-atfr-gold" />
+            Mes stats
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            {stats.trend && (
+              <Badge variant={getTrendBadgeVariant(stats.trend.tone)}>
+                {stats.trend.label}
+              </Badge>
+            )}
+            <span className="text-xs text-atfr-fog">
+              {stats.games} partie{stats.games > 1 ? 's' : ''}
+              {stats.gamesLast7Days > 0 && ` · ${stats.gamesLast7Days} cette semaine`}
+            </span>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* KPI tiles */}
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           <PersonalStatTile
-            icon={<Trophy size={16} />}
+            icon={<Trophy size={15} />}
             label="Meilleur score"
             value={stats.bestScoreM != null ? formatDistance(stats.bestScoreM) : '—'}
-            detail="plus bas score total"
+            detail="score le plus bas"
+            tone="gold"
           />
           <PersonalStatTile
-            icon={<Target size={16} />}
+            icon={<Target size={15} />}
             label="Moyenne"
             value={stats.avgScoreM != null ? formatDistance(stats.avgScoreM) : '—'}
-            detail="par partie terminée"
+            detail="par partie"
+            tone="neutral"
           />
           <PersonalStatTile
-            icon={<MapIcon size={16} />}
-            label="Maps trouvées"
-            value={
-              stats.avgMapAccuracyPct != null
-                ? `${stats.avgMapAccuracyPct}%`
-                : '—'
-            }
-            detail="précision moyenne"
+            icon={<MapIcon size={15} />}
+            label="Précision maps"
+            value={stats.avgMapAccuracyPct != null ? `${stats.avgMapAccuracyPct}%` : '—'}
+            detail="maps correctes en moy."
+            tone={stats.avgMapAccuracyPct != null && stats.avgMapAccuracyPct >= 70 ? 'success' : 'neutral'}
           />
           <PersonalStatTile
-            icon={<Flame size={16} />}
+            icon={<Flame size={15} />}
             label="Meilleure série"
-            value={String(stats.bestStreak)}
-            detail="bonnes maps d'affilée"
+            value={stats.bestStreak > 0 ? `×${stats.bestStreak}` : '—'}
+            detail="maps d'affilée"
+            tone={stats.bestStreak >= 3 ? 'warning' : 'neutral'}
           />
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_1.15fr]">
-          <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 p-4">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
-              Progression
-            </p>
-            {stats.trend ? (
-              <div className="space-y-2">
-                <Badge variant={getTrendBadgeVariant(stats.trend.tone)}>
-                  {stats.trend.label}
-                </Badge>
-                <p className="text-sm leading-relaxed text-atfr-bone">
-                  {stats.trend.detail}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm leading-relaxed text-atfr-fog">
-                Joue encore quelques parties pour comparer tes dernières
-                performances avec ton historique.
-              </p>
-            )}
-            {stats.bestMode && (
-              <p className="mt-3 text-xs text-atfr-fog">
-                Mode fort :{' '}
-                <strong className="text-atfr-bone">
-                  {formatGenericModeLabel(stats.bestMode.mode)}
-                </strong>{' '}
-                · meilleur score {formatDistance(stats.bestMode.bestScoreM)}
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/35 p-4">
+        {/* Par mode */}
+        {stats.modes.length > 0 && (
+          <div className="rounded-xl border border-atfr-gold/15 bg-atfr-graphite/35 p-4">
             <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
               Par mode
             </p>
@@ -2364,58 +2439,72 @@ function PersonalStatsPanel({
               {stats.modes.map((mode) => (
                 <div
                   key={mode.mode}
-                  className="rounded bg-atfr-ink/45 px-3 py-2"
+                  className="flex items-center gap-3 rounded-lg bg-atfr-ink/45 px-3 py-2.5"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant={getModeBadgeVariant(mode.mode)}>
-                      {formatGenericModeLabel(mode.mode)}
-                    </Badge>
-                    <span className="text-[10px] text-atfr-fog">
-                      {mode.games} partie(s)
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant={getModeBadgeVariant(mode.mode)} className="text-[10px]">
+                        {formatGenericModeLabel(mode.mode)}
+                      </Badge>
+                      <span className="text-[10px] text-atfr-fog/60">{mode.games}p</span>
+                    </div>
+                    <p className="text-xs text-atfr-fog">
+                      Moy. <span className="text-atfr-bone">{formatDistance(mode.avgScoreM)}</span>
+                    </p>
                   </div>
-                  <p className="mt-2 text-sm text-atfr-bone">
-                    Best {formatDistance(mode.bestScoreM)}
-                  </p>
-                  <p className="text-xs text-atfr-fog">
-                    Moy. {formatDistance(mode.avgScoreM)}
-                  </p>
+                  <div className="text-right shrink-0">
+                    <p className="font-display text-base text-atfr-bone tabular-nums">
+                      {formatDistance(mode.bestScoreM)}
+                    </p>
+                    <p className="text-[9px] text-atfr-fog uppercase tracking-wide">best</p>
+                  </div>
                 </div>
               ))}
             </div>
+            {stats.trend && (
+              <p className="mt-3 text-xs text-atfr-fog border-t border-atfr-gold/10 pt-3">
+                {stats.trend.detail}
+              </p>
+            )}
           </div>
-        </div>
+        )}
 
+        {/* Dernières parties */}
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-3">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-gold mb-2.5">
             Dernières parties
           </p>
-          <div className="grid gap-2">
-            {stats.recent.map((score) => (
-              <div
-                key={score.id}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-atfr-gold/10 bg-atfr-ink/35 px-3 py-2"
-              >
-                <Badge variant={getModeBadgeVariant(score.mode)}>
-                  {formatScoreModeLabel(score.mode, score.dailyKey)}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-atfr-bone tabular-nums">
-                    {formatDistance(score.scoreM)}
-                  </p>
-                  <p className="text-xs text-atfr-fog">
-                    {formatScoreDate(score.createdAt)}
-                    {score.rounds ? ` · ${score.rounds} manche(s)` : ''}
-                    {score.mapAccuracyPct != null
-                      ? ` · ${score.mapAccuracyPct}% maps`
-                      : ''}
-                  </p>
+          <div className="grid gap-1.5">
+            {stats.recent.map((score) => {
+              const pct = Math.round(score.ratio * 100);
+              return (
+                <div
+                  key={score.id}
+                  className="flex items-center gap-3 rounded-lg border border-atfr-gold/10 bg-atfr-ink/35 px-3 py-2.5"
+                >
+                  <Badge variant={getModeBadgeVariant(score.mode)} className="shrink-0 text-[10px]">
+                    {formatScoreModeLabel(score.mode, score.dailyKey)}
+                  </Badge>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-atfr-fog/70">
+                      {formatScoreDate(score.createdAt)}
+                      {score.mapAccuracyPct != null ? ` · ${score.mapAccuracyPct}% maps` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-display text-sm text-atfr-bone tabular-nums">
+                      {formatDistance(score.scoreM)}
+                    </p>
+                    <p className={cn(
+                      'text-[9px] tabular-nums',
+                      pct >= 80 ? 'text-atfr-success' : pct >= 50 ? 'text-atfr-gold' : 'text-atfr-fog',
+                    )}>
+                      {pct}%
+                    </p>
+                  </div>
                 </div>
-                <span className="text-xs text-atfr-fog tabular-nums">
-                  {Math.round(score.ratio * 100)}%
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </CardBody>
@@ -2428,15 +2517,26 @@ function PersonalStatTile({
   label,
   value,
   detail,
+  tone = 'gold',
 }: {
   icon: ReactNode;
   label: string;
   value: string;
   detail: string;
+  tone?: 'gold' | 'success' | 'warning' | 'neutral';
 }) {
+  const iconClass =
+    tone === 'success'
+      ? 'border-atfr-success/30 bg-atfr-success/10 text-atfr-success'
+      : tone === 'warning'
+        ? 'border-atfr-warning/30 bg-atfr-warning/10 text-atfr-warning'
+        : tone === 'neutral'
+          ? 'border-atfr-fog/20 bg-atfr-ink/60 text-atfr-fog'
+          : 'border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold';
+
   return (
-    <div className="rounded-md border border-atfr-gold/15 bg-atfr-ink/45 p-3 min-w-0">
-      <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-md border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
+    <div className="rounded-xl border border-atfr-gold/15 bg-atfr-ink/45 p-3.5 min-w-0">
+      <div className={cn('mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border', iconClass)}>
         {icon}
       </div>
       <p className="text-[10px] uppercase tracking-[0.2em] text-atfr-fog">
@@ -2445,7 +2545,7 @@ function PersonalStatTile({
       <p className="font-display text-xl text-atfr-bone mt-1 truncate">
         {value}
       </p>
-      <p className="text-xs text-atfr-fog mt-1 truncate">{detail}</p>
+      <p className="text-[10px] text-atfr-fog/70 mt-1 truncate">{detail}</p>
     </div>
   );
 }
@@ -2601,57 +2701,76 @@ function GeoguesserLeaderboardRow({
   const pct = Math.round(entry.ratio * 100);
   const isSprint = gameMode === 'sprint';
 
+  const rankBadge =
+    rank === 1
+      ? { bg: 'bg-gradient-to-br from-yellow-400 to-amber-500', text: 'text-atfr-ink', shadow: 'shadow-amber-400/30' }
+      : rank === 2
+        ? { bg: 'bg-gradient-to-br from-slate-300 to-slate-400', text: 'text-atfr-ink', shadow: 'shadow-slate-400/20' }
+        : rank === 3
+          ? { bg: 'bg-gradient-to-br from-amber-600 to-amber-700', text: 'text-white', shadow: 'shadow-amber-700/20' }
+          : { bg: 'bg-atfr-ink/60', text: 'text-atfr-fog', shadow: '' };
+
   return (
     <li
       className={cn(
-        'rounded-md border p-3 transition-colors',
+        'rounded-xl border p-3.5 transition-colors',
         isMe
-          ? 'border-atfr-gold/60 bg-atfr-gold/10'
-          : 'border-atfr-gold/15 bg-atfr-graphite/40',
+          ? 'border-atfr-gold/60 bg-atfr-gold/10 shadow-sm shadow-atfr-gold/10'
+          : rank <= 3
+            ? 'border-atfr-gold/20 bg-atfr-graphite/50'
+            : 'border-atfr-gold/10 bg-atfr-graphite/35',
       )}
     >
       <div className="flex items-center gap-3">
         <span
           className={cn(
-            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-display',
-            rank === 1 && 'bg-gradient-gold text-atfr-ink',
-            rank > 1 && 'bg-atfr-ink/60 text-atfr-gold',
+            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow',
+            rankBadge.bg,
+            rankBadge.text,
+            rankBadge.shadow,
           )}
         >
-          {rank === 1 ? <Crown size={15} /> : rank}
+          {rank === 1 ? <Crown size={14} /> : rank}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-atfr-bone truncate flex items-center gap-1.5">
+          <p className={cn(
+            'font-semibold truncate flex items-center gap-1.5 text-sm',
+            isMe ? 'text-atfr-gold' : 'text-atfr-bone',
+          )}>
             {entry.player_nickname}
+            {isMe && <span className="text-[9px] uppercase tracking-widest text-atfr-gold/70 font-normal">(moi)</span>}
             {entry.is_verified && (
               <ShieldCheck
-                size={14}
+                size={13}
                 className="text-atfr-success shrink-0"
                 aria-label="Compte WG vérifié"
               />
             )}
           </p>
-          <p className="text-xs text-atfr-fog">
+          <p className="text-[10px] text-atfr-fog/70 mt-0.5">
             {dailyKey ? `Défi ${formatChallengeDate(dailyKey)} · ` : ''}
             {formatScoreDate(entry.created_at)}
           </p>
         </div>
         <div className="text-right shrink-0">
-          <p className="font-display text-xl text-atfr-bone tabular-nums">
+          <p className="font-display text-xl text-atfr-bone tabular-nums leading-tight">
             {formatDistance(scoreM)}
           </p>
-          <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            {isSprint ? 'score' : 'perf'} {pct}%
+          <p className="text-[10px] text-atfr-fog mt-0.5">
+            <span className={cn('font-semibold', pct >= 80 ? 'text-atfr-success' : pct >= 50 ? 'text-atfr-gold' : 'text-atfr-fog')}>
+              {pct}%
+            </span>
+            {' '}perf
           </p>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+      <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
         <LeaderboardMetric
-          label="Moy."
+          label="Moy./manche"
           value={avgM != null ? formatDistance(avgM) : '—'}
         />
         <LeaderboardMetric
-          label={isSprint ? 'Temps' : 'Maps'}
+          label={isSprint ? 'Temps total' : 'Maps OK'}
           value={
             isSprint
               ? elapsedSeconds != null
@@ -2663,14 +2782,14 @@ function GeoguesserLeaderboardRow({
           }
         />
         <LeaderboardMetric
-          label={isSprint ? 'Distance' : 'Série'}
+          label={isSprint ? 'Dist. brute' : 'Meilleure série'}
           value={
             isSprint
               ? rawDistanceM != null
                 ? formatDistance(rawDistanceM)
                 : '—'
               : bestStreak != null
-                ? String(bestStreak)
+                ? `×${bestStreak}`
                 : '—'
           }
         />
@@ -2681,11 +2800,11 @@ function GeoguesserLeaderboardRow({
 
 function LeaderboardMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded bg-atfr-ink/45 px-2 py-1.5">
-      <p className="text-[9px] uppercase tracking-[0.16em] text-atfr-fog">
+    <div className="rounded-lg bg-atfr-ink/50 px-2 py-2">
+      <p className="text-[9px] uppercase tracking-[0.14em] text-atfr-fog/70 mb-0.5">
         {label}
       </p>
-      <p className="text-sm text-atfr-bone tabular-nums">{value}</p>
+      <p className="text-sm font-semibold text-atfr-bone tabular-nums">{value}</p>
     </div>
   );
 }
@@ -2766,28 +2885,49 @@ function ProgressBar({
   results: RoundResult[];
 }) {
   return (
-    <div className="flex gap-1">
-      {Array.from({ length: total }).map((_, i) => {
-        const r = results[i];
-        const isCurrent = i === currentIndex && !r;
-        return (
-          <div
-            key={i}
-            className={cn(
-              'h-1.5 flex-1 rounded-full',
-              r
-                ? r.kind === 'timeout'
-                  ? 'bg-atfr-warning'
-                  : r.correctMap
-                    ? 'bg-atfr-success'
-                    : 'bg-atfr-danger'
-                : isCurrent
-                  ? 'bg-atfr-gold'
-                  : 'bg-atfr-graphite',
-            )}
-          />
-        );
-      })}
+    <div className="space-y-1.5">
+      <div className="flex gap-1">
+        {Array.from({ length: total }).map((_, i) => {
+          const r = results[i];
+          const isCurrent = i === currentIndex && !r;
+          return (
+            <div
+              key={i}
+              className={cn(
+                'flex-1 rounded-full transition-all duration-300',
+                isCurrent ? 'h-2.5' : 'h-2',
+                r
+                  ? r.kind === 'timeout'
+                    ? 'bg-atfr-warning'
+                    : r.correctMap
+                      ? 'bg-atfr-success'
+                      : 'bg-atfr-danger'
+                  : isCurrent
+                    ? 'bg-atfr-gold shadow-sm shadow-atfr-gold/50'
+                    : 'bg-atfr-graphite/60',
+              )}
+            />
+          );
+        })}
+      </div>
+      <div className="flex gap-1">
+        {Array.from({ length: total }).map((_, i) => {
+          const r = results[i];
+          const isCurrent = i === currentIndex && !r;
+          return (
+            <div key={i} className="flex-1 text-center">
+              <span className={cn(
+                'text-[9px] tabular-nums',
+                r
+                  ? r.correctMap ? 'text-atfr-success/80' : 'text-atfr-danger/80'
+                  : isCurrent ? 'text-atfr-gold font-semibold' : 'text-atfr-fog/30',
+              )}>
+                {i + 1}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2804,71 +2944,109 @@ function RevealBanner({
     result.kind === 'distance' &&
     result.distanceM != null &&
     result.distanceM < 80;
-  const headline =
-    result.kind === 'wrong-map'
-      ? `Mauvaise map — +${settings.wrongMapMalusM} m de malus`
-      : result.kind === 'timeout'
-        ? `Time out — +${settings.timeoutMalusM} m de malus`
-        : closeHit
-          ? 'Pile au bon endroit !'
-          : 'Bonne map';
   const tone =
     result.kind === 'distance'
       ? 'success'
       : result.kind === 'timeout'
         ? 'warning'
         : 'danger';
+  const headline =
+    result.kind === 'wrong-map'
+      ? 'Mauvaise map'
+      : result.kind === 'timeout'
+        ? 'Temps écoulé'
+        : closeHit
+          ? 'Pile au bon endroit !'
+          : 'Bonne map !';
   const Icon =
     result.kind === 'distance'
-      ? Target
+      ? closeHit ? CheckCircle2 : Target
       : result.kind === 'timeout'
         ? Clock
         : XCircle;
-  const toneClass =
+
+  const borderClass =
     tone === 'success'
-      ? 'bg-atfr-success/15 border-atfr-success/40 text-atfr-success'
+      ? 'border-atfr-success/40'
       : tone === 'warning'
-        ? 'bg-atfr-warning/15 border-atfr-warning/40 text-atfr-warning'
-        : 'bg-atfr-danger/15 border-atfr-danger/40 text-atfr-danger';
+        ? 'border-atfr-warning/40'
+        : 'border-atfr-danger/40';
+  const bgClass =
+    tone === 'success'
+      ? 'bg-gradient-to-r from-atfr-success/10 to-transparent'
+      : tone === 'warning'
+        ? 'bg-gradient-to-r from-atfr-warning/10 to-transparent'
+        : 'bg-gradient-to-r from-atfr-danger/10 to-transparent';
+  const iconClass =
+    tone === 'success'
+      ? 'border-atfr-success/40 bg-atfr-success/15 text-atfr-success'
+      : tone === 'warning'
+        ? 'border-atfr-warning/40 bg-atfr-warning/15 text-atfr-warning'
+        : 'border-atfr-danger/40 bg-atfr-danger/15 text-atfr-danger';
+  const headlineClass =
+    tone === 'success'
+      ? 'text-atfr-success'
+      : tone === 'warning'
+        ? 'text-atfr-warning'
+        : 'text-atfr-danger';
+
   return (
-    <Card>
-      <CardBody className="p-5 flex items-center gap-4 flex-wrap">
-        <div
-          className={cn(
-            'inline-flex h-12 w-12 items-center justify-center rounded-lg border',
-            toneClass,
-          )}
-        >
-          <Icon size={22} />
-        </div>
-        <div className="flex-1">
-          <p className="font-display text-lg text-atfr-bone">{headline}</p>
-          <p className="text-xs text-atfr-fog mt-0.5 flex items-center gap-2 flex-wrap">
-            {result.kind === 'distance' && result.distanceM != null && (
-              <span>Distance : {formatDistance(result.distanceM)}</span>
-            )}
-            {result.timePenalty > 0 && (
-              <span>
-                Chrono : +{formatDistance(result.timePenalty)} (
-                {formatDuration(result.elapsedSeconds)})
+    <Card className={cn('overflow-hidden border-2', borderClass)}>
+      <CardBody className={cn('p-0', bgClass)}>
+        <div className="flex items-start gap-4 p-4 sm:p-5">
+          <div className={cn(
+            'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border',
+            iconClass,
+          )}>
+            <Icon size={22} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className={cn('font-display text-xl font-bold leading-tight', headlineClass)}>
+              {headline}
+            </p>
+            {/* Métriques clés */}
+            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+              {result.kind === 'distance' && result.distanceM != null && (
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-atfr-bone">
+                  <Target size={13} className="text-atfr-gold" />
+                  {formatDistance(result.distanceM)}
+                </span>
+              )}
+              {result.kind === 'wrong-map' && (
+                <span className="text-xs text-atfr-fog">
+                  +{formatDistance(settings.wrongMapMalusM)} de malus
+                </span>
+              )}
+              {result.kind === 'timeout' && (
+                <span className="text-xs text-atfr-fog">
+                  +{formatDistance(settings.timeoutMalusM)} de malus
+                </span>
+              )}
+              {result.timePenalty > 0 && (
+                <span className="text-xs text-atfr-fog">
+                  · Chrono +{formatDistance(result.timePenalty)} ({formatDuration(result.elapsedSeconds)})
+                </span>
+              )}
+              <span className="text-xs text-atfr-fog">
+                <Camera size={11} className="inline mr-1 opacity-60" />
+                {result.shot.map?.name}
               </span>
-            )}
-            <span>
-              <Camera size={12} className="inline mr-1" />
-              {result.shot.map?.name}
-            </span>
-          </p>
-          <p className="text-sm text-atfr-bone/90 mt-2 leading-relaxed">
-            {feedback}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="font-display text-3xl text-atfr-bone tabular-nums">
-            {formatDistance(result.score)}
-          </p>
-          <p className="text-[10px] uppercase tracking-wider text-atfr-fog">
-            score
-          </p>
+            </div>
+            <p className="text-sm text-atfr-bone/80 mt-2 leading-relaxed">
+              {feedback}
+            </p>
+          </div>
+
+          {/* Score de la manche */}
+          <div className="shrink-0 text-right pl-2 border-l border-atfr-gold/15">
+            <p className="font-display text-4xl text-atfr-bone tabular-nums leading-none">
+              {formatDistance(result.score)}
+            </p>
+            <p className="text-[10px] uppercase tracking-widest text-atfr-fog mt-1">
+              cette manche
+            </p>
+          </div>
         </div>
       </CardBody>
     </Card>
