@@ -524,9 +524,9 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   // Stage: intro
   // -----------------------------------------------------------------
-  if (stage === ‘intro’) {
+  if (stage === 'intro') {
     return (
-      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l’endroit">
+      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit">
         <div className="mx-auto max-w-6xl space-y-4">
           {/* Nav + Identity header (single row) */}
           <div className="flex items-center gap-3">
@@ -557,10 +557,10 @@ export default function Geoguesser() {
                   onClick={() => setShowStatsPanel(false)}
                 />
                 <motion.div
-                  initial={{ x: ‘100%’ }}
+                  initial={{ x: '100%' }}
                   animate={{ x: 0 }}
-                  exit={{ x: ‘100%’ }}
-                  transition={{ type: ‘spring’, damping: 28, stiffness: 260 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 260 }}
                   className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md overflow-y-auto bg-atfr-carbon border-l border-atfr-gold/20 shadow-2xl p-5 space-y-4"
                 >
                   <div className="flex items-center justify-between">
@@ -592,7 +592,7 @@ export default function Geoguesser() {
             </Alert>
           ) : !shots.data || shots.data.length === 0 ? (
             <Alert tone="warning" title="Pas encore de screenshot">
-              L’éditeur travaille dessus. Reviens bientôt.
+              L'éditeur travaille dessus. Reviens bientôt.
             </Alert>
           ) : (
             <Card>
@@ -606,13 +606,13 @@ export default function Geoguesser() {
                 />
 
                 <AnimatePresence initial={false}>
-                  {gameMode !== ‘daily’ && (
+                  {gameMode !== 'daily' && (
                     <motion.div
                       key="difficulty"
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: ‘auto’ }}
+                      animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: ‘easeInOut’ }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
                       className="overflow-hidden"
                     >
                       <DifficultyPicker
@@ -1285,7 +1285,7 @@ function getStartDisabledReason(
   hasNickname: boolean,
   availability: DifficultyAvailability | undefined,
 ): string | null {
-  if (!hasNickname) return 'Choisis d’abord un pseudo';
+  if (!hasNickname) return 'Choisis d'abord un pseudo';
   if (!availability?.disabled) return null;
   if (availability.mapCount < availability.requiredMapCount) {
     return `Il faut ${availability.requiredMapCount} maps minimum pour ce mode.`;
@@ -1569,7 +1569,7 @@ function buildResultAdvice({
     return 'Pose un point approximatif dès que tu as une intuition : même imparfait, un pick joué bat souvent un time out.';
   }
   if (wrongMaps >= Math.ceil(rounds / 2)) {
-    return 'Travaille d’abord la silhouette des minimaps : chemins de fer, lignes d’eau et gros reliefs donnent souvent la map avant les détails.';
+    return 'Travaille d'abord la silhouette des minimaps : chemins de fer, lignes d'eau et gros reliefs donnent souvent la map avant les détails.';
   }
   if (correctMaps < rounds) {
     return 'Tu lis déjà plusieurs maps. Pour gratter des mètres, repère les spawns, bases et couloirs de tir visibles sur le screen.';
@@ -1598,7 +1598,7 @@ function buildRoundFeedback(result: RoundResult): string {
   const dx = result.selectedX - result.shot.x_pct;
   const dy = result.selectedY - result.shot.y_pct;
   const horizontal =
-    Math.abs(dx) < 0.06 ? null : dx > 0 ? 'à l’est' : 'à l’ouest';
+    Math.abs(dx) < 0.06 ? null : dx > 0 ? 'à l'est' : 'à l'ouest';
   const vertical =
     Math.abs(dy) < 0.06 ? null : dy > 0 ? 'au sud' : 'au nord';
   const direction = [vertical, horizontal].filter(Boolean).join(' et ');
@@ -2197,7 +2197,7 @@ function SetupSummaryPanel({
           <span className="inline-flex items-center gap-1">
             <Clock size={11} /> {roundTimeS}s / manche
           </span>
-          {gameMode === ‘sprint’ && (
+          {gameMode === 'sprint' && (
             <>
               <span>·</span>
               <span className="text-atfr-warning">Pénalité chrono</span>
@@ -2220,20 +2220,20 @@ function SetupSummaryPanel({
           <motion.div
             key="info"
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: ‘auto’ }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: ‘easeInOut’ }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
             <ModeRules gameMode={gameMode} roundTimeS={roundTimeS} modeSettings={modeSettings} />
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 px-1 text-xs text-atfr-fog">
               <span>
-                Mauvaise map{‘ ‘}
+                Mauvaise map{' '}
                 <strong className="text-atfr-bone">+{formatDistance(wrongMapMalusM)}</strong>
               </span>
               <span>·</span>
               <span>
-                Time out{‘ ‘}
+                Time out{' '}
                 <strong className="text-atfr-bone">+{formatDistance(timeoutMalusM)}</strong>
               </span>
             </div>
@@ -2242,12 +2242,12 @@ function SetupSummaryPanel({
       </AnimatePresence>
 
       {/* Toggle entraînement (hors daily) */}
-      {gameMode !== ‘daily’ && (
+      {gameMode !== 'daily' && (
         <label className={cn(
-          ‘flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all select-none’,
+          'flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all select-none',
           trainingMode
-            ? ‘border-atfr-fog/30 bg-atfr-graphite/60’
-            : ‘border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/25’,
+            ? 'border-atfr-fog/30 bg-atfr-graphite/60'
+            : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/25',
         )}>
           <div className="relative shrink-0">
             <input
@@ -2257,20 +2257,20 @@ function SetupSummaryPanel({
               className="sr-only"
             />
             <div className={cn(
-              ‘h-5 w-5 rounded border-2 flex items-center justify-center transition-all’,
+              'h-5 w-5 rounded border-2 flex items-center justify-center transition-all',
               trainingMode
-                ? ‘border-atfr-fog/60 bg-atfr-graphite’
-                : ‘border-atfr-gold/30 bg-atfr-ink/60’,
+                ? 'border-atfr-fog/60 bg-atfr-graphite'
+                : 'border-atfr-gold/30 bg-atfr-ink/60',
             )}>
               {trainingMode && <CheckCircle2 size={12} className="text-atfr-fog" />}
             </div>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <BookOpen size={13} className={trainingMode ? ‘text-atfr-fog’ : ‘text-atfr-gold/60’} />
+              <BookOpen size={13} className={trainingMode ? 'text-atfr-fog' : 'text-atfr-gold/60'} />
               <span className={cn(
-                ‘text-sm font-medium’,
-                trainingMode ? ‘text-atfr-fog’ : ‘text-atfr-bone’,
+                'text-sm font-medium',
+                trainingMode ? 'text-atfr-fog' : 'text-atfr-bone',
               )}>
                 Mode entraînement
               </span>
@@ -2289,11 +2289,11 @@ function SetupSummaryPanel({
         disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
       >
-        {gameMode === ‘daily’ && dailyDone
-          ? "Challenge déjà effectué aujourd’hui"
+        {gameMode === 'daily' && dailyDone
+          ? "Challenge déjà effectué aujourd'hui"
           : hasNickname
             ? getStartButtonLabel(gameMode)
-            : "Connecte-toi d’abord"}
+            : "Connecte-toi d'abord"}
       </Button>
       {disabledReason && (
         <p className="text-xs text-atfr-warning">{disabledReason}</p>
@@ -2345,8 +2345,8 @@ function ModeRules({
       </p>
       <p className="mt-1 text-atfr-fog">
         {gameMode === 'daily'
-          ? 'Même sélection pour tout le clan aujourd’hui, avec un classement dédié.'
-          : 'Une série rapide pour t’entraîner sur le pool et la difficulté choisis.'}
+          ? 'Même sélection pour tout le clan aujourd'hui, avec un classement dédié.'
+          : 'Une série rapide pour t'entraîner sur le pool et la difficulté choisis.'}
       </p>
     </div>
   );
@@ -2902,7 +2902,7 @@ function GeoguesserLeaderboardPanel({
         ) : entries.length === 0 ? (
           <p className="text-center text-sm text-atfr-fog py-6">
             {gameMode === 'daily'
-              ? 'Personne n’a encore terminé le défi du jour.'
+              ? 'Personne n'a encore terminé le défi du jour.'
               : 'Pas encore de score sur cette difficulté.'}
           </p>
         ) : (
