@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
   BarChart3,
+  BookOpen,
   Camera,
   CalendarDays,
   CheckCircle2,
@@ -13,13 +14,19 @@ import {
   Crown,
   EyeOff,
   Flame,
+  Info,
+  LogIn,
+  LogOut,
   Map as MapIcon,
+  Pencil,
   RotateCcw,
   ShieldCheck,
   Shuffle,
   Target,
   Trophy,
+  User,
   Users,
+  X,
   XCircle,
   Zap,
 } from 'lucide-react';
@@ -35,7 +42,7 @@ import {
 import { cn } from '@/lib/cn';
 import { FloatingMapPicker } from '@/components/geoguesser/FloatingMapPicker';
 import { RoundTimer } from '@/components/geoguesser/RoundTimer';
-import { IdentityBar } from '@/components/quiz/IdentityBar';
+import { env } from '@/lib/env';
 import {
   DEFAULT_GEO_SETTINGS,
   useGeoMaps,
@@ -183,6 +190,9 @@ export default function Geoguesser() {
   );
   const [shareCopied, setShareCopied] = useState(false);
   const [dailyDoneKeys, setDailyDoneKeys] = useState<Set<string>>(() => getDailyDoneKeys());
+  const [trainingMode, setTrainingMode] = useState(false);
+  const [activeTrainingMode, setActiveTrainingMode] = useState(false);
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
 
   const current = pool[index];
   const total = pool.length;
@@ -260,9 +270,12 @@ export default function Geoguesser() {
     return () => clearInterval(id);
   }, [stage, index, showTutorial]);
 
-  // Daily mode n'a pas de sélection de difficulté (même pool pour tous).
+  // Daily mode n'a pas de sélection de difficulté ni de mode entraînement.
   useEffect(() => {
-    if (gameMode === 'daily') setDifficulty('all');
+    if (gameMode === 'daily') {
+      setDifficulty('all');
+      setTrainingMode(false);
+    }
   }, [gameMode]);
 
   useEffect(() => {
@@ -303,6 +316,7 @@ export default function Geoguesser() {
     setResults([]);
     setActiveChallengeKey(challengeKey);
     setActiveRoundTarget(rounds);
+    setActiveTrainingMode(trainingMode);
     setShareCopied(false);
     setSelectedMapId(null);
     setPickX(null);
@@ -421,7 +435,7 @@ export default function Geoguesser() {
       ),
     );
     const finalStats = summarizeResults(results);
-    if (identity.nickname && pool.length > 0) {
+    if (identity.nickname && pool.length > 0 && !activeTrainingMode) {
       try {
         // Lower-is-better in-game ; pour que le leaderboard générique
         // (sort score DESC) classe correctement, on stocke
@@ -483,6 +497,7 @@ export default function Geoguesser() {
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
+    setActiveTrainingMode(false);
   }
 
   async function copyClanChallenge() {
@@ -509,22 +524,63 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   // Stage: intro
   // -----------------------------------------------------------------
-  if (stage === 'intro') {
+  if (stage === ‘intro’) {
     return (
-      <Section
-        eyebrow="WoT GeoGuesseur"
-        title="Devine la map et l’endroit"
-        description="Chaque manche : une capture in-game. Choisis la map dans le picker en bas-droite, puis clique sur la minimap pour pointer où le screen a été pris. Plus tu es proche, plus ton score est petit. Le but est d'avoir le score le plus bas possible."
-      >
-        <div className="mx-auto max-w-6xl space-y-6">
-          <Link
-            to="/modules"
-            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
-          >
-            <ArrowLeft size={12} /> Retour à l'académie
-          </Link>
+      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l’endroit">
+        <div className="mx-auto max-w-6xl space-y-4">
+          {/* Nav + Identity header (single row) */}
+          <div className="flex items-center gap-3">
+            <Link
+              to="/modules"
+              className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold shrink-0"
+            >
+              <ArrowLeft size={12} /> Académie
+            </Link>
+            <div className="flex-1 min-w-0">
+              <GeoIdentityBar
+                identity={identity}
+                hasStats={personalStats.games > 0}
+                onShowStats={() => setShowStatsPanel(true)}
+              />
+            </div>
+          </div>
 
-          <IdentityBar />
+          {/* Stats slide-in panel */}
+          <AnimatePresence>
+            {showStatsPanel && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-40 bg-atfr-ink/70 backdrop-blur-sm"
+                  onClick={() => setShowStatsPanel(false)}
+                />
+                <motion.div
+                  initial={{ x: ‘100%’ }}
+                  animate={{ x: 0 }}
+                  exit={{ x: ‘100%’ }}
+                  transition={{ type: ‘spring’, damping: 28, stiffness: 260 }}
+                  className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md overflow-y-auto bg-atfr-carbon border-l border-atfr-gold/20 shadow-2xl p-5 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-lg text-atfr-bone">Mes stats</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowStatsPanel(false)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-gold/20 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/50 transition-colors"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <PersonalStatsPanel
+                    stats={personalStats}
+                    isLoading={playerScores.isLoading}
+                  />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {shots.isLoading || allShots.isLoading || maps.isLoading ? (
             <div className="flex justify-center py-20">
@@ -536,7 +592,7 @@ export default function Geoguesser() {
             </Alert>
           ) : !shots.data || shots.data.length === 0 ? (
             <Alert tone="warning" title="Pas encore de screenshot">
-              L'éditeur travaille dessus. Reviens bientôt.
+              L’éditeur travaille dessus. Reviens bientôt.
             </Alert>
           ) : (
             <Card>
@@ -550,13 +606,13 @@ export default function Geoguesser() {
                 />
 
                 <AnimatePresence initial={false}>
-                  {gameMode !== 'daily' && (
+                  {gameMode !== ‘daily’ && (
                     <motion.div
                       key="difficulty"
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
+                      animate={{ opacity: 1, height: ‘auto’ }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      transition={{ duration: 0.2, ease: ‘easeInOut’ }}
                       className="overflow-hidden"
                     >
                       <DifficultyPicker
@@ -579,16 +635,13 @@ export default function Geoguesser() {
                   dailyDone={isDailyDone}
                   canStart={canStartGame}
                   disabledReason={startDisabledReason}
+                  trainingMode={trainingMode}
+                  onTrainingModeChange={setTrainingMode}
                   onStart={startGame}
                 />
               </CardBody>
             </Card>
           )}
-
-          <PersonalStatsPanel
-            stats={personalStats}
-            isLoading={playerScores.isLoading}
-          />
 
           <GeoguesserLeaderboardPanel
             moduleSlug={MODULE_SLUG}
@@ -645,6 +698,7 @@ export default function Geoguesser() {
             gameMode={gameMode}
             challengeKey={activeChallengeKey}
             difficulty={difficulty}
+            trainingMode={activeTrainingMode}
           />
 
           {/* Screenshot — overlays both timer (top-right) and floating
@@ -840,6 +894,11 @@ export default function Geoguesser() {
                   {difficulty === 'all' ? 'Mixte' : DIFFICULTY_LABELS[difficulty]}
                 </Badge>
                 <Badge variant="outline">{pool.length} manches</Badge>
+                {activeTrainingMode && (
+                  <Badge variant="neutral" className="inline-flex items-center gap-1">
+                    <BookOpen size={10} /> Entraînement · non classé
+                  </Badge>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-end gap-6">
@@ -1694,6 +1753,156 @@ function getEntryGameMode(entry: LeaderboardEntry): GameMode {
 // ---------------------------------------------------------------------------
 
 
+// ---------------------------------------------------------------------------
+// Compact identity bar (top of intro, single row)
+// ---------------------------------------------------------------------------
+
+function GeoIdentityBar({
+  identity,
+  hasStats,
+  onShowStats,
+}: {
+  identity: ReturnType<typeof usePlayerIdentity>;
+  hasStats: boolean;
+  onShowStats: () => void;
+}) {
+  const [editing, setEditing] = useState(!identity.nickname && !identity.isVerified);
+  const [draft, setDraft] = useState(identity.nickname);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (draft.trim().length < 1) return;
+    identity.setNickname(draft.trim());
+    setEditing(false);
+  }
+
+  // Ouvre l'édition du pseudo depuis l'extérieur (e.g. clic sur Pencil)
+  function startEdit() {
+    setDraft(identity.nickname);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 10);
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/50 px-3 py-2">
+      {/* Icône statut */}
+      {identity.isVerified ? (
+        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-success/40 bg-atfr-success/10 text-atfr-success">
+          <ShieldCheck size={15} />
+        </div>
+      ) : (
+        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-gold/20 bg-atfr-gold/8 text-atfr-fog">
+          <User size={15} />
+        </div>
+      )}
+
+      {/* Zone identité */}
+      <div className="flex-1 min-w-0">
+        {identity.isVerified ? (
+          /* Compte WG vérifié */
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-atfr-bone truncate">
+              {identity.nickname}
+            </span>
+            <span className="text-[10px] text-atfr-success/80 uppercase tracking-wide">
+              WG vérifié
+            </span>
+          </div>
+        ) : editing ? (
+          /* Saisie du pseudo */
+          <form onSubmit={save} className="flex gap-2">
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Ton pseudo…"
+              maxLength={32}
+              autoFocus
+              className="flex-1 min-w-0 bg-atfr-ink/60 border border-atfr-gold/30 rounded-lg px-2.5 py-1 text-sm text-atfr-bone placeholder-atfr-fog/50 focus:outline-none focus:border-atfr-gold/60"
+            />
+            <button
+              type="submit"
+              disabled={draft.trim().length < 1}
+              className="px-3 py-1 text-xs font-semibold rounded-lg bg-atfr-gold text-atfr-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-atfr-gold/90 transition-colors"
+            >
+              OK
+            </button>
+          </form>
+        ) : identity.nickname ? (
+          /* Pseudo invité */
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-atfr-bone truncate">
+              {identity.nickname}
+            </span>
+            <span className="text-[10px] text-atfr-fog/60">Invité</span>
+          </div>
+        ) : (
+          /* Pas de pseudo */
+          <span className="text-sm text-atfr-fog/70">
+            Connecte-toi ou saisis un pseudo
+          </span>
+        )}
+      </div>
+
+      {/* Actions à droite */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Connexion WG (priorité si non vérifié) */}
+        {!identity.isVerified && env.wotApplicationId && (
+          <button
+            type="button"
+            onClick={() => identity.startWgLogin()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/40 bg-atfr-gold/10 px-2.5 py-1.5 text-xs font-semibold text-atfr-gold hover:bg-atfr-gold/20 hover:border-atfr-gold/70 transition-all"
+          >
+            <LogIn size={12} />
+            <span className="hidden sm:inline">Connexion WG</span>
+          </button>
+        )}
+
+        {/* Éditer pseudo (invité non en édition) */}
+        {!identity.isVerified && !editing && identity.nickname && (
+          <button
+            type="button"
+            onClick={startEdit}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-gold/15 text-atfr-fog/50 hover:text-atfr-bone hover:border-atfr-gold/40 transition-colors"
+            title="Modifier le pseudo"
+          >
+            <Pencil size={12} />
+          </button>
+        )}
+
+        {/* Déconnexion WG */}
+        {identity.isVerified && (
+          <button
+            type="button"
+            onClick={() => identity.logoutVerified()}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-fog/20 text-atfr-fog/50 hover:text-atfr-bone hover:border-atfr-fog/40 transition-colors"
+            title="Déconnexion"
+          >
+            <LogOut size={12} />
+          </button>
+        )}
+
+        {/* Icône profil → stats */}
+        {hasStats && (
+          <button
+            type="button"
+            onClick={onShowStats}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-gold/25 text-atfr-gold/60 hover:text-atfr-gold hover:border-atfr-gold/60 bg-atfr-gold/5 transition-colors"
+            title="Voir mes stats"
+          >
+            <BarChart3 size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Game mode selector
+// ---------------------------------------------------------------------------
+
 function GameModeSelector({
   value,
   onChange,
@@ -1956,6 +2165,8 @@ function SetupSummaryPanel({
   dailyDone,
   canStart,
   disabledReason,
+  trainingMode,
+  onTrainingModeChange,
   onStart,
 }: {
   gameMode: GameMode;
@@ -1968,38 +2179,108 @@ function SetupSummaryPanel({
   dailyDone: boolean;
   canStart: boolean;
   disabledReason: string | null;
+  trainingMode: boolean;
+  onTrainingModeChange: (v: boolean) => void;
   onStart: () => void;
 }) {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
     <div className="space-y-3">
-      <ModeRules
-        gameMode={gameMode}
-        roundTimeS={roundTimeS}
-        modeSettings={modeSettings}
-      />
-
-      {/* Métriques condensées */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-atfr-fog">
-        <span className="inline-flex items-center gap-1">
-          <Camera size={11} />
-          {roundTarget} manches
-        </span>
-        <span>·</span>
-        <span className="inline-flex items-center gap-1">
-          <Clock size={11} />
-          {roundTimeS}s / manche
-        </span>
-        <span>·</span>
-        <span>
-          Mauvaise map{' '}
-          <strong className="text-atfr-bone">+{formatDistance(wrongMapMalusM)}</strong>
-        </span>
-        <span>·</span>
-        <span>
-          Time out{' '}
-          <strong className="text-atfr-bone">+{formatDistance(timeoutMalusM)}</strong>
-        </span>
+      {/* Règles condensées avec toggle info */}
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-atfr-fog flex-1">
+          <span className="inline-flex items-center gap-1">
+            <Camera size={11} /> {roundTarget} manches
+          </span>
+          <span>·</span>
+          <span className="inline-flex items-center gap-1">
+            <Clock size={11} /> {roundTimeS}s / manche
+          </span>
+          {gameMode === ‘sprint’ && (
+            <>
+              <span>·</span>
+              <span className="text-atfr-warning">Pénalité chrono</span>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowInfo((p) => !p)}
+          className="text-atfr-fog/50 hover:text-atfr-gold transition-colors"
+          title="Voir les règles de scoring"
+        >
+          <Info size={14} />
+        </button>
       </div>
+
+      {/* Détail des pénalités (optionnel) */}
+      <AnimatePresence initial={false}>
+        {showInfo && (
+          <motion.div
+            key="info"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: ‘auto’ }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18, ease: ‘easeInOut’ }}
+            className="overflow-hidden"
+          >
+            <ModeRules gameMode={gameMode} roundTimeS={roundTimeS} modeSettings={modeSettings} />
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 px-1 text-xs text-atfr-fog">
+              <span>
+                Mauvaise map{‘ ‘}
+                <strong className="text-atfr-bone">+{formatDistance(wrongMapMalusM)}</strong>
+              </span>
+              <span>·</span>
+              <span>
+                Time out{‘ ‘}
+                <strong className="text-atfr-bone">+{formatDistance(timeoutMalusM)}</strong>
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toggle entraînement (hors daily) */}
+      {gameMode !== ‘daily’ && (
+        <label className={cn(
+          ‘flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all select-none’,
+          trainingMode
+            ? ‘border-atfr-fog/30 bg-atfr-graphite/60’
+            : ‘border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/25’,
+        )}>
+          <div className="relative shrink-0">
+            <input
+              type="checkbox"
+              checked={trainingMode}
+              onChange={(e) => onTrainingModeChange(e.target.checked)}
+              className="sr-only"
+            />
+            <div className={cn(
+              ‘h-5 w-5 rounded border-2 flex items-center justify-center transition-all’,
+              trainingMode
+                ? ‘border-atfr-fog/60 bg-atfr-graphite’
+                : ‘border-atfr-gold/30 bg-atfr-ink/60’,
+            )}>
+              {trainingMode && <CheckCircle2 size={12} className="text-atfr-fog" />}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <BookOpen size={13} className={trainingMode ? ‘text-atfr-fog’ : ‘text-atfr-gold/60’} />
+              <span className={cn(
+                ‘text-sm font-medium’,
+                trainingMode ? ‘text-atfr-fog’ : ‘text-atfr-bone’,
+              )}>
+                Mode entraînement
+              </span>
+            </div>
+            <p className="text-xs text-atfr-fog/60 mt-0.5">
+              Score non soumis au classement — joue sans pression
+            </p>
+          </div>
+        </label>
+      )}
 
       <Button
         size="lg"
@@ -2008,11 +2289,11 @@ function SetupSummaryPanel({
         disabled={!canStart}
         trailingIcon={<ArrowRight size={16} />}
       >
-        {gameMode === 'daily' && dailyDone
+        {gameMode === ‘daily’ && dailyDone
           ? "Challenge déjà effectué aujourd’hui"
           : hasNickname
             ? getStartButtonLabel(gameMode)
-            : "Choisis d’abord un pseudo"}
+            : "Connecte-toi d’abord"}
       </Button>
       {disabledReason && (
         <p className="text-xs text-atfr-warning">{disabledReason}</p>
@@ -2078,12 +2359,14 @@ function RoundStatusBar({
   gameMode,
   challengeKey,
   difficulty,
+  trainingMode,
 }: {
   stats: ResultStats;
   totalScore: number;
   gameMode: GameMode;
   challengeKey: string;
   difficulty: DifficultyFilter;
+  trainingMode: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-atfr-gold/15 bg-atfr-carbon/80 px-4 py-2.5 backdrop-blur">
@@ -2094,6 +2377,11 @@ function RoundStatusBar({
         {difficulty !== 'all' && (
           <Badge variant="outline" className="text-[10px]">
             {DIFFICULTY_LABELS[difficulty]}
+          </Badge>
+        )}
+        {trainingMode && (
+          <Badge variant="neutral" className="text-[10px] inline-flex items-center gap-1">
+            <BookOpen size={9} /> Entraînement
           </Badge>
         )}
       </div>
