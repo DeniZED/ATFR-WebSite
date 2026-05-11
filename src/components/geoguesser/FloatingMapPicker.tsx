@@ -249,40 +249,38 @@ export function FloatingMapPicker({
           disabled && 'pointer-events-none opacity-80',
         )}
       >
-        <div className="rounded-lg border border-atfr-gold/40 bg-atfr-ink/95 backdrop-blur shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-atfr-gold/15">
+        <div className="rounded-xl border border-atfr-gold/50 bg-atfr-ink/97 backdrop-blur shadow-2xl shadow-black/50 overflow-hidden">
+          {/* Header bar */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-atfr-gold/15 bg-atfr-graphite/30">
             {!showCorrect ? (
               <button
                 type="button"
                 onClick={onClearMap}
-                className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-bone"
+                className="inline-flex items-center gap-1.5 text-xs text-atfr-fog hover:text-atfr-bone transition-colors rounded px-1.5 py-1 hover:bg-atfr-graphite/60"
                 title="Choisir une autre map"
               >
-                <ArrowLeft size={12} /> Map
+                <ArrowLeft size={12} /> Changer
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-atfr-gold">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-atfr-gold">
                 <Crosshair size={12} /> Révélation
               </span>
             )}
-            <p className="text-xs text-atfr-bone font-medium truncate max-w-[60%]">
+            <p className="text-sm font-semibold text-atfr-bone truncate max-w-[55%]">
               {selectedMap.name}
             </p>
             {distanceLabel ? (
-              <span className="text-[10px] uppercase tracking-wider rounded bg-atfr-gold/15 text-atfr-gold border border-atfr-gold/30 px-1.5 py-0.5">
+              <span className="shrink-0 text-sm font-bold rounded-lg bg-atfr-gold/20 text-atfr-gold border border-atfr-gold/40 px-2.5 py-0.5 tabular-nums">
                 {distanceLabel}
               </span>
             ) : (
-              <span className="text-[10px] text-atfr-fog">
-                {onPlace
-                  ? player
-                    ? 'Replace si besoin'
-                    : 'Clique pour pointer'
-                  : ''}
+              <span className="text-[10px] text-atfr-fog shrink-0">
+                {onPlace ? (player ? 'Replace si besoin' : 'Clique pour pointer') : ''}
               </span>
             )}
           </div>
 
+          {/* Map canvas */}
           <div
             ref={placeRef}
             onClick={handlePlaceClick}
@@ -308,7 +306,7 @@ export function FloatingMapPicker({
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div
-                className="absolute inset-0 bg-grid opacity-15"
+                className="absolute inset-0 bg-grid opacity-10"
                 style={{ backgroundSize: '20px 20px' }}
                 aria-hidden
               />
@@ -324,36 +322,36 @@ export function FloatingMapPicker({
                     y1={player.y * 100}
                     x2={correct!.x * 100}
                     y2={correct!.y * 100}
-                    stroke="rgba(232,176,67,0.85)"
-                    strokeWidth={0.5}
-                    strokeDasharray="1.5 1.2"
+                    stroke="rgba(232,176,67,0.9)"
+                    strokeWidth={0.6}
+                    strokeDasharray="1.8 1.2"
                     vectorEffect="non-scaling-stroke"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.6 }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
                   />
                 </svg>
               )}
 
               {player && (
-                <PinAt x={player.x} y={player.y} tone="gold" zoom={zoom} />
+                <PinAt x={player.x} y={player.y} tone="gold" zoom={zoom} label={showCorrect ? 'Moi' : undefined} />
               )}
               {correct && (
-                <PinAt x={correct.x} y={correct.y} tone="emerald" zoom={zoom} />
+                <PinAt x={correct.x} y={correct.y} tone="emerald" zoom={zoom} label="Réponse" />
               )}
             </div>
 
-            {/* Zoom controls (always visible in PLACE/REVEAL) */}
+            {/* Zoom controls */}
             <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); adjustZoom(1.25); }}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="flex h-6 w-6 items-center justify-center rounded border border-atfr-gold/30 bg-atfr-ink/80 text-atfr-fog hover:text-atfr-bone backdrop-blur"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-gold/30 bg-atfr-ink/90 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/60 backdrop-blur transition-colors"
                 title="Zoom +"
                 aria-label="Zoom avant"
               >
-                <Plus size={12} />
+                <Plus size={13} />
               </button>
               <button
                 type="button"
@@ -361,20 +359,32 @@ export function FloatingMapPicker({
                 onMouseDown={(e) => e.stopPropagation()}
                 disabled={!isZoomed}
                 className={cn(
-                  'flex h-6 w-6 items-center justify-center rounded border border-atfr-gold/30 bg-atfr-ink/80 backdrop-blur',
-                  isZoomed ? 'text-atfr-fog hover:text-atfr-bone' : 'text-atfr-fog/30 cursor-default',
+                  'flex h-7 w-7 items-center justify-center rounded-lg border bg-atfr-ink/90 backdrop-blur transition-colors',
+                  isZoomed
+                    ? 'border-atfr-gold/30 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/60'
+                    : 'border-atfr-gold/10 text-atfr-fog/25 cursor-default',
                 )}
                 title="Zoom −"
                 aria-label="Zoom arrière"
               >
-                <Minus size={12} />
+                <Minus size={13} />
               </button>
             </div>
 
-            {/* Zoom level indicator */}
+            {/* Zoom level */}
             {isZoomed && (
-              <div className="absolute bottom-2 left-2 z-10 rounded border border-atfr-gold/20 bg-atfr-ink/75 px-1.5 py-0.5 text-[9px] text-atfr-fog backdrop-blur tabular-nums">
+              <div className="absolute bottom-2 left-2 z-10 rounded-lg border border-atfr-gold/20 bg-atfr-ink/85 px-2 py-0.5 text-[9px] text-atfr-gold/80 backdrop-blur tabular-nums font-semibold">
                 ×{zoom.toFixed(1)}
+              </div>
+            )}
+
+            {/* Hint: no pin yet */}
+            {onPlace && !player && !showCorrect && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="rounded-xl border border-atfr-gold/30 bg-atfr-ink/80 px-4 py-2.5 text-center backdrop-blur">
+                  <Crosshair size={20} className="text-atfr-gold mx-auto mb-1" />
+                  <p className="text-xs font-medium text-atfr-bone">Clique pour placer ton pin</p>
+                </div>
               </div>
             )}
           </div>
@@ -394,33 +404,39 @@ export function FloatingMapPicker({
       onMouseEnter={() => !disabled && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
+      {/* Map grid panel */}
       {open && (
         <div
-          className="w-full sm:w-[min(56vw,620px)] lg:w-[min(44vw,680px)] max-h-[min(72vh,560px)] overflow-hidden rounded-lg border border-atfr-gold/30 bg-atfr-ink/95 backdrop-blur shadow-2xl"
+          className="w-full sm:w-[min(56vw,620px)] lg:w-[min(44vw,680px)] max-h-[min(72vh,560px)] overflow-hidden rounded-xl border border-atfr-gold/35 bg-atfr-ink/97 backdrop-blur shadow-2xl shadow-black/50"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-2 border-b border-atfr-gold/15 px-3 py-2">
+          <div className="flex items-center gap-2 border-b border-atfr-gold/15 bg-atfr-graphite/30 px-3 py-2.5">
             <Search size={14} className="text-atfr-gold shrink-0" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher une map…"
-              className="flex-1 bg-transparent text-sm text-atfr-bone placeholder-atfr-fog focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-atfr-bone placeholder-atfr-fog/60 focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-atfr-fog hover:text-atfr-bone"
-              aria-label="Fermer"
-            >
-              <X size={14} />
-            </button>
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="text-atfr-fog/60 hover:text-atfr-bone transition-colors"
+                aria-label="Effacer"
+              >
+                <X size={13} />
+              </button>
+            )}
+            <span className="text-[10px] text-atfr-fog/50 tabular-nums ml-1">
+              {filtered.length}
+            </span>
           </div>
-          <div className="overflow-y-auto p-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[min(58vh,460px)]">
+          <div className="overflow-y-auto p-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[min(58vh,460px)]">
             {filtered.length === 0 ? (
-              <p className="col-span-full py-6 text-center text-xs text-atfr-fog">
-                Aucune map ne correspond.
+              <p className="col-span-full py-8 text-center text-sm text-atfr-fog">
+                Aucune map trouvée.
               </p>
             ) : (
               filtered.map((m) => (
@@ -432,7 +448,7 @@ export function FloatingMapPicker({
                     setOpen(false);
                     setQuery('');
                   }}
-                  className="group relative aspect-square overflow-hidden rounded-md border-2 border-atfr-gold/15 hover:border-atfr-gold/60 transition-all"
+                  className="group relative aspect-square overflow-hidden rounded-xl border-2 border-atfr-gold/15 hover:border-atfr-gold/70 hover:scale-[1.03] transition-all duration-150 bg-atfr-graphite shadow-sm"
                 >
                   {m.image_url ? (
                     <img
@@ -440,13 +456,15 @@ export function FloatingMapPicker({
                       alt={m.name}
                       loading="lazy"
                       draggable={false}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="h-full w-full bg-atfr-graphite" />
+                    <div className="h-full w-full bg-atfr-graphite flex items-center justify-center">
+                      <MapIcon size={18} className="text-atfr-fog/30" />
+                    </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-atfr-ink to-transparent px-1.5 py-1">
-                    <p className="text-[10px] text-atfr-bone truncate">
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-atfr-ink/95 via-atfr-ink/50 to-transparent px-1.5 pb-1.5 pt-3">
+                    <p className="text-[10px] font-medium text-atfr-bone truncate leading-tight">
                       {m.name}
                     </p>
                   </div>
@@ -457,20 +475,29 @@ export function FloatingMapPicker({
         </div>
       )}
 
+      {/* Collapsed button */}
       <button
         type="button"
         onClick={() => !disabled && setOpen((p) => !p)}
-        className="flex items-center gap-2 rounded-md border-2 border-atfr-gold/40 hover:border-atfr-gold bg-atfr-ink/80 backdrop-blur shadow-xl px-2 py-1.5 transition-all sm:max-w-[260px]"
+        className={cn(
+          'flex items-center gap-3 rounded-xl border-2 bg-atfr-ink/90 backdrop-blur shadow-2xl shadow-black/40 px-3 py-2 transition-all duration-200',
+          open
+            ? 'border-atfr-gold/60 bg-atfr-ink/98'
+            : 'border-atfr-gold/45 hover:border-atfr-gold hover:bg-atfr-ink/98',
+        )}
       >
-        <div className="h-12 w-12 sm:h-16 sm:w-16 rounded overflow-hidden bg-atfr-graphite shrink-0 flex items-center justify-center">
-          <MapIcon size={20} className="text-atfr-gold opacity-70" />
+        <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg overflow-hidden bg-atfr-graphite shrink-0 flex items-center justify-center border border-atfr-gold/20">
+          <MapIcon size={22} className="text-atfr-gold opacity-80" />
         </div>
-        <div className="text-left pr-1.5">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-atfr-gold">
+        <div className="text-left pr-1">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-atfr-gold font-semibold mb-0.5">
             Choisir la map
           </p>
-          <p className="text-xs sm:text-sm font-medium text-atfr-bone max-w-[140px] truncate">
-            Survole / clique
+          <p className="text-xs text-atfr-bone">
+            {open ? 'Fermer le sélecteur' : 'Survole ou clique'}
+          </p>
+          <p className="text-[9px] text-atfr-fog/60 mt-0.5">
+            {maps.length} maps disponibles
           </p>
         </div>
       </button>
@@ -499,15 +526,18 @@ function PinAt({
   y,
   tone,
   zoom,
+  label,
 }: {
   x: number;
   y: number;
   tone: 'gold' | 'emerald';
   zoom: number;
+  label?: string;
 }) {
   const ring = tone === 'gold' ? 'border-atfr-gold' : 'border-emerald-400';
   const halo = tone === 'gold' ? 'bg-atfr-gold/30' : 'bg-emerald-400/40';
   const dot = tone === 'gold' ? 'bg-atfr-gold' : 'bg-emerald-400';
+  const labelBg = tone === 'gold' ? 'bg-atfr-gold text-atfr-ink' : 'bg-emerald-400 text-white';
   // Scale the pin down as zoom increases so it doesn't look huge.
   const pinScale = 1 / Math.sqrt(zoom);
   return (
@@ -519,10 +549,20 @@ function PinAt({
         transform: `translate(-50%, -50%) scale(${pinScale})`,
       }}
     >
-      <div className="relative h-5 w-5">
-        <div className={cn('absolute inset-0 -m-1.5 rounded-full blur-md opacity-80', halo)} />
-        <div className={cn('absolute inset-0 rounded-full border-2 bg-atfr-ink/40 shadow-lg', ring)} />
-        <div className={cn('absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full', dot)} />
+      <div className="relative flex flex-col items-center gap-0.5">
+        {label && (
+          <span className={cn(
+            'rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap shadow-sm',
+            labelBg,
+          )}>
+            {label}
+          </span>
+        )}
+        <div className="relative h-5 w-5">
+          <div className={cn('absolute inset-0 -m-1.5 rounded-full blur-md opacity-80', halo)} />
+          <div className={cn('absolute inset-0 rounded-full border-2 bg-atfr-ink/40 shadow-lg', ring)} />
+          <div className={cn('absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full', dot)} />
+        </div>
       </div>
     </div>
   );
