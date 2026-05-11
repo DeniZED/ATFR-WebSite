@@ -1285,7 +1285,7 @@ function getStartDisabledReason(
   hasNickname: boolean,
   availability: DifficultyAvailability | undefined,
 ): string | null {
-  if (!hasNickname) return 'Choisis d'abord un pseudo';
+  if (!hasNickname) return "Choisis d'abord un pseudo";
   if (!availability?.disabled) return null;
   if (availability.mapCount < availability.requiredMapCount) {
     return `Il faut ${availability.requiredMapCount} maps minimum pour ce mode.`;
@@ -1569,7 +1569,7 @@ function buildResultAdvice({
     return 'Pose un point approximatif dès que tu as une intuition : même imparfait, un pick joué bat souvent un time out.';
   }
   if (wrongMaps >= Math.ceil(rounds / 2)) {
-    return 'Travaille d'abord la silhouette des minimaps : chemins de fer, lignes d'eau et gros reliefs donnent souvent la map avant les détails.';
+    return "Travaille d'abord la silhouette des minimaps : chemins de fer, lignes d'eau et gros reliefs donnent souvent la map avant les détails.";
   }
   if (correctMaps < rounds) {
     return 'Tu lis déjà plusieurs maps. Pour gratter des mètres, repère les spawns, bases et couloirs de tir visibles sur le screen.';
@@ -1598,7 +1598,7 @@ function buildRoundFeedback(result: RoundResult): string {
   const dx = result.selectedX - result.shot.x_pct;
   const dy = result.selectedY - result.shot.y_pct;
   const horizontal =
-    Math.abs(dx) < 0.06 ? null : dx > 0 ? 'à l'est' : 'à l'ouest';
+    Math.abs(dx) < 0.06 ? null : dx > 0 ? "à l'est" : "à l'ouest";
   const vertical =
     Math.abs(dy) < 0.06 ? null : dy > 0 ? 'au sud' : 'au nord';
   const direction = [vertical, horizontal].filter(Boolean).join(' et ');
@@ -2345,8 +2345,8 @@ function ModeRules({
       </p>
       <p className="mt-1 text-atfr-fog">
         {gameMode === 'daily'
-          ? 'Même sélection pour tout le clan aujourd'hui, avec un classement dédié.'
-          : 'Une série rapide pour t'entraîner sur le pool et la difficulté choisis.'}
+          ? "Même sélection pour tout le clan aujourd'hui, avec un classement dédié."
+          : "Une série rapide pour t'entraîner sur le pool et la difficulté choisis."}
       </p>
     </div>
   );
@@ -2902,8 +2902,8 @@ function GeoguesserLeaderboardPanel({
         ) : entries.length === 0 ? (
           <p className="text-center text-sm text-atfr-fog py-6">
             {gameMode === 'daily'
-              ? 'Personne n'a encore terminé le défi du jour.'
-              : 'Pas encore de score sur cette difficulté.'}
+              ? "Personne n'a encore terminé le défi du jour."
+              : "Pas encore de score sur cette difficulté."}
           </p>
         ) : (
           <ol className="space-y-2">
