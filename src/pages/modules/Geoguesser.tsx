@@ -784,7 +784,6 @@ export default function Geoguesser() {
             total={total}
             totalScore={totalScore}
             secondsLeft={secondsLeft}
-            gameMode={gameMode}
             onValidate={validate}
             onNext={nextRound}
           />
@@ -1235,38 +1234,6 @@ function getStartDisabledReason(
   return `Il faut ${availability.requiredShotCount} screenshots minimum pour ce mode.`;
 }
 
-function getRoundActionStatus(
-  selectedMapName: string | null,
-  hasPick: boolean,
-  showReveal: boolean,
-): { label: string; detail: string; cta: string } {
-  if (showReveal) {
-    return {
-      label: 'Révélation',
-      detail: 'Compare ton point avec la position correcte.',
-      cta: 'Continuer',
-    };
-  }
-  if (!selectedMapName) {
-    return {
-      label: 'Étape 1',
-      detail: 'Ouvre le sélecteur de map en bas à droite et choisis la minimap.',
-      cta: 'Choisis une map',
-    };
-  }
-  if (!hasPick) {
-    return {
-      label: 'Étape 2',
-      detail: `${selectedMapName} sélectionnée. Clique sur la minimap pour poser ton point.`,
-      cta: 'Place ton point',
-    };
-  }
-  return {
-    label: 'Prêt',
-    detail: `${selectedMapName} sélectionnée. Tu peux valider ou déplacer ton point.`,
-    cta: 'Valider',
-  };
-}
 
 type BadgeVariant = 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'outline';
 
@@ -2165,7 +2132,6 @@ function RoundActionDock({
   total,
   totalScore,
   secondsLeft,
-  gameMode,
   onValidate,
   onNext,
 }: {
@@ -2177,18 +2143,10 @@ function RoundActionDock({
   total: number;
   totalScore: number;
   secondsLeft: number;
-  gameMode: GameMode;
   onValidate: () => void;
   onNext: () => void;
 }) {
   const step = showReveal ? 3 : !selectedMapName ? 1 : !hasPick ? 2 : 3;
-  const stepLabel = showReveal
-    ? 'Révélation'
-    : step === 1
-      ? 'Choisis la map'
-      : step === 2
-        ? 'Place le pin'
-        : 'Prêt à valider';
   const stepDetail = showReveal
     ? 'Analyse la correction, puis passe à la suite.'
     : !selectedMapName
