@@ -144,7 +144,7 @@ export default function AdminGallery() {
               onCopy={copy}
               copied={copied === a.public_url}
               onUpdate={(patch) => update.mutateAsync({ id: a.id, ...patch })}
-              onDelete={() => remove.mutateAsync({ id: a.id })}
+              onDelete={() => remove.mutateAsync({ id: a.id, path: a.path, kind: a.kind })}
               saving={update.isPending}
               deleting={remove.isPending}
             />
