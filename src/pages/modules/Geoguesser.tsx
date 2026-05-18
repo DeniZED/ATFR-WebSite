@@ -41,7 +41,6 @@ import {
 import { cn } from '@/lib/cn';
 import { FloatingMapPicker } from '@/components/geoguesser/FloatingMapPicker';
 import { RoundTimer } from '@/components/geoguesser/RoundTimer';
-import { env } from '@/lib/env';
 import {
   DEFAULT_GEO_SETTINGS,
   useGeoMaps,
