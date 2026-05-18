@@ -2624,8 +2624,8 @@ function PersonalStatsPanel({
 
   const AvatarCard = (
     <div className="flex items-center gap-4 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/40 p-3">
-      <div className="shrink-0 flex items-center justify-center w-24 h-16 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10">
-        <TankAvatar config={avatarConfig} size={100} />
+      <div className="shrink-0 flex items-center justify-center w-28 h-[76px] rounded-lg bg-atfr-ink/50 border border-atfr-gold/10">
+        <TankAvatar config={avatarConfig} size={104} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
