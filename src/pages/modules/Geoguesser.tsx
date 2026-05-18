@@ -72,6 +72,10 @@ import {
   DIFFICULTY_LABELS,
   type QuizDifficulty,
 } from '@/types/database';
+import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
+import { getUnlockById, type AvatarConfig, type LevelInfo } from '@/features/geoguesser/playerProfile';
+import { TankAvatar } from '@/components/geoguesser/TankAvatar';
+import { AvatarCustomizer } from '@/components/geoguesser/AvatarCustomizer';
 
 const MODULE_SLUG = 'wot-geoguesser';
 const TUTORIAL_KEY = 'atfr.geoguesser.tutorial.seen.v1';
@@ -193,6 +197,8 @@ export default function Geoguesser() {
   const [trainingMode, setTrainingMode] = useState(false);
   const [activeTrainingMode, setActiveTrainingMode] = useState(false);
   const [showStatsPanel, setShowStatsPanel] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const playerProfile = usePlayerProfile(identity, playerScores.data);
 
   const current = pool[index];
   const total = pool.length;
@@ -545,6 +551,16 @@ export default function Geoguesser() {
             </div>
           </div>
 
+          {/* Avatar customizer modal */}
+          {showCustomizer && (
+            <AvatarCustomizer
+              config={playerProfile.avatarConfig}
+              levelInfo={playerProfile.levelInfo}
+              onSave={playerProfile.updateAvatarConfig}
+              onClose={() => setShowCustomizer(false)}
+            />
+          )}
+
           {/* Stats slide-in panel */}
           <AnimatePresence>
             {showStatsPanel && (
@@ -576,6 +592,9 @@ export default function Geoguesser() {
                   <PersonalStatsPanel
                     stats={personalStats}
                     isLoading={playerScores.isLoading}
+                    levelInfo={playerProfile.levelInfo}
+                    avatarConfig={playerProfile.avatarConfig}
+                    onCustomize={() => { setShowStatsPanel(false); setShowCustomizer(true); }}
                   />
                 </motion.div>
               </>
@@ -976,6 +995,9 @@ export default function Geoguesser() {
         <PersonalStatsPanel
           stats={personalStats}
           isLoading={playerScores.isLoading || playerScores.isFetching}
+          levelInfo={playerProfile.levelInfo}
+          avatarConfig={playerProfile.avatarConfig}
+          onCustomize={() => setShowCustomizer(true)}
         />
 
         {/* Per-round recap */}
@@ -995,7 +1017,7 @@ export default function Geoguesser() {
                 <Card key={i} className={cn('overflow-hidden border-l-4', kindColor)}>
                   <CardBody className="p-3 sm:p-4 flex items-center gap-3">
                     <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-atfr-graphite">
-                      <img src={r.shot.image_url} alt="" className="h-full w-full object-cover" />
+                      <img src={r.shot.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -2588,15 +2610,60 @@ function ResultInsights({ stats }: { stats: ResultStats }) {
 function PersonalStatsPanel({
   stats,
   isLoading,
+  levelInfo,
+  avatarConfig,
+  onCustomize,
 }: {
   stats: PersonalStats;
   isLoading: boolean;
+  levelInfo: LevelInfo;
+  avatarConfig: AvatarConfig;
+  onCustomize: () => void;
 }) {
+  const titleUnlock = avatarConfig.titleId ? getUnlockById(avatarConfig.titleId) : null;
+
+  const AvatarCard = (
+    <div className="flex items-center gap-4 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/40 p-3">
+      <div className="shrink-0 flex items-center justify-center w-24 h-16 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10">
+        <TankAvatar config={avatarConfig} size={100} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="font-display text-lg text-atfr-gold">Niv. {levelInfo.level}</span>
+          <Badge variant="gold">{levelInfo.title}</Badge>
+        </div>
+        {titleUnlock && (
+          <p className="text-[11px] text-atfr-fog/60 italic mb-1.5">{titleUnlock.label}</p>
+        )}
+        <div className="h-1.5 rounded-full bg-atfr-ink/70 overflow-hidden mb-1">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-atfr-gold/70 to-atfr-gold transition-all duration-700"
+            style={{ width: `${Math.round(levelInfo.progress * 100)}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-atfr-fog">
+          {levelInfo.xp.toLocaleString('fr')} XP
+          {!levelInfo.isMax && ` · +${levelInfo.xpToNext.toLocaleString('fr')} → niv. ${levelInfo.level + 1}`}
+          {levelInfo.isMax && <span className="text-atfr-gold"> · Niveau max !</span>}
+        </p>
+      </div>
+      <button
+        onClick={onCustomize}
+        className="shrink-0 px-2.5 py-1.5 rounded-lg border border-atfr-gold/30 text-[11px] text-atfr-gold hover:bg-atfr-gold/10 transition-colors font-medium"
+      >
+        Perso.
+      </button>
+    </div>
+  );
+
   if (isLoading && stats.games === 0) {
     return (
       <Card>
-        <CardBody className="p-5 flex justify-center">
-          <Spinner />
+        <CardBody className="p-5 space-y-4">
+          {AvatarCard}
+          <div className="flex justify-center">
+            <Spinner />
+          </div>
         </CardBody>
       </Card>
     );
@@ -2605,16 +2672,19 @@ function PersonalStatsPanel({
   if (stats.games === 0) {
     return (
       <Card>
-        <CardBody className="p-5 flex items-start gap-4">
-          <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
-            <BarChart3 size={20} />
-          </div>
-          <div>
-            <h3 className="font-display text-lg text-atfr-bone">Mes stats</h3>
-            <p className="mt-1 text-sm leading-relaxed text-atfr-fog">
-              Termine une partie pour débloquer ton historique : meilleur score,
-              progression, modes forts et dernières manches.
-            </p>
+        <CardBody className="p-5 space-y-4">
+          {AvatarCard}
+          <div className="flex items-start gap-4">
+            <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-atfr-gold/30 bg-atfr-gold/10 text-atfr-gold">
+              <BarChart3 size={20} />
+            </div>
+            <div>
+              <h3 className="font-display text-lg text-atfr-bone">Mes stats</h3>
+              <p className="mt-1 text-sm leading-relaxed text-atfr-fog">
+                Termine une partie pour débloquer ton historique : meilleur score,
+                progression, modes forts et dernières manches.
+              </p>
+            </div>
           </div>
         </CardBody>
       </Card>
@@ -2624,6 +2694,9 @@ function PersonalStatsPanel({
   return (
     <Card>
       <CardBody className="p-5 space-y-5">
+        {/* Avatar + Level */}
+        {AvatarCard}
+
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="font-display text-lg text-atfr-bone flex items-center gap-2">

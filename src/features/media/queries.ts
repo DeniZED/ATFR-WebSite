@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 import type { Database, MediaKind } from '@/types/database';
 
 type MediaRow = Database['public']['Tables']['media_assets']['Row'];
-
-const BUCKET = 'public-media';
 
 interface MediaAssetOptions {
   galleryOnly?: boolean;
@@ -32,35 +31,48 @@ export function useMediaAssets(kind?: MediaKind, opts: MediaAssetOptions = {}) {
   });
 }
 
-interface ImageDimensions {
-  width: number;
-  height: number;
+interface CloudinaryUploadResult {
+  publicId: string;
+  publicUrl: string;
+  width: number | null;
+  height: number | null;
 }
 
-function readImageDimensions(file: File): Promise<ImageDimensions | null> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(null);
-    };
-    img.src = url;
-  });
-}
+async function uploadToCloudinary(
+  file: File,
+  folder: string,
+): Promise<CloudinaryUploadResult> {
+  const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9.-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', env.cloudinaryUploadPreset);
+  formData.append('folder', folder);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${env.cloudinaryCloudName}/${resourceType}/upload`,
+    { method: 'POST', body: formData },
+  );
+
+  if (!res.ok) {
+    const err = await res.json() as { error?: { message?: string } };
+    throw new Error(err.error?.message ?? `Cloudinary upload failed (${res.status})`);
+  }
+
+  const data = await res.json() as {
+    public_id: string;
+    width?: number;
+    height?: number;
+  };
+
+  const publicUrl = `https://res.cloudinary.com/${env.cloudinaryCloudName}/${resourceType}/upload/f_auto,q_auto/${data.public_id}`;
+
+  return {
+    publicId: data.public_id,
+    publicUrl,
+    width: data.width ?? null,
+    height: data.height ?? null,
+  };
 }
 
 export function useUploadMedia() {
@@ -73,37 +85,35 @@ export function useUploadMedia() {
     }): Promise<MediaRow> => {
       const { file, caption, tags } = args;
       const kind: MediaKind = file.type.startsWith('video/') ? 'video' : 'image';
-      const ts = Date.now();
-      const path = `${kind}/${ts}-${slugify(file.name)}`;
 
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, {
-          cacheControl: '31536000',
-          upsert: false,
-          contentType: file.type || undefined,
-        });
-      if (upErr) throw upErr;
+      // Détection de doublons : même taille + même type = même fichier
+      const { data: existing } = await supabase
+        .from('media_assets')
+        .select('*')
+        .eq('size_bytes', file.size)
+        .eq('mime', file.type)
+        .limit(1)
+        .single();
+      if (existing) return existing as MediaRow;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-      const dims = kind === 'image' ? await readImageDimensions(file) : null;
+      const { publicId, publicUrl, width, height } = await uploadToCloudinary(
+        file,
+        'atfr/media',
+      );
 
       const { data: inserted, error: insErr } = await supabase
         .from('media_assets')
         .insert({
-          path,
+          path: publicId,
           public_url: publicUrl,
           kind,
           mime: file.type || null,
           size_bytes: file.size,
-          width: dims?.width ?? null,
-          height: dims?.height ?? null,
+          width,
+          height,
           caption: caption ?? null,
           tags: tags ?? [],
-          is_gallery_visible: false,
+          is_gallery_visible: true,
         })
         .select()
         .single();
@@ -137,11 +147,17 @@ export function useUpdateMedia() {
 export function useDeleteMedia() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (asset: Pick<MediaRow, 'id' | 'path'>) => {
-      const { error: storageErr } = await supabase.storage
-        .from(BUCKET)
-        .remove([asset.path]);
-      if (storageErr) throw storageErr;
+    mutationFn: async (asset: Pick<MediaRow, 'id' | 'path' | 'kind'>) => {
+      // Suppression Cloudinary côté serveur (API secret non exposé au browser)
+      await fetch('/.netlify/functions/cloudinary-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicId: asset.path,
+          resourceType: asset.kind,
+        }),
+      });
+
       const { error } = await supabase
         .from('media_assets')
         .delete()
