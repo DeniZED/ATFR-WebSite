@@ -16,6 +16,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
 import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { resolve, dirname } from 'path';
 
 // ── Chargement des variables d'environnement ──────────────────────────────────
 
@@ -36,7 +38,8 @@ function loadEnvFile(path) {
   return result;
 }
 
-const fileEnv = loadEnvFile(new URL('../.env.migration', import.meta.url).pathname);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fileEnv = loadEnvFile(resolve(__dirname, '../.env.migration'));
 const get = (k) => fileEnv[k] ?? process.env[k] ?? '';
 
 const SUPABASE_URL            = get('SUPABASE_URL');
