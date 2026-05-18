@@ -995,7 +995,7 @@ export default function Geoguesser() {
                 <Card key={i} className={cn('overflow-hidden border-l-4', kindColor)}>
                   <CardBody className="p-3 sm:p-4 flex items-center gap-3">
                     <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-atfr-graphite">
-                      <img src={r.shot.image_url} alt="" className="h-full w-full object-cover" />
+                      <img src={r.shot.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
