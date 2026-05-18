@@ -80,15 +80,15 @@ function buildCloudinaryUrl(publicId) {
 
 // ── Migration d'une table ─────────────────────────────────────────────────────
 
-async function migrateTable(table, folder) {
+async function migrateTable(table, folder, urlField = 'image_url') {
   console.log(`\n${'─'.repeat(60)}`);
   console.log(`Table : ${table}  →  dossier Cloudinary : ${folder}`);
   console.log('─'.repeat(60));
 
   const { data: rows, error } = await supabase
     .from(table)
-    .select('id, image_url')
-    .not('image_url', 'is', null);
+    .select(`id, ${urlField}`)
+    .not(urlField, 'is', null);
 
   if (error) {
     console.error(`Impossible de lire ${table} :`, error.message);
@@ -102,7 +102,7 @@ async function migrateTable(table, folder) {
   let failed = 0;
 
   for (const row of rows) {
-    const url = row.image_url;
+    const url = row[urlField];
 
     if (url.includes('cloudinary.com')) {
       skipped++;
@@ -123,7 +123,7 @@ async function migrateTable(table, folder) {
 
       const { error: updateErr } = await supabase
         .from(table)
-        .update({ image_url: newUrl })
+        .update({ [urlField]: newUrl })
         .eq('id', row.id);
 
       if (updateErr) throw new Error(updateErr.message);
@@ -150,8 +150,12 @@ async function main() {
   console.log(`Cloud : ${CLOUDINARY_CLOUD_NAME}`);
   console.log(`Supabase : ${SUPABASE_URL}`);
 
-  await migrateTable('wot_maps', 'atfr/maps');
-  await migrateTable('geoguesser_shots', 'atfr/geoguessr');
+  await migrateTable('wot_maps',          'atfr/maps');
+  await migrateTable('geoguesser_shots',  'atfr/geoguessr');
+  await migrateTable('media_assets',      'atfr/media', 'public_url');
+  await migrateTable('highlights',        'atfr/highlights');
+  await migrateTable('achievements',      'atfr/achievements');
+  await migrateTable('quiz_questions',    'atfr/quiz');
 
   console.log('\n\n✅ Migration terminée !');
   console.log('Tu peux maintenant vider le bucket Supabase Storage.');
