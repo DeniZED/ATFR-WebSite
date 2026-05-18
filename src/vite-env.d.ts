@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_CLAN_TAG: string;
   readonly VITE_DISCORD_WEBHOOK_URL: string;
   readonly VITE_SITE_URL: string;
+  readonly VITE_CLOUDINARY_CLOUD_NAME: string;
+  readonly VITE_CLOUDINARY_UPLOAD_PRESET: string;
 }
 
 interface ImportMeta {
