@@ -84,10 +84,11 @@ const SKINS: Record<string, { base: string; track: string; accent?: string }> = 
 // ── 3D layout (all in isometric units) ───────────────────────────────────
 // Hull
 const HX = -4, HY = -3.5, HZ = 0, HW = 8, HD = 7, HH = 2.8;
-// Tracks
-const TW = 1.5, TE = 0.55, TH = 2.3;
-const LTX = HX - TW, RTX = HX + HW;
-const TY = HY - TE, TD = HD + TE * 2;
+// Tracks — run in +x direction (parallel to gun), on y-min and y-max sides of hull
+const TW = 1.5, TE = 0.5, TH = 2.3;   // width(y), x-extension, height
+const TX = HX - TE, TDX = HW + TE * 2; // x start, x length
+const NTY = HY - TW;                    // near track y start (y-min side)
+const FTY = HY + HD;                    // far track y start (y-max side)
 // Turret
 const UW = 5.2, UD = 4.4, UH = 2.3;
 const UX = HX + (HW - UW) / 2 - 0.4;
@@ -175,26 +176,29 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           />
 
           {/* ── Tracks ── */}
-          <IsoBox x={LTX} y={TY} z={0} w={TW} d={TD} h={TH} top={tT} side={tS} right={tR} />
-          <IsoBox x={RTX} y={TY} z={0} w={TW} d={TD} h={TH} top={tT} side={tS} right={tR} />
+          {/* Near track (y-min side of hull) */}
+          <IsoBox x={TX} y={NTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
+          {/* Far track (y-max side of hull) */}
+          <IsoBox x={TX} y={FTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
 
-          {/* Tread grooves on track y-faces */}
+          {/* Tread grooves on far track y-max face (horizontal stripes along track length) */}
           {[0.5, 1.05, 1.6, 2.1].map((zt, i) => {
-            const [lx1, ly1] = iso(LTX,      TY + TD, zt);
-            const [lx2, ly2] = iso(LTX + TW, TY + TD, zt);
-            const [rx1, ry1] = iso(RTX,      TY + TD, zt);
-            const [rx2, ry2] = iso(RTX + TW, TY + TD, zt);
-            return (
-              <g key={i}>
-                <line x1={lx1} y1={ly1} x2={lx2} y2={ly2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />
-                <line x1={rx1} y1={ry1} x2={rx2} y2={ry2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />
-              </g>
-            );
+            const [x1, y1] = iso(TX,       FTY + TW, zt);
+            const [x2, y2] = iso(TX + TDX, FTY + TW, zt);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />;
           })}
 
-          {/* Sprocket wheels on right track x-face */}
-          {[TY + 0.8, TY + TD - 0.8].map((wy, i) => {
-            const [sx, sy] = iso(RTX + TW, wy, TH * 0.5);
+          {/* Track link dividers on far track y-max face */}
+          {Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
+            const xi = TX + i;
+            const [x1, y1] = iso(xi, FTY + TW, 0);
+            const [x2, y2] = iso(xi, FTY + TW, TH);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.4)} strokeWidth="0.4" opacity="0.5" />;
+          })}
+
+          {/* Front sprocket wheels on x-max face of both tracks */}
+          {([NTY + TW * 0.5, FTY + TW * 0.5] as const).map((wy, i) => {
+            const [sx, sy] = iso(TX + TDX, wy, TH * 0.5);
             return <ellipse key={i} cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
           })}
 
@@ -257,12 +261,12 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
             );
           })()}
 
-          {/* Mudguard skirts */}
+          {/* Mudguard skirts — thin slab on far track y-max face (visible side) */}
           {has('acc-mudguards') && (
-            <>
-              <polygon points={poly([LTX, TY+TD, TH+0.05], [HX, TY+TD, TH+0.05], [HX, TY+TD, TH+0.45], [LTX, TY+TD, TH+0.45])} fill={dk(b, 0.30)} stroke="#0003" strokeWidth="0.3" />
-              <polygon points={poly([RTX, TY+TD, TH+0.05], [RTX+TW, TY+TD, TH+0.05], [RTX+TW, TY+TD, TH+0.45], [RTX, TY+TD, TH+0.45])} fill={dk(b, 0.30)} stroke="#0003" strokeWidth="0.3" />
-            </>
+            <polygon
+              points={poly([TX-0.1, FTY+TW+0.15, TH], [TX+TDX+0.1, FTY+TW+0.15, TH], [TX+TDX+0.1, FTY+TW+0.15, TH+0.42], [TX-0.1, FTY+TW+0.15, TH+0.42])}
+              fill={dk(b, 0.28)} stroke="#0003" strokeWidth="0.3"
+            />
           )}
 
           {/* Antenna */}
