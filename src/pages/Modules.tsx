@@ -4,6 +4,7 @@ import { ArrowRight, Hourglass } from 'lucide-react';
 import { Section, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePublishedModules } from '@/features/modules/queries';
+import { AcademyIdentityWidget } from '@/components/academy/AcademyIdentityWidget';
 
 const CATEGORY_LABEL = {
   pédagogie: 'Pédagogique',
@@ -19,6 +20,7 @@ export default function Modules() {
       eyebrow="Académie ATFR"
       title="Modules & mini-jeux"
       description="Une collection grandissante de tests, défis et outils communautaires autour de World of Tanks. Chaque module est administré indépendamment."
+      headerAction={<AcademyIdentityWidget />}
     >
       {isLoading ? (
         <div className="flex justify-center py-20">

@@ -15,8 +15,6 @@ import {
   EyeOff,
   Flame,
   Info,
-  LogIn,
-  LogOut,
   Map as MapIcon,
   Pencil,
   RotateCcw,
@@ -30,6 +28,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
+import { AcademyIdentityWidget } from '@/components/academy/AcademyIdentityWidget';
 import {
   Alert,
   Badge,
@@ -1869,18 +1868,6 @@ function GeoIdentityBar({
 
       {/* Actions à droite */}
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Connexion WG (priorité si non vérifié) */}
-        {!identity.isVerified && env.wotApplicationId && (
-          <button
-            type="button"
-            onClick={() => identity.startWgLogin()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/40 bg-atfr-gold/10 px-2.5 py-1.5 text-xs font-semibold text-atfr-gold hover:bg-atfr-gold/20 hover:border-atfr-gold/70 transition-all"
-          >
-            <LogIn size={12} />
-            <span className="hidden sm:inline">Connexion WG</span>
-          </button>
-        )}
-
         {/* Éditer pseudo (invité non en édition) */}
         {!identity.isVerified && !editing && identity.nickname && (
           <button
@@ -1893,20 +1880,8 @@ function GeoIdentityBar({
           </button>
         )}
 
-        {/* Déconnexion WG */}
-        {identity.isVerified && (
-          <button
-            type="button"
-            onClick={() => identity.logoutVerified()}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-fog/20 text-atfr-fog/50 hover:text-atfr-bone hover:border-atfr-fog/40 transition-colors"
-            title="Déconnexion"
-          >
-            <LogOut size={12} />
-          </button>
-        )}
-
-        {/* Icône profil → stats */}
-        {hasStats && (
+        {/* Icône stats (invité) */}
+        {!identity.isVerified && hasStats && (
           <button
             type="button"
             onClick={onShowStats}
@@ -1916,6 +1891,9 @@ function GeoIdentityBar({
             <BarChart3 size={13} />
           </button>
         )}
+
+        {/* Bulle de profil — login WG géré depuis la page Académie */}
+        <AcademyIdentityWidget />
       </div>
     </div>
   );
