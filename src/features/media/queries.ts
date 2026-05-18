@@ -86,6 +86,16 @@ export function useUploadMedia() {
       const { file, caption, tags } = args;
       const kind: MediaKind = file.type.startsWith('video/') ? 'video' : 'image';
 
+      // Détection de doublons : même taille + même type = même fichier
+      const { data: existing } = await supabase
+        .from('media_assets')
+        .select('*')
+        .eq('size_bytes', file.size)
+        .eq('mime', file.type)
+        .limit(1)
+        .single();
+      if (existing) return existing as MediaRow;
+
       const { publicId, publicUrl, width, height } = await uploadToCloudinary(
         file,
         'atfr/media',
@@ -103,7 +113,7 @@ export function useUploadMedia() {
           height,
           caption: caption ?? null,
           tags: tags ?? [],
-          is_gallery_visible: false,
+          is_gallery_visible: true,
         })
         .select()
         .single();
@@ -137,7 +147,17 @@ export function useUpdateMedia() {
 export function useDeleteMedia() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (asset: Pick<MediaRow, 'id'>) => {
+    mutationFn: async (asset: Pick<MediaRow, 'id' | 'path' | 'kind'>) => {
+      // Suppression Cloudinary côté serveur (API secret non exposé au browser)
+      await fetch('/.netlify/functions/cloudinary-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicId: asset.path,
+          resourceType: asset.kind,
+        }),
+      });
+
       const { error } = await supabase
         .from('media_assets')
         .delete()
