@@ -72,22 +72,23 @@ cloudinary.config({
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
-function buildCloudinaryUrl(publicId) {
-  // f_auto : WebP pour les navigateurs qui le supportent, AVIF si possible
+function buildCloudinaryUrl(publicId, resourceType = 'image') {
+  // f_auto : WebP/AVIF pour les images, WebM pour les vidéos selon le navigateur
   // q_auto : qualité optimale automatique (Cloudinary choisit)
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${publicId}`;
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload/f_auto,q_auto/${publicId}`;
 }
 
 // ── Migration d'une table ─────────────────────────────────────────────────────
 
-async function migrateTable(table, folder, urlField = 'image_url') {
+async function migrateTable(table, folder, urlField = 'image_url', kindField = null) {
   console.log(`\n${'─'.repeat(60)}`);
   console.log(`Table : ${table}  →  dossier Cloudinary : ${folder}`);
   console.log('─'.repeat(60));
 
+  const selectFields = kindField ? `id, ${urlField}, ${kindField}` : `id, ${urlField}`;
   const { data: rows, error } = await supabase
     .from(table)
-    .select(`id, ${urlField}`)
+    .select(selectFields)
     .not(urlField, 'is', null);
 
   if (error) {
@@ -111,15 +112,16 @@ async function migrateTable(table, folder, urlField = 'image_url') {
     }
 
     try {
+      const resourceType = kindField ? (row[kindField] === 'video' ? 'video' : 'image') : 'image';
       const result = await cloudinary.uploader.upload(url, {
         folder,
-        resource_type: 'image',
+        resource_type: resourceType,
         use_filename: true,
         unique_filename: true,
         overwrite: false,
       });
 
-      const newUrl = buildCloudinaryUrl(result.public_id);
+      const newUrl = buildCloudinaryUrl(result.public_id, resourceType);
 
       const { error: updateErr } = await supabase
         .from(table)
@@ -152,7 +154,7 @@ async function main() {
 
   await migrateTable('wot_maps',          'atfr/maps');
   await migrateTable('geoguesser_shots',  'atfr/geoguessr');
-  await migrateTable('media_assets',      'atfr/media', 'public_url');
+  await migrateTable('media_assets',      'atfr/media', 'public_url', 'kind');
   await migrateTable('highlights',        'atfr/highlights');
   await migrateTable('achievements',      'atfr/achievements');
   await migrateTable('quiz_questions',    'atfr/quiz');
