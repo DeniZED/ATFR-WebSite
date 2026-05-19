@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Lock, Palette, Sparkles, Star, Tag, X } from 'lucide-react';
+import { Gift, Lock, Palette, Sparkles, Star, Tag, X } from 'lucide-react';
 import { Badge, Button, Card, CardBody } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   UNLOCKS,
+  getNextReward,
   getUnlockedIds,
   type AvatarConfig,
   type LevelInfo,
@@ -45,7 +46,8 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
   }
 
   function selectSkin(id: string) {
-    setDraft((prev) => ({ ...prev, skinId: id }));
+    // UNLOCKS use 'skin-' prefix; stored skinId omits it to match server allowlist
+    setDraft((prev) => ({ ...prev, skinId: id.replace(/^skin-/, '') }));
   }
 
   function selectEffect(id: string) {
@@ -73,6 +75,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
   }
 
   const xpPct = Math.round(levelInfo.progress * 100);
+  const nextReward = getNextReward(levelInfo.level);
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -113,7 +116,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                 <div className="flex justify-between text-[10px] text-atfr-fog">
                   <span>{levelInfo.xp.toLocaleString('fr')} XP</span>
                   {!levelInfo.isMax && (
-                    <span>+{levelInfo.xpToNext.toLocaleString('fr')} XP pour le niveau {levelInfo.level + 1}</span>
+                    <span>+{levelInfo.xpToNext.toLocaleString('fr')} XP → Niv. {levelInfo.level + 1}</span>
                   )}
                   {levelInfo.isMax && <span className="text-atfr-gold">Niveau maximum atteint</span>}
                 </div>
@@ -124,6 +127,16 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                   />
                 </div>
               </div>
+              {/* Next reward */}
+              {nextReward && (
+                <div className="flex items-start gap-1.5 mt-1.5 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10 px-2.5 py-1.5">
+                  <Gift size={11} className="text-atfr-gold/60 mt-0.5 shrink-0" />
+                  <p className="text-[10px] text-atfr-fog/60 leading-tight">
+                    <span className="text-atfr-gold/80 font-medium">Niv. {nextReward.level} :</span>{' '}
+                    {nextReward.unlocks.map((u) => u.label).join(', ')}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

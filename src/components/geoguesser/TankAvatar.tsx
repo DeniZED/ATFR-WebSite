@@ -102,17 +102,44 @@ const GZ = UZ + (UH - GH) / 2;
 // Muzzle brake
 const MBX = GX + GW, MBY = GY - 0.22, MBZ = GZ - 0.22;
 
+// ── Size presets ──────────────────────────────────────────────────────────
+const SIZE_PRESETS = { sm: 60, md: 100, lg: 180, xl: 260 } as const;
+type SizePreset = keyof typeof SIZE_PRESETS;
+
 // ── Component ─────────────────────────────────────────────────────────────
 interface TankAvatarProps {
   config: AvatarConfig;
-  size?: number;
+  /** Pixel width, or a named preset: 'sm' | 'md' | 'lg' | 'xl'. Default 'md' (100px). */
+  size?: number | SizePreset;
+  /** Reserved for future tank chassis variants — currently only one chassis. */
+  tankId?: string;
+  /** Reserved for future badge overlay. */
+  badgeId?: string;
+  /** Fallback <img> shown when size is 'sm' and a src is provided, avoiding SVG overhead in lists. */
+  fallback?: string;
   className?: string;
 }
 
 // ViewBox tight around tank content: x[48,158] y[30,112] → 110×82
 const VX = 48, VY = 30, VW = 110, VH = 82;
 
-export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
+export function TankAvatar({ config, size = 'md', fallback, className }: TankAvatarProps) {
+  const pxSize: number = typeof size === 'string' ? SIZE_PRESETS[size] : size;
+  const simplified = pxSize < 90;
+
+  // When 'sm' and a fallback image is provided, skip SVG rendering entirely.
+  if (size === 'sm' && fallback) {
+    return (
+      <img
+        src={fallback}
+        width={pxSize}
+        height={Math.round(pxSize * VH / VW)}
+        className={cn('inline-block select-none object-contain', className)}
+        alt="tank avatar"
+      />
+    );
+  }
+
   // Normalize skinId: UNLOCKS store 'skin-default', DEFAULT_AVATAR_CONFIG uses 'default'
   const skinKey = config.skinId.replace(/^skin-/, '');
   const skin = SKINS[skinKey] ?? SKINS.default;
@@ -130,9 +157,9 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
   const [flagX, flagY]   = iso(UX + 0.7, UY + UD - 0.5, UZ + UH);
   const [antX, antY]     = iso(HX + 1.0, HY + 0.8, HZ + HH);
 
-  // Display size: width=size, height proportional to viewBox
-  const dW = size;
-  const dH = Math.round(size * VH / VW);
+  // Display size: width=pxSize, height proportional to viewBox
+  const dW = pxSize;
+  const dH = Math.round(pxSize * VH / VW);
 
   // Glow filter
   const filterId = eff === 'fx-glow-gold' ? 'gG' : eff === 'fx-prestige' ? 'gP' : '';
@@ -141,7 +168,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
   return (
     <motion.div
       className={cn('inline-block select-none', className)}
-      whileHover={{ scale: 1.07 }}
+      whileHover={simplified ? undefined : { scale: 1.07 }}
       transition={{ type: 'spring', stiffness: 320, damping: 22 }}
     >
       <svg
@@ -170,25 +197,27 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
         <g filter={filterId ? `url(#${filterId})` : undefined}>
 
           {/* ── Ground shadow ── */}
-          <ellipse
-            cx={OX + 6} cy={OY + 28}
-            rx={66} ry={20}
-            fill="rgba(0,0,0,0.20)"
-            filter="url(#shd)"
-          />
+          {!simplified && (
+            <ellipse
+              cx={OX + 6} cy={OY + 28}
+              rx={66} ry={20}
+              fill="rgba(0,0,0,0.20)"
+              filter="url(#shd)"
+            />
+          )}
 
           {/* ── Far track (behind hull — draw first) ── */}
           <IsoBox x={TX} y={FTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
 
           {/* Tread grooves on far track y-max face */}
-          {[0.5, 1.1, 1.7, 2.3].map((zt, i) => {
+          {!simplified && [0.5, 1.1, 1.7, 2.3].map((zt, i) => {
             const [x1, y1] = iso(TX,       FTY + TW, zt);
             const [x2, y2] = iso(TX + TDX, FTY + TW, zt);
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />;
           })}
 
           {/* Track link dividers on far track y-max face */}
-          {Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
+          {!simplified && Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
             const xi = TX + i;
             const [x1, y1] = iso(xi, FTY + TW, 0);
             const [x2, y2] = iso(xi, FTY + TW, TH);
@@ -196,13 +225,13 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           })}
 
           {/* Road wheels on far track visible face */}
-          {[-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
+          {!simplified && [-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
             const [cx, cy] = iso(wx, FTY + TW, TH * 0.38);
             return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={lt(tr, 0.22)} stroke="#0009" strokeWidth="0.8" />;
           })}
 
           {/* Sprocket wheel on far track */}
-          {(() => {
+          {!simplified && (() => {
             const [sx, sy] = iso(TX + TDX, FTY + TW * 0.5, TH * 0.5);
             return <ellipse cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
           })()}
@@ -211,7 +240,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           <IsoBox x={HX} y={HY} z={HZ} w={HW} d={HD} h={HH} top={hT} side={hS} right={hR} />
 
           {/* Accent stripes on hull top (ATFR / prestige / chrome) */}
-          {acc && (
+          {!simplified && acc && (
             <>
               <polygon
                 points={poly([HX+0.4, HY, HZ+HH], [HX+HW-0.4, HY, HZ+HH], [HX+HW-0.4, HY+0.65, HZ+HH], [HX+0.4, HY+0.65, HZ+HH])}
@@ -225,7 +254,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Camo blotches (forest / digital / urban) */}
-          {['forest', 'digital', 'urban'].includes(skinKey) && (
+          {!simplified && ['forest', 'digital', 'urban'].includes(skinKey) && (
             <>
               <polygon
                 points={poly([HX+0.8, HY+0.8, HZ+HH+0.01], [HX+3, HY+0.8, HZ+HH+0.01], [HX+2.6, HY+3.2, HZ+HH+0.01], [HX+0.7, HY+2.8, HZ+HH+0.01])}
@@ -239,7 +268,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Winter snow patches */}
-          {skinKey === 'winter' && (
+          {!simplified && skinKey === 'winter' && (
             <>
               <polygon
                 points={poly([HX+1, HY+1, HZ+HH+0.01], [HX+4, HY+0.5, HZ+HH+0.01], [HX+3.5, HY+3, HZ+HH+0.01], [HX+1.2, HY+3.5, HZ+HH+0.01])}
@@ -253,7 +282,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Battle scratches (worn effect) */}
-          {eff === 'fx-worn' && (() => {
+          {!simplified && eff === 'fx-worn' && (() => {
             const [ax1, ay1] = iso(HX + 0.8, HY + HD, HZ + HH);
             const [ax2, ay2] = iso(HX + 2.5, HY + HD - 2, HZ + HH);
             const [bx1, by1] = iso(HX + 4, HY + HD, HZ + HH);
@@ -266,8 +295,8 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
             );
           })()}
 
-          {/* Mudguard skirts — thin slab on far track y-max face (visible side) */}
-          {has('acc-mudguards') && (
+          {/* Mudguard skirts */}
+          {!simplified && has('acc-mudguards') && (
             <polygon
               points={poly([TX-0.1, FTY+TW+0.15, TH], [TX+TDX+0.1, FTY+TW+0.15, TH], [TX+TDX+0.1, FTY+TW+0.15, TH+0.42], [TX-0.1, FTY+TW+0.15, TH+0.42])}
               fill={dk(b, 0.28)} stroke="#0003" strokeWidth="0.3"
@@ -275,7 +304,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Antenna */}
-          {has('acc-antenna') && (
+          {!simplified && has('acc-antenna') && (
             <line x1={antX} y1={antY} x2={antX} y2={antY - 20} stroke={acc ?? '#909090'} strokeWidth="1.1" strokeLinecap="round" />
           )}
 
@@ -283,14 +312,14 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           <IsoBox x={TX} y={NTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
 
           {/* Tread grooves on near track y-max face */}
-          {[0.5, 1.1, 1.7, 2.3].map((zt, i) => {
+          {!simplified && [0.5, 1.1, 1.7, 2.3].map((zt, i) => {
             const [x1, y1] = iso(TX,       NTY + TW, zt);
             const [x2, y2] = iso(TX + TDX, NTY + TW, zt);
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />;
           })}
 
           {/* Track link dividers on near track y-max face */}
-          {Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
+          {!simplified && Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
             const xi = TX + i;
             const [x1, y1] = iso(xi, NTY + TW, 0);
             const [x2, y2] = iso(xi, NTY + TW, TH);
@@ -298,13 +327,13 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           })}
 
           {/* Road wheels on near track visible face */}
-          {[-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
+          {!simplified && [-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
             const [cx, cy] = iso(wx, NTY + TW, TH * 0.38);
             return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={lt(tr, 0.22)} stroke="#0009" strokeWidth="0.8" />;
           })}
 
           {/* Sprocket wheel on near track */}
-          {(() => {
+          {!simplified && (() => {
             const [sx, sy] = iso(TX + TDX, NTY + TW * 0.5, TH * 0.5);
             return <ellipse cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
           })()}
@@ -313,34 +342,32 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           <IsoBox x={UX} y={UY} z={UZ} w={UW} d={UD} h={UH} top={uT} side={uS} right={uR} />
 
           {/* Ventilation lines on turret top (right half) */}
-          {[UY + 0.8, UY + 1.4, UY + 2.0, UY + 2.6].map((gy, i) => {
+          {!simplified && [UY + 0.8, UY + 1.4, UY + 2.0, UY + 2.6].map((gy, i) => {
             const [x1, y1] = iso(UX + 3.2, gy, UZ + UH + 0.01);
             const [x2, y2] = iso(UX + UW - 0.3, gy, UZ + UH + 0.01);
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(uT, 0.30)} strokeWidth="0.55" opacity="0.5" />;
           })}
 
           {/* Hatch ring */}
-          <ellipse cx={hatchX} cy={hatchY} rx={7} ry={4.2} fill={dk(b, 0.40)} stroke={dk(b, 0.55)} strokeWidth="0.8" />
+          {!simplified && (
+            <ellipse cx={hatchX} cy={hatchY} rx={7} ry={4.2} fill={dk(b, 0.40)} stroke={dk(b, 0.55)} strokeWidth="0.8" />
+          )}
 
           {/* Commander in hatch */}
-          {has('acc-hatch') && (
+          {!simplified && has('acc-hatch') && (
             <g>
-              {/* Shoulders */}
               <ellipse cx={hatchX} cy={hatchY - 5} rx={4.2} ry={2.5} fill={dk(b, 0.15)} />
-              {/* Head */}
               <circle cx={hatchX} cy={hatchY - 9.5} r={3.8} fill="#c0906a" />
-              {/* Helmet */}
               <path
                 d={`M${hatchX - 3.8},${hatchY - 9.5} Q${hatchX - 3.8},${hatchY - 14.5} ${hatchX},${hatchY - 15} Q${hatchX + 3.8},${hatchY - 14.5} ${hatchX + 3.8},${hatchY - 9.5} Z`}
                 fill={dk(b, 0.08)}
               />
-              {/* Goggles */}
               <rect x={hatchX - 3} y={hatchY - 11} width="6" height="2.5" rx="1.2" fill="#1a3060" opacity="0.9" />
             </g>
           )}
 
           {/* Ace medal */}
-          {has('acc-ace') && (() => {
+          {!simplified && has('acc-ace') && (() => {
             const [mx, my] = iso(UX + UW - 0.4, UY + UD, UZ + UH * 0.58);
             return (
               <g>
@@ -351,7 +378,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           })()}
 
           {/* Flag */}
-          {has('acc-flag') && (
+          {!simplified && has('acc-flag') && (
             <g>
               <line x1={flagX} y1={flagY} x2={flagX} y2={flagY - 20} stroke="#787878" strokeWidth="1.1" />
               <polygon points={`${flagX},${flagY - 20} ${flagX + 13},${flagY - 16} ${flagX},${flagY - 12}`} fill="#c9a227" />
@@ -359,7 +386,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Kill stars on turret y-face */}
-          {(has('acc-star1') || has('acc-star3')) &&
+          {!simplified && (has('acc-star1') || has('acc-star3')) &&
             Array.from({ length: has('acc-star3') ? 3 : 1 }, (_, i) => {
               const [sx, sy] = iso(UX + UW - 1 - i * 0.9, UY + UD, UZ + UH * 0.55);
               return (
@@ -375,7 +402,9 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           {/* ── Gun barrel ── */}
           <IsoBox x={GX} y={GY} z={GZ} w={GW} d={GD} h={GH} top="#2a2a2a" side="#121212" right="#0c0c0c" />
           {/* Muzzle brake */}
-          <IsoBox x={MBX} y={MBY} z={MBZ} w={0.65} d={1.22} h={1.22} top="#222" side="#101010" right="#0a0a0a" />
+          {!simplified && (
+            <IsoBox x={MBX} y={MBY} z={MBZ} w={0.65} d={1.22} h={1.22} top="#222" side="#101010" right="#0a0a0a" />
+          )}
 
         </g>
       </svg>

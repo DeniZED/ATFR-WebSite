@@ -14,6 +14,7 @@ export interface Unlock {
 
 export interface AvatarConfig {
   skinId: string;
+  tankId?: string;
   accessoryIds: string[];
   effectId: string | null;
   titleId: string | null;
@@ -21,10 +22,24 @@ export interface AvatarConfig {
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   skinId: 'default',
+  tankId: undefined,
   accessoryIds: [],
   effectId: null,
   titleId: null,
 };
+
+// ─── Tank catalog ─────────────────────────────────────────────────────────────
+
+export interface TankDef {
+  id: string;
+  label: string;
+  description: string;
+  levelRequired: number;
+}
+
+export const TANK_CATALOG: TankDef[] = [
+  { id: 'tank-default', label: 'Char standard',  description: 'Le char réglementaire de l\'académie.', levelRequired: 1 },
+];
 
 export interface LevelDef {
   level: number;
@@ -177,4 +192,23 @@ export function getUnlockedIds(level: number): Set<string> {
 
 export function getUnlockById(id: string): Unlock | undefined {
   return UNLOCKS.find((u) => u.id === id);
+}
+
+// ─── Level rewards ────────────────────────────────────────────────────────────
+// What new items are unlocked upon reaching each level.
+
+export interface LevelReward {
+  level: number;
+  unlocks: Unlock[];
+}
+
+export const LEVEL_REWARDS: LevelReward[] = LEVEL_TABLE
+  .map((def) => ({
+    level: def.level,
+    unlocks: UNLOCKS.filter((u) => u.levelRequired === def.level),
+  }))
+  .filter((r) => r.unlocks.length > 0);
+
+export function getNextReward(level: number): LevelReward | undefined {
+  return LEVEL_REWARDS.find((r) => r.level > level);
 }

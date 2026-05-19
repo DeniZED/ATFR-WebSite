@@ -19,6 +19,7 @@ const ALLOWED_TITLE_IDS = new Set([
   'title-lieutenant', 'title-captain', 'title-commander', 'title-legend',
   'title-master', null,
 ]);
+const ALLOWED_TANK_IDS = new Set(['tank-default', null, undefined]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -35,6 +36,7 @@ function isValidAvatarConfig(c: unknown): boolean {
   if (cfg.accessoryIds.some((a) => typeof a !== 'string' || !ALLOWED_ACCESSORY_IDS.has(a))) return false;
   if (cfg.effectId !== null && (typeof cfg.effectId !== 'string' || !ALLOWED_EFFECT_IDS.has(cfg.effectId))) return false;
   if (cfg.titleId !== null && (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
+  if (cfg.tankId !== undefined && cfg.tankId !== null && (typeof cfg.tankId !== 'string' || !ALLOWED_TANK_IDS.has(cfg.tankId))) return false;
   return true;
 }
 
@@ -73,6 +75,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     const b = body as Record<string, unknown>;
     const playerToken = typeof b.player_token === 'string' ? b.player_token : null;
     const avatarConfig = b.avatar_config ?? null;
+    const nickname = typeof b.nickname === 'string' && b.nickname.length <= 64 ? b.nickname : null;
 
     if (!playerToken) return json({ error: 'Missing player_token' }, 401);
     if (!isValidAvatarConfig(avatarConfig)) return json({ error: 'Invalid avatar_config' }, 400);
@@ -80,12 +83,12 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     const accountId = verifyPlayerToken(playerToken);
     if (!accountId) return json({ error: 'Invalid or expired token' }, 401);
 
+    const payload: Record<string, unknown> = { player_account_id: accountId, avatar_config: avatarConfig };
+    if (nickname) payload.nickname = nickname;
+
     const { error } = await sb
       .from('geoguesser_player_profiles')
-      .upsert(
-        { player_account_id: accountId, avatar_config: avatarConfig },
-        { onConflict: 'player_account_id' },
-      );
+      .upsert(payload, { onConflict: 'player_account_id' });
     if (error) return json({ error: 'DB error' }, 500);
     return json({ ok: true });
   }
