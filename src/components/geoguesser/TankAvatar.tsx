@@ -85,7 +85,7 @@ const SKINS: Record<string, { base: string; track: string; accent?: string }> = 
 // Hull
 const HX = -4, HY = -3.5, HZ = 0, HW = 8, HD = 7, HH = 2.8;
 // Tracks — run in +x direction (parallel to gun), on y-min and y-max sides of hull
-const TW = 1.5, TE = 0.5, TH = 2.3;   // width(y), x-extension, height
+const TW = 1.5, TE = 0.5, TH = HH;    // width(y), x-extension, height — same as hull
 const TX = HX - TE, TDX = HW + TE * 2; // x start, x length
 const NTY = HY - TW;                    // near track y start (y-min side)
 const FTY = HY + HD;                    // far track y start (y-max side)

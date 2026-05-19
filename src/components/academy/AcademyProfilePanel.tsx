@@ -46,7 +46,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-atfr-ink/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-atfr-ink/70 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -57,7 +57,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[420px] flex flex-col bg-atfr-carbon border-l border-atfr-gold/20 shadow-2xl overflow-y-auto"
+            className="fixed right-0 top-0 bottom-0 z-[70] w-full max-w-[420px] flex flex-col bg-atfr-carbon border-l border-atfr-gold/20 shadow-2xl overflow-y-auto"
           >
             {/* ── Header ── */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-atfr-gold/15 bg-atfr-carbon/95 backdrop-blur-sm px-5 py-4">
