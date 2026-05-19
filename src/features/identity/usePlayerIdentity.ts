@@ -145,6 +145,8 @@ export function usePlayerIdentity() {
   return { ...state, setNickname, startWgLogin, logoutVerified };
 }
 
+export type PlayerIdentityHook = ReturnType<typeof usePlayerIdentity>;
+
 /**
  * Helpers used by the WG callback page. Outside the hook so they can
  * be called from a non-React module context.
