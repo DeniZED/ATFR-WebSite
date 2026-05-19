@@ -11,7 +11,7 @@ import {
 import {
   usePlayerModuleScores,
 } from '@/features/leaderboard/queries';
-import { TankAvatar } from '@/components/geoguesser/TankAvatar';
+import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AvatarCustomizer } from '@/components/geoguesser/AvatarCustomizer';
 import { ACADEMY_MODULE_CONTRIBUTIONS } from '@/features/academy/moduleContributions';
 
@@ -91,10 +91,8 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
 
             {/* ── Avatar hero ── */}
             <div className="flex flex-col items-center gap-4 px-5 py-8 border-b border-atfr-gold/10">
-              {/* Big tank */}
-              <div className="flex items-center justify-center w-64 h-48 rounded-2xl bg-atfr-ink/60 border border-atfr-gold/15">
-                <TankAvatar config={profile.avatarConfig} size={220} />
-              </div>
+              {/* Insigne de rang */}
+              <AcademyBadge levelInfo={profile.levelInfo} size={148} className="drop-shadow-xl" />
 
               {/* Identity */}
               <div className="text-center">

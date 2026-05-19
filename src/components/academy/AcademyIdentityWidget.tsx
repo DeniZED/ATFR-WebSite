@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
-import { TankAvatar } from '@/components/geoguesser/TankAvatar';
+import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AcademyProfilePanel } from './AcademyProfilePanel';
 import { env } from '@/lib/env';
 
@@ -26,9 +26,7 @@ export function AcademyIdentityWidget() {
           className="group relative flex items-center gap-2 rounded-xl border border-atfr-gold/30 bg-atfr-graphite/60 px-2 py-1.5 hover:border-atfr-gold/70 hover:bg-atfr-graphite/90 transition-all"
           title="Mon profil"
         >
-          <div className="w-10 h-[30px] flex items-center justify-center overflow-visible">
-            <TankAvatar config={profile.avatarConfig} size={48} />
-          </div>
+          <AcademyBadge levelInfo={profile.levelInfo} size={34} />
           <div className="hidden sm:block text-left">
             <p className="text-xs font-semibold text-atfr-bone leading-none truncate max-w-[120px]">
               {identity.nickname}
