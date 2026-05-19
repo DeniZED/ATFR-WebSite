@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, LogOut, Palette } from 'lucide-react';
+import { Gift, X, LogOut, Palette } from 'lucide-react';
 import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
+import {
+  getNextReward,
+  getUnlockById,
+} from '@/features/geoguesser/playerProfile';
 import {
   usePlayerModuleScores,
 } from '@/features/leaderboard/queries';
@@ -97,6 +101,11 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                 <p className="font-display text-2xl text-atfr-bone leading-tight">
                   {identity.nickname || '—'}
                 </p>
+                {profile.avatarConfig.titleId && (
+                  <p className="text-xs text-atfr-gold/70 italic mt-0.5">
+                    {getUnlockById(profile.avatarConfig.titleId)?.label}
+                  </p>
+                )}
                 {identity.isVerified && (
                   <p className="text-xs text-atfr-success/80 uppercase tracking-wider mt-0.5">
                     Compte WG vérifié
@@ -110,11 +119,9 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   <span className="font-semibold text-atfr-gold">
                     Niv. {profile.levelInfo.level} — {profile.levelInfo.title}
                   </span>
-                  {!profile.levelInfo.isMax && (
-                    <span className="text-xs text-atfr-fog/60">
-                      {profile.levelInfo.xp.toLocaleString('fr')} XP
-                    </span>
-                  )}
+                  <span className="text-xs text-atfr-fog/60">
+                    {profile.levelInfo.xp.toLocaleString('fr')} XP
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-atfr-ink/70 overflow-hidden">
                   <motion.div
@@ -129,6 +136,19 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                     +{profile.levelInfo.xpToNext.toLocaleString('fr')} XP → Niv. {profile.levelInfo.level + 1}
                   </p>
                 )}
+                {/* Next reward */}
+                {(() => {
+                  const next = getNextReward(profile.levelInfo.level);
+                  return next ? (
+                    <div className="flex items-start gap-1.5 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10 px-2.5 py-1.5 mt-0.5">
+                      <Gift size={11} className="text-atfr-gold/60 mt-0.5 shrink-0" />
+                      <p className="text-[10px] text-atfr-fog/60 leading-tight">
+                        <span className="text-atfr-gold/80 font-medium">Niv. {next.level} :</span>{' '}
+                        {next.unlocks.map((u) => u.label).join(', ')}
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Customize button */}

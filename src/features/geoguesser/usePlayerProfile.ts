@@ -37,12 +37,20 @@ async function fetchRemoteConfig(accountId: number): Promise<AvatarConfig | null
   }
 }
 
-async function pushRemoteConfig(playerToken: string, config: AvatarConfig): Promise<void> {
+async function pushRemoteConfig(
+  playerToken: string,
+  config: AvatarConfig,
+  nickname?: string,
+): Promise<void> {
   try {
     await fetch(PROFILE_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ player_token: playerToken, avatar_config: config }),
+      body: JSON.stringify({
+        player_token: playerToken,
+        avatar_config: config,
+        ...(nickname ? { nickname } : {}),
+      }),
     });
   } catch { /* best-effort */ }
 }
@@ -85,12 +93,12 @@ export function usePlayerProfile(
     (config: AvatarConfig) => {
       setAvatarConfig(config);
       saveAvatarConfig(config);
-      // Sync to server for verified players.
+      // Sync to server for verified players; include nickname so it's stored server-side.
       if (identity.isVerified && identity.playerToken) {
-        pushRemoteConfig(identity.playerToken, config);
+        pushRemoteConfig(identity.playerToken, config, identity.nickname ?? undefined);
       }
     },
-    [identity.isVerified, identity.playerToken],
+    [identity.isVerified, identity.playerToken, identity.nickname],
   );
 
   return { avatarConfig, levelInfo, isLoadingRemote, updateAvatarConfig };
