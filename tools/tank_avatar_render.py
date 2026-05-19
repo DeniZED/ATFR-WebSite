@@ -243,7 +243,9 @@ def setup_render():
     # Lumière d'ambiance neutre (n'apparaît pas sur fond transparent)
     w = bpy.data.worlds.new("World")
     w.use_nodes = True
-    w.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.20
+    bg = next((n for n in w.node_tree.nodes if n.type == 'BACKGROUND'), None)
+    if bg:
+        bg.inputs["Strength"].default_value = 0.20
     sc.world = w
 
 
