@@ -52,7 +52,7 @@ export function AcademyIdentityWidget() {
         ) : null
       )}
 
-      <AcademyProfilePanel open={open} onClose={() => setOpen(false)} />
+      <AcademyProfilePanel open={open} onClose={() => setOpen(false)} identity={identity} />
     </>
   );
 }

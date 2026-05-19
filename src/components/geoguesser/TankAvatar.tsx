@@ -113,7 +113,9 @@ interface TankAvatarProps {
 const VX = 48, VY = 30, VW = 110, VH = 82;
 
 export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
-  const skin = SKINS[config.skinId] ?? SKINS.default;
+  // Normalize skinId: UNLOCKS store 'skin-default', DEFAULT_AVATAR_CONFIG uses 'default'
+  const skinKey = config.skinId.replace(/^skin-/, '');
+  const skin = SKINS[skinKey] ?? SKINS.default;
   const has = (id: string) => config.accessoryIds.includes(id);
   const eff = config.effectId;
   const { base: b, track: tr, accent: acc } = skin;
@@ -175,13 +177,10 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
             filter="url(#shd)"
           />
 
-          {/* ── Tracks ── */}
-          {/* Near track (y-min side of hull) */}
-          <IsoBox x={TX} y={NTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
-          {/* Far track (y-max side of hull) */}
+          {/* ── Far track (behind hull — draw first) ── */}
           <IsoBox x={TX} y={FTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
 
-          {/* Tread grooves on far track y-max face (horizontal stripes along track length) */}
+          {/* Tread grooves on far track y-max face */}
           {[0.5, 1.05, 1.6, 2.1].map((zt, i) => {
             const [x1, y1] = iso(TX,       FTY + TW, zt);
             const [x2, y2] = iso(TX + TDX, FTY + TW, zt);
@@ -196,11 +195,11 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.4)} strokeWidth="0.4" opacity="0.5" />;
           })}
 
-          {/* Front sprocket wheels on x-max face of both tracks */}
-          {([NTY + TW * 0.5, FTY + TW * 0.5] as const).map((wy, i) => {
-            const [sx, sy] = iso(TX + TDX, wy, TH * 0.5);
-            return <ellipse key={i} cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
-          })}
+          {/* Sprocket wheel on far track */}
+          {(() => {
+            const [sx, sy] = iso(TX + TDX, FTY + TW * 0.5, TH * 0.5);
+            return <ellipse cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
+          })()}
 
           {/* ── Hull ── */}
           <IsoBox x={HX} y={HY} z={HZ} w={HW} d={HD} h={HH} top={hT} side={hS} right={hR} />
@@ -220,7 +219,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Camo blotches (forest / digital / urban) */}
-          {['forest', 'digital', 'urban'].includes(config.skinId) && (
+          {['forest', 'digital', 'urban'].includes(skinKey) && (
             <>
               <polygon
                 points={poly([HX+0.8, HY+0.8, HZ+HH+0.01], [HX+3, HY+0.8, HZ+HH+0.01], [HX+2.6, HY+3.2, HZ+HH+0.01], [HX+0.7, HY+2.8, HZ+HH+0.01])}
@@ -234,7 +233,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           )}
 
           {/* Winter snow patches */}
-          {config.skinId === 'winter' && (
+          {skinKey === 'winter' && (
             <>
               <polygon
                 points={poly([HX+1, HY+1, HZ+HH+0.01], [HX+4, HY+0.5, HZ+HH+0.01], [HX+3.5, HY+3, HZ+HH+0.01], [HX+1.2, HY+3.5, HZ+HH+0.01])}
@@ -273,6 +272,15 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           {has('acc-antenna') && (
             <line x1={antX} y1={antY} x2={antX} y2={antY - 20} stroke={acc ?? '#909090'} strokeWidth="1.1" strokeLinecap="round" />
           )}
+
+          {/* ── Near track (in front of hull — draw after hull) ── */}
+          <IsoBox x={TX} y={NTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
+
+          {/* Sprocket wheel on near track */}
+          {(() => {
+            const [sx, sy] = iso(TX + TDX, NTY + TW * 0.5, TH * 0.5);
+            return <ellipse cx={sx} cy={sy} rx={4} ry={2.4} fill={lt(tr, 0.28)} />;
+          })()}
 
           {/* ── Turret ── */}
           <IsoBox x={UX} y={UY} z={UZ} w={UW} d={UD} h={UH} top={uT} side={uS} right={uR} />
