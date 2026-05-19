@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, LogOut, Palette } from 'lucide-react';
-import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
+import type { PlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import {
   usePlayerModuleScores,
@@ -16,10 +16,10 @@ import '@/components/academy/GeoguesseurStats';
 interface Props {
   open: boolean;
   onClose: () => void;
+  identity: PlayerIdentity;
 }
 
-export function AcademyProfilePanel({ open, onClose }: Props) {
-  const identity = usePlayerIdentity();
+export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
 
   // Fetch geoguesser scores to compute level accurately
