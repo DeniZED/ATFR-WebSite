@@ -43,6 +43,7 @@ const AdminGeoShotEdit = lazy(() => import('@/pages/admin/AdminGeoShotEdit'));
 const AdminGeoShotsBulk = lazy(() => import('@/pages/admin/AdminGeoShotsBulk'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
+const AdminAcademie = lazy(() => import('@/pages/admin/AdminAcademie'));
 
 function Loading() {
   return (
@@ -110,6 +111,7 @@ export const router = createBrowserRouter([
           { path: 'geoguesser/shots/new', element: <AdminGeoShotEdit /> },
           { path: 'geoguesser/shots/:id', element: <AdminGeoShotEdit /> },
           { path: 'geoguesser/settings', element: <AdminGeoSettings /> },
+          { path: 'academie', element: <AdminAcademie /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },

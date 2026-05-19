@@ -198,7 +198,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           {/* Road wheels on far track visible face */}
           {[-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
             const [cx, cy] = iso(wx, FTY + TW, TH * 0.38);
-            return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={dk(tr, 0.08)} stroke={dk(tr, 0.38)} strokeWidth="0.7" />;
+            return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={lt(tr, 0.22)} stroke="#0009" strokeWidth="0.8" />;
           })}
 
           {/* Sprocket wheel on far track */}
@@ -300,7 +300,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           {/* Road wheels on near track visible face */}
           {[-3.6, -1.8, 0, 1.8, 3.6].map((wx, i) => {
             const [cx, cy] = iso(wx, NTY + TW, TH * 0.38);
-            return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={dk(tr, 0.08)} stroke={dk(tr, 0.38)} strokeWidth="0.7" />;
+            return <ellipse key={i} cx={cx} cy={cy} rx={2.8} ry={3.5} fill={lt(tr, 0.22)} stroke="#0009" strokeWidth="0.8" />;
           })}
 
           {/* Sprocket wheel on near track */}

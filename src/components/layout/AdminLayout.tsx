@@ -50,6 +50,7 @@ const nav: NavItem[] = [
   { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, area: 'content' },
   { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, area: 'content' },
   { to: '/admin/modules', label: 'Académie', icon: GraduationCap, area: 'content' },
+  { to: '/admin/academie', label: 'Joueurs Académie', icon: GraduationCap, area: 'content' },
   { to: '/admin/quiz', label: 'Guide pour les bots', icon: BookOpen, area: 'content' },
   { to: '/admin/geoguesser', label: 'GeoGuesser', icon: Map, area: 'content' },
   { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, area: 'users' },

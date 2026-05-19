@@ -59,43 +59,21 @@ export function usePlayerModuleScores(args: {
     ],
     enabled: !!playerAnonId,
     queryFn: async (): Promise<LeaderboardEntry[]> => {
-      const queries = [
-        supabase
-          .from('module_scores')
-          .select('*')
-          .eq('module_slug', moduleSlug)
-          .eq('player_anon_id', playerAnonId)
-          .order('created_at', { ascending: false })
-          .limit(limit),
-      ];
+      // When the player is verified (WG login), query only by account_id so
+      // XP is identical across all devices. Fall back to anon_id otherwise.
+      const col = playerAccountId != null ? 'player_account_id' : 'player_anon_id';
+      const val = playerAccountId != null ? playerAccountId : playerAnonId;
 
-      if (playerAccountId != null) {
-        queries.push(
-          supabase
-            .from('module_scores')
-            .select('*')
-            .eq('module_slug', moduleSlug)
-            .eq('player_account_id', playerAccountId)
-            .order('created_at', { ascending: false })
-            .limit(limit),
-        );
-      }
+      const { data, error } = await supabase
+        .from('module_scores')
+        .select('*')
+        .eq('module_slug', moduleSlug)
+        .eq(col, val)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
 
-      const responses = await Promise.all(queries);
-      const rows: ScoreRow[] = [];
-      for (const { data, error } of responses) {
-        if (error) throw error;
-        rows.push(...(data ?? []));
-      }
-
-      const unique = new Map<string, ScoreRow>();
-      for (const row of rows) unique.set(row.id, row);
-
-      return [...unique.values()]
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        )
+      return (data ?? [])
         .slice(0, limit)
         .map((row) => ({
           ...row,
