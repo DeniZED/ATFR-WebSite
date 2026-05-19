@@ -92,7 +92,13 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
             {/* ── Avatar hero ── */}
             <div className="flex flex-col items-center gap-4 px-5 py-8 border-b border-atfr-gold/10">
               {/* Insigne de rang */}
-              <AcademyBadge levelInfo={profile.levelInfo} size={148} className="drop-shadow-xl" />
+              <AcademyBadge
+                levelInfo={profile.levelInfo}
+                skinId={profile.avatarConfig.skinId}
+                emblemId={profile.avatarConfig.emblemId}
+                size={148}
+                className="drop-shadow-xl"
+              />
 
               {/* Identity */}
               <div className="text-center">

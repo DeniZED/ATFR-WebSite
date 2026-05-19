@@ -20,6 +20,9 @@ const ALLOWED_TITLE_IDS = new Set([
   'title-master', null,
 ]);
 const ALLOWED_TANK_IDS = new Set(['tank-default', null, undefined]);
+const ALLOWED_EMBLEM_IDS = new Set([
+  'emb-crosshair', 'emb-star', 'emb-bolt', 'emb-diamond', 'emb-compass', null,
+]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -37,6 +40,7 @@ function isValidAvatarConfig(c: unknown): boolean {
   if (cfg.effectId !== null && (typeof cfg.effectId !== 'string' || !ALLOWED_EFFECT_IDS.has(cfg.effectId))) return false;
   if (cfg.titleId !== null && (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
   if (cfg.tankId !== undefined && cfg.tankId !== null && (typeof cfg.tankId !== 'string' || !ALLOWED_TANK_IDS.has(cfg.tankId))) return false;
+  if (cfg.emblemId !== null && cfg.emblemId !== undefined && (typeof cfg.emblemId !== 'string' || !ALLOWED_EMBLEM_IDS.has(cfg.emblemId))) return false;
   return true;
 }
 

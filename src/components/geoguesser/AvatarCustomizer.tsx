@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gift, Lock, Palette, Sparkles, Star, Tag, X } from 'lucide-react';
+import { Gift, Lock, Palette, Shield, Sparkles, Star, Tag, X } from 'lucide-react';
 import { Badge, Button, Card, CardBody } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -10,13 +10,14 @@ import {
   type LevelInfo,
   type UnlockType,
 } from '@/features/geoguesser/playerProfile';
-import { TankAvatar } from './TankAvatar';
+import { AcademyBadge } from './AcademyBadge';
 
 const TABS: { id: UnlockType; label: string; icon: typeof Palette }[] = [
-  { id: 'skin',      label: 'Skins',       icon: Palette },
-  { id: 'accessory', label: 'Accessoires', icon: Star },
-  { id: 'effect',    label: 'Effets',      icon: Sparkles },
-  { id: 'title',     label: 'Titres',      icon: Tag },
+  { id: 'skin',      label: 'Skins',      icon: Palette },
+  { id: 'emblem',    label: 'Emblèmes',   icon: Shield },
+  { id: 'accessory', label: 'Accessoires',icon: Star },
+  { id: 'effect',    label: 'Effets',     icon: Sparkles },
+  { id: 'title',     label: 'Titres',     icon: Tag },
 ];
 
 interface AvatarCustomizerProps {
@@ -58,19 +59,25 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
     setDraft((prev) => ({ ...prev, titleId: prev.titleId === id ? null : id }));
   }
 
+  function selectEmblem(id: string) {
+    setDraft((prev) => ({ ...prev, emblemId: prev.emblemId === id ? null : id }));
+  }
+
   function handleItem(type: UnlockType, id: string, isLocked: boolean) {
     if (isLocked) return;
-    if (type === 'skin') selectSkin(id);
+    if (type === 'skin')      selectSkin(id);
     else if (type === 'accessory') toggleAccessory(id);
-    else if (type === 'effect') selectEffect(id);
-    else if (type === 'title') selectTitle(id);
+    else if (type === 'effect')    selectEffect(id);
+    else if (type === 'title')     selectTitle(id);
+    else if (type === 'emblem')    selectEmblem(id);
   }
 
   function isSelected(type: UnlockType, id: string): boolean {
-    if (type === 'skin') return draft.skinId === id;
+    if (type === 'skin')      return draft.skinId === id.replace(/^skin-/, '');
     if (type === 'accessory') return draft.accessoryIds.includes(id);
-    if (type === 'effect') return draft.effectId === id;
-    if (type === 'title') return draft.titleId === id;
+    if (type === 'effect')    return draft.effectId === id;
+    if (type === 'title')     return draft.titleId === id;
+    if (type === 'emblem')    return draft.emblemId === id;
     return false;
   }
 
@@ -84,7 +91,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
         <div className="flex items-center justify-between px-5 pt-5 pb-0 shrink-0">
           <h2 className="font-display text-xl text-atfr-bone flex items-center gap-2">
             <Palette size={18} className="text-atfr-gold" />
-            Personnaliser l'avatar
+            Personnaliser l'insigne
           </h2>
           <button
             onClick={onClose}
@@ -98,8 +105,13 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
         <CardBody className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Preview + level */}
           <div className="flex items-center gap-5 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/40 p-4">
-            <div className="shrink-0 flex items-center justify-center w-28 h-[76px] rounded-lg bg-atfr-ink/60 border border-atfr-gold/15">
-              <TankAvatar config={draft} size={104} />
+            <div className="shrink-0 flex items-center justify-center w-24 h-24 rounded-xl bg-atfr-ink/60 border border-atfr-gold/15">
+              <AcademyBadge
+                levelInfo={levelInfo}
+                skinId={draft.skinId}
+                emblemId={draft.emblemId}
+                size={88}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -178,18 +190,15 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                         : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
                   )}
                 >
-                  {/* Lock icon */}
                   {isLocked && (
                     <div className="absolute top-2 right-2 text-atfr-fog/40">
                       <Lock size={10} />
                     </div>
                   )}
-                  {/* Selection dot */}
                   {selected && !isLocked && (
                     <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />
                   )}
                   <div>
-                    {/* Skin color preview */}
                     {item.type === 'skin' && (
                       <SkinSwatch skinId={item.id.replace('skin-', '')} />
                     )}
@@ -231,7 +240,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 }
 
 // Small color swatch for skin items
-const SKIN_COLORS: Record<string, string[]> = {
+const SKIN_SWATCH_COLORS: Record<string, string[]> = {
   default:  ['#556B2F', '#6B7E38'],
   desert:   ['#C19A3E', '#CDA844'],
   winter:   ['#C4CDD6', '#D2DBE4'],
@@ -245,7 +254,7 @@ const SKIN_COLORS: Record<string, string[]> = {
 };
 
 function SkinSwatch({ skinId }: { skinId: string }) {
-  const colors = SKIN_COLORS[skinId] ?? ['#556B2F', '#6B7E38'];
+  const colors = SKIN_SWATCH_COLORS[skinId] ?? ['#556B2F', '#6B7E38'];
   return (
     <div className="flex gap-1 h-4">
       {colors.map((c, i) => (
