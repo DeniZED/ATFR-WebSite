@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, LogOut, Palette } from 'lucide-react';
-import type { PlayerIdentity } from '@/features/identity/usePlayerIdentity';
+import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import {
   usePlayerModuleScores,
@@ -16,7 +16,7 @@ import '@/components/academy/GeoguesseurStats';
 interface Props {
   open: boolean;
   onClose: () => void;
-  identity: PlayerIdentity;
+  identity: PlayerIdentityHook;
 }
 
 export function AcademyProfilePanel({ open, onClose, identity }: Props) {
