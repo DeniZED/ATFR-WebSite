@@ -85,7 +85,7 @@ const SKINS: Record<string, { base: string; track: string; accent?: string }> = 
 // Hull
 const HX = -4, HY = -3.5, HZ = 0, HW = 8, HD = 7, HH = 2.8;
 // Tracks — run in +x direction (parallel to gun), on y-min and y-max sides of hull
-const TW = 1.5, TE = 0.5, TH = HH;    // width(y), x-extension, height — same as hull
+const TW = 2.0, TE = 0.5, TH = HH;    // width(y), x-extension, height — same as hull
 const TX = HX - TE, TDX = HW + TE * 2; // x start, x length
 const NTY = HY - TW;                    // near track y start (y-min side)
 const FTY = HY + HD;                    // far track y start (y-max side)
@@ -181,7 +181,7 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
           <IsoBox x={TX} y={FTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
 
           {/* Tread grooves on far track y-max face */}
-          {[0.5, 1.05, 1.6, 2.1].map((zt, i) => {
+          {[0.5, 1.1, 1.7, 2.3].map((zt, i) => {
             const [x1, y1] = iso(TX,       FTY + TW, zt);
             const [x2, y2] = iso(TX + TDX, FTY + TW, zt);
             return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />;
@@ -275,6 +275,21 @@ export function TankAvatar({ config, size = 100, className }: TankAvatarProps) {
 
           {/* ── Near track (in front of hull — draw after hull) ── */}
           <IsoBox x={TX} y={NTY} z={0} w={TDX} d={TW} h={TH} top={tT} side={tS} right={tR} />
+
+          {/* Tread grooves on near track y-max face */}
+          {[0.5, 1.1, 1.7, 2.3].map((zt, i) => {
+            const [x1, y1] = iso(TX,       NTY + TW, zt);
+            const [x2, y2] = iso(TX + TDX, NTY + TW, zt);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.5)} strokeWidth="0.65" opacity="0.75" />;
+          })}
+
+          {/* Track link dividers on near track y-max face */}
+          {Array.from({ length: Math.round(TDX) + 1 }, (_, i) => {
+            const xi = TX + i;
+            const [x1, y1] = iso(xi, NTY + TW, 0);
+            const [x2, y2] = iso(xi, NTY + TW, TH);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={dk(tr, 0.4)} strokeWidth="0.4" opacity="0.5" />;
+          })}
 
           {/* Sprocket wheel on near track */}
           {(() => {
