@@ -2,7 +2,7 @@ import type { LeaderboardEntry } from '@/features/leaderboard/queries';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UnlockType = 'skin' | 'accessory' | 'effect' | 'title';
+export type UnlockType = 'skin' | 'accessory' | 'effect' | 'title' | 'emblem';
 
 export interface Unlock {
   id: string;
@@ -18,6 +18,7 @@ export interface AvatarConfig {
   accessoryIds: string[];
   effectId: string | null;
   titleId: string | null;
+  emblemId: string | null;
 }
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
@@ -26,6 +27,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   accessoryIds: [],
   effectId: null,
   titleId: null,
+  emblemId: null,
 };
 
 // ─── Tank catalog ─────────────────────────────────────────────────────────────
@@ -184,6 +186,13 @@ export const UNLOCKS: Unlock[] = [
   { id: 'fx-worn',       type: 'effect', levelRequired: 7,  label: 'Combat usé',         description: 'Rayures et marques de bataille.' },
   { id: 'fx-glow-gold',  type: 'effect', levelRequired: 10, label: 'Halo doré',          description: 'Aura or autour du char.' },
   { id: 'fx-prestige',   type: 'effect', levelRequired: 15, label: 'Aura Prestige',      description: 'Halo irisé pour les légendes.' },
+
+  // Emblems (displayed on the badge shield)
+  { id: 'emb-crosshair', type: 'emblem', levelRequired: 1,  label: 'Réticule',   description: 'Viseur de précision.' },
+  { id: 'emb-star',      type: 'emblem', levelRequired: 4,  label: 'Étoile',     description: 'Simple et élégante.' },
+  { id: 'emb-bolt',      type: 'emblem', levelRequired: 7,  label: 'Éclair',     description: 'Vitesse et puissance.' },
+  { id: 'emb-diamond',   type: 'emblem', levelRequired: 10, label: 'Diamant',    description: 'Précision cristalline.' },
+  { id: 'emb-compass',   type: 'emblem', levelRequired: 13, label: 'Boussole',   description: "Maître de l'orientation." },
 ];
 
 export function getUnlockedIds(level: number): Set<string> {

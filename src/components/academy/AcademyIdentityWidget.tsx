@@ -26,7 +26,11 @@ export function AcademyIdentityWidget() {
           className="group relative flex items-center gap-2 rounded-xl border border-atfr-gold/30 bg-atfr-graphite/60 px-2 py-1.5 hover:border-atfr-gold/70 hover:bg-atfr-graphite/90 transition-all"
           title="Mon profil"
         >
-          <AcademyBadge levelInfo={profile.levelInfo} size={34} />
+          <AcademyBadge
+            levelInfo={profile.levelInfo}
+            skinId={profile.avatarConfig.skinId}
+            size={34}
+          />
           <div className="hidden sm:block text-left">
             <p className="text-xs font-semibold text-atfr-bone leading-none truncate max-w-[120px]">
               {identity.nickname}
