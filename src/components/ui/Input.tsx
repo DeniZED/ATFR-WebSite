@@ -32,10 +32,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error && inputId ? `${inputId}-error` : hint && inputId ? `${inputId}-hint` : undefined}
           {...props}
         />
-        {hint && !error && <p className="text-xs text-atfr-fog/70">{hint}</p>}
-        {error && <p className="text-xs text-atfr-danger">{error}</p>}
+        {hint && !error && <p id={inputId ? `${inputId}-hint` : undefined} className="text-xs text-atfr-fog/70">{hint}</p>}
+        {error && <p id={inputId ? `${inputId}-error` : undefined} className="text-xs text-atfr-danger">{error}</p>}
       </div>
     );
   },
@@ -71,10 +72,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error && inputId ? `${inputId}-error` : hint && inputId ? `${inputId}-hint` : undefined}
           {...props}
         />
-        {hint && !error && <p className="text-xs text-atfr-fog/70">{hint}</p>}
-        {error && <p className="text-xs text-atfr-danger">{error}</p>}
+        {hint && !error && <p id={inputId ? `${inputId}-hint` : undefined} className="text-xs text-atfr-fog/70">{hint}</p>}
+        {error && <p id={inputId ? `${inputId}-error` : undefined} className="text-xs text-atfr-danger">{error}</p>}
       </div>
     );
   },

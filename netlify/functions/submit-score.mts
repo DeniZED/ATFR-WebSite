@@ -72,7 +72,8 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   if (!moduleSlug || score === null || maxScore === null || !playerAnonId || !playerNickname) {
     return json({ error: 'Missing or invalid required fields' }, 400);
   }
-  if (score < 0 || score > maxScore || maxScore <= 0) {
+  const MAX_ALLOWED_SCORE = 1_000_000;
+  if (score < 0 || score > maxScore || maxScore <= 0 || maxScore > MAX_ALLOWED_SCORE) {
     return json({ error: 'Invalid score range' }, 400);
   }
 

@@ -20,12 +20,12 @@ export function Footer() {
             Navigation
           </p>
           <ul className="space-y-2 text-sm text-atfr-fog">
-            <li><Link to="/" className="hover:text-atfr-gold">Accueil</Link></li>
-            <li><Link to="/membres" className="hover:text-atfr-gold">Membres</Link></li>
-            <li><Link to="/evenements" className="hover:text-atfr-gold">Événements</Link></li>
-            <li><Link to="/galerie" className="hover:text-atfr-gold">Galerie</Link></li>
-            <li><Link to="/modules" className="hover:text-atfr-gold">Académie</Link></li>
-            <li><Link to="/recrutement" className="hover:text-atfr-gold">Rejoindre</Link></li>
+            <li><Link to="/" className="hover:text-atfr-gold transition-colors duration-200">Accueil</Link></li>
+            <li><Link to="/membres" className="hover:text-atfr-gold transition-colors duration-200">Membres</Link></li>
+            <li><Link to="/evenements" className="hover:text-atfr-gold transition-colors duration-200">Événements</Link></li>
+            <li><Link to="/galerie" className="hover:text-atfr-gold transition-colors duration-200">Galerie</Link></li>
+            <li><Link to="/modules" className="hover:text-atfr-gold transition-colors duration-200">Académie</Link></li>
+            <li><Link to="/recrutement" className="hover:text-atfr-gold transition-colors duration-200">Rejoindre</Link></li>
           </ul>
         </div>
 
@@ -39,7 +39,7 @@ export function Footer() {
                 href="https://worldoftanks.eu/fr/clans/500191501-ATFR/"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-atfr-gold"
+                className="hover:text-atfr-gold transition-colors duration-200"
               >
                 Page Wargaming
               </a>
@@ -49,7 +49,7 @@ export function Footer() {
                 href="https://tomato.gg/clan/eu/500191501/ATFR"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-atfr-gold"
+                className="hover:text-atfr-gold transition-colors duration-200"
               >
                 Stats tomato.gg
               </a>
@@ -71,7 +71,7 @@ export function Footer() {
       <div className="border-t border-atfr-gold/10">
         <div className="container py-4 text-xs text-atfr-fog/80 flex items-center justify-between">
           <p>© {new Date().getFullYear()} {env.clanTag}. Fan site non affilié à Wargaming.net.</p>
-          <Link to="/admin" className="hover:text-atfr-gold">
+          <Link to="/admin" className="hover:text-atfr-gold transition-colors duration-200">
             Administration
           </Link>
         </div>

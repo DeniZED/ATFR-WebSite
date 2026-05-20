@@ -1,22 +1,38 @@
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
-import { Section, Spinner } from '@/components/ui';
+import { Alert, Section, Spinner } from '@/components/ui';
 import { useContent } from '@/hooks/useContent';
 import { useAchievements } from '@/features/content/queries';
 
 export function Achievements() {
   const { get } = useContent();
-  const { data, isLoading } = useAchievements({ visibleOnly: true });
+  const { data, isLoading, isError } = useAchievements({ visibleOnly: true });
 
   if (isLoading) {
     return (
-      <Section
-        eyebrow={get('achievements_eyebrow')}
-        title={get('achievements_title')}
-      >
-        <div className="flex justify-center">
-          <Spinner />
+      <Section eyebrow={get('achievements_eyebrow')} title={get('achievements_title')}>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-atfr-gold/20 bg-atfr-carbon p-6">
+              <div className="flex items-start gap-4">
+                <div className="h-14 w-14 shrink-0 rounded-lg shimmer" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 w-3/4 shimmer rounded" />
+                  <div className="h-4 w-full shimmer rounded" />
+                  <div className="h-4 w-1/2 shimmer rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+      </Section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Section eyebrow={get('achievements_eyebrow')} title={get('achievements_title')}>
+        <Alert tone="danger">Le palmarès est temporairement indisponible. Réessaie dans quelques instants.</Alert>
       </Section>
     );
   }

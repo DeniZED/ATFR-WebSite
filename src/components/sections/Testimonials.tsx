@@ -1,22 +1,40 @@
 import { motion } from 'framer-motion';
 import { Quote } from 'lucide-react';
-import { Section, Spinner } from '@/components/ui';
+import { Alert, Section } from '@/components/ui';
 import { useContent } from '@/hooks/useContent';
 import { useTestimonials } from '@/features/content/queries';
 
 export function Testimonials() {
   const { get } = useContent();
-  const { data, isLoading } = useTestimonials({ visibleOnly: true });
+  const { data, isLoading, isError } = useTestimonials({ visibleOnly: true });
 
   if (isLoading) {
     return (
-      <Section
-        eyebrow={get('testimonials_eyebrow')}
-        title={get('testimonials_title')}
-      >
-        <div className="flex justify-center">
-          <Spinner />
+      <Section eyebrow={get('testimonials_eyebrow')} title={get('testimonials_title')}>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-6 space-y-4">
+              <div className="h-4 w-full shimmer rounded" />
+              <div className="h-4 w-5/6 shimmer rounded" />
+              <div className="h-4 w-4/6 shimmer rounded" />
+              <div className="flex items-center gap-3 pt-4 border-t border-atfr-gold/10">
+                <div className="h-10 w-10 shrink-0 rounded-full shimmer" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-4 w-28 shimmer rounded" />
+                  <div className="h-3 w-16 shimmer rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+      </Section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Section eyebrow={get('testimonials_eyebrow')} title={get('testimonials_title')}>
+        <Alert tone="danger">Les témoignages sont temporairement indisponibles. Réessaie dans quelques instants.</Alert>
       </Section>
     );
   }

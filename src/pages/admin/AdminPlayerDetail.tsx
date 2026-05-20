@@ -207,6 +207,7 @@ export default function AdminPlayerDetail() {
         },
       });
       setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch {
       /* surfaced by mutation state */
     }

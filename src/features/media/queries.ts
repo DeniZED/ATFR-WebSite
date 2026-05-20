@@ -148,10 +148,15 @@ export function useDeleteMedia() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (asset: Pick<MediaRow, 'id' | 'path' | 'kind'>) => {
-      // Suppression Cloudinary côté serveur (API secret non exposé au browser)
+      // Suppression Cloudinary côté serveur (API secret non exposé au browser).
+      // The function requires a valid editor session token to authorize the deletion.
+      const { data: { session } } = await supabase.auth.getSession();
       await fetch('/.netlify/functions/cloudinary-delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           publicId: asset.path,
           resourceType: asset.kind,

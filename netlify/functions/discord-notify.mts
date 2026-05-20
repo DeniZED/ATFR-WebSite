@@ -39,9 +39,13 @@ function isValid(body: unknown): body is ApplicationPayload {
     b.discordTag.length <= 64 &&
     (b.targetClan === 'ATFR' || b.targetClan === 'A-T-O') &&
     typeof b.availability === 'string' &&
+    b.availability.length >= 1 &&
+    b.availability.length <= 500 &&
     typeof b.motivation === 'string' &&
     b.motivation.length >= 30 &&
     b.motivation.length <= 2000 &&
+    (b.previousClans == null ||
+      (typeof b.previousClans === 'string' && b.previousClans.length <= 500)) &&
     isFiniteNumberOrNullish(b.wn8) &&
     isFiniteNumberOrNullish(b.winRate) &&
     isFiniteNumberOrNullish(b.battles) &&
@@ -132,9 +136,9 @@ export default async (req: Request, _context: Context): Promise<Response> => {
   });
 
   if (!discordRes.ok) {
-    const text = await discordRes.text().catch(() => '');
+    console.error('[discord-notify] webhook failed:', discordRes.status, await discordRes.text().catch(() => ''));
     return new Response(
-      JSON.stringify({ error: 'Discord webhook failed', detail: text }),
+      JSON.stringify({ error: 'Notification failed, please try again.' }),
       {
         status: 502,
         headers: { ...headers, 'content-type': 'application/json' },

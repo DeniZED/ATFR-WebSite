@@ -1046,7 +1046,7 @@ export default function Geoguesser() {
                       <p className="font-display text-xl text-atfr-bone tabular-nums">
                         {formatDistance(r.score)}
                       </p>
-                      <p className="text-[9px] uppercase tracking-wider text-atfr-fog">score</p>
+                      <p className="text-[10px] uppercase tracking-wider text-atfr-fog">score</p>
                     </div>
                   </CardBody>
                 </Card>

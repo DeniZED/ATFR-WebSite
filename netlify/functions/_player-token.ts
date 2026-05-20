@@ -1,13 +1,12 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-// Signing secret — use SUPABASE_SERVICE_ROLE_KEY (already required by submit-score).
-// Falls back to WG app ID (public, so lower security — but still blocks token forgery
-// without the actual WG token flow).
-const SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.WOT_APPLICATION_ID ||
-  process.env.VITE_WOT_APPLICATION_ID ||
-  'dev-insecure-fallback';
+// Signing secret — must be set to SUPABASE_SERVICE_ROLE_KEY in Netlify env.
+// Never fall back to public values: a leaked secret allows anyone to forge
+// verified player tokens and submit scores with arbitrary account IDs.
+const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SECRET) {
+  throw new Error('[_player-token] SUPABASE_SERVICE_ROLE_KEY is not configured');
+}
 
 const TOKEN_TTL_S = 6 * 3600; // 6 h
 
@@ -16,7 +15,7 @@ export function issuePlayerToken(accountId: number): string {
   const payload = Buffer.from(
     JSON.stringify({ a: accountId, e: Math.floor(Date.now() / 1000) + TOKEN_TTL_S }),
   ).toString('base64url');
-  const sig = createHmac('sha256', SECRET).update(payload).digest('base64url');
+  const sig = createHmac('sha256', SECRET!).update(payload).digest('base64url');
   return `${payload}.${sig}`;
 }
 
@@ -29,7 +28,7 @@ export function verifyPlayerToken(token: string): number | null {
   const payload = token.slice(0, dot);
   const sig = token.slice(dot + 1);
 
-  const expected = createHmac('sha256', SECRET).update(payload).digest('base64url');
+  const expected = createHmac('sha256', SECRET!).update(payload).digest('base64url');
   try {
     const eBuf = Buffer.from(expected, 'base64url');
     const sBuf = Buffer.from(sig, 'base64url');

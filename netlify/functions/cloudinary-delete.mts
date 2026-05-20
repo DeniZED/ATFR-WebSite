@@ -1,5 +1,6 @@
 import type { Context } from '@netlify/functions';
 import { v2 as cloudinary } from 'cloudinary';
+import { createClient } from '@supabase/supabase-js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,9 +9,57 @@ cloudinary.config({
   secure: true,
 });
 
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 export default async function handler(req: Request, _ctx: Context) {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
+  }
+
+  // Verify caller is an authenticated editor/admin.
+  const auth = req.headers.get('authorization');
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error('[cloudinary-delete] Supabase service role not configured');
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  const userToken = auth.slice('Bearer '.length);
+  const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  // Verify the JWT and check editor role.
+  const { data: userData, error: userError } = await adminClient.auth.getUser(userToken);
+  if (userError || !userData.user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  const { data: roleData } = await adminClient
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userData.user.id)
+    .maybeSingle();
+
+  const EDITOR_ROLES = ['editor', 'admin', 'super_admin'];
+  if (!roleData || !EDITOR_ROLES.includes(roleData.role)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'content-type': 'application/json' },
+    });
   }
 
   let publicId: string;
@@ -34,7 +83,7 @@ export default async function handler(req: Request, _ctx: Context) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
+    console.error('[cloudinary-delete] uploader error:', err);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }
