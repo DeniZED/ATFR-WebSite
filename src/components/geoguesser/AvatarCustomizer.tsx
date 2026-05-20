@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import { Gift, Lock, Palette, Shield, Tag, X } from 'lucide-react';
+import { Check, Gift, Lock, Palette, Tag, X } from 'lucide-react';
 import { Badge, Button, Card, CardBody } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   UNLOCKS,
+  PRIMARY_COLORS,
+  ACCENT_COLORS,
   getNextReward,
   getUnlockedIds,
   type AvatarConfig,
   type LevelInfo,
-  type UnlockType,
 } from '@/features/geoguesser/playerProfile';
 import { AcademyBadge } from './AcademyBadge';
 
-const TABS: { id: UnlockType; label: string; icon: typeof Palette }[] = [
-  { id: 'skin',   label: 'Skins',     icon: Palette },
-  { id: 'emblem', label: 'Emblèmes',  icon: Shield },
-  { id: 'title',  label: 'Titres',    icon: Tag },
+type CustomizerTab = 'color' | 'emblem' | 'title';
+
+const TABS: { id: CustomizerTab; label: string; icon: typeof Palette }[] = [
+  { id: 'color',  label: 'Couleur',  icon: Palette },
+  { id: 'emblem', label: 'Emblèmes', icon: Check },
+  { id: 'title',  label: 'Titres',   icon: Tag },
 ];
 
 interface AvatarCustomizerProps {
@@ -27,36 +30,25 @@ interface AvatarCustomizerProps {
 
 export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarCustomizerProps) {
   const [draft, setDraft] = useState<AvatarConfig>({ ...config });
-  const [tab, setTab] = useState<UnlockType>('skin');
+  const [tab, setTab] = useState<CustomizerTab>('color');
 
   const unlocked = getUnlockedIds(levelInfo.level);
-  const items = UNLOCKS.filter((u) => u.type === tab);
+  const playerLevel = levelInfo.level;
 
-  function selectSkin(id: string) {
-    // UNLOCKS use 'skin-' prefix; stored skinId omits it to match server allowlist
-    setDraft((prev) => ({ ...prev, skinId: id.replace(/^skin-/, '') }));
+  function selectColor(id: string) {
+    setDraft((prev) => ({ ...prev, primaryColorId: id }));
   }
 
-  function selectTitle(id: string) {
-    setDraft((prev) => ({ ...prev, titleId: prev.titleId === id ? null : id }));
+  function selectAccent(id: string | null) {
+    setDraft((prev) => ({ ...prev, accentColorId: id }));
   }
 
   function selectEmblem(id: string) {
     setDraft((prev) => ({ ...prev, emblemId: prev.emblemId === id ? null : id }));
   }
 
-  function handleItem(type: UnlockType, id: string, isLocked: boolean) {
-    if (isLocked) return;
-    if (type === 'skin')        selectSkin(id);
-    else if (type === 'title')  selectTitle(id);
-    else if (type === 'emblem') selectEmblem(id);
-  }
-
-  function isSelected(type: UnlockType, id: string): boolean {
-    if (type === 'skin')   return draft.skinId === id.replace(/^skin-/, '');
-    if (type === 'title')  return draft.titleId === id;
-    if (type === 'emblem') return draft.emblemId === id;
-    return false;
+  function selectTitle(id: string) {
+    setDraft((prev) => ({ ...prev, titleId: prev.titleId === id ? null : id }));
   }
 
   const xpPct = Math.round(levelInfo.progress * 100);
@@ -83,12 +75,13 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
         <CardBody className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Preview + level */}
           <div className="flex items-center gap-5 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/40 p-4">
-            <div className="shrink-0 flex items-center justify-center w-24 h-24 rounded-xl bg-atfr-ink/60 border border-atfr-gold/15">
+            <div className="shrink-0 flex items-center justify-center w-24 h-28 rounded-lg bg-atfr-ink/60 border border-atfr-gold/15">
               <AcademyBadge
                 levelInfo={levelInfo}
-                skinId={draft.skinId}
+                primaryColorId={draft.primaryColorId}
+                accentColorId={draft.accentColorId}
                 emblemId={draft.emblemId}
-                size={88}
+                size={90}
               />
             </div>
             <div className="flex-1 min-w-0">
@@ -149,55 +142,194 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
             ))}
           </div>
 
-          {/* Items grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {items.map((item) => {
-              const isLocked = !unlocked.has(item.id);
-              const selected = isSelected(item.type, item.id);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleItem(item.type, item.id, isLocked)}
-                  disabled={isLocked}
-                  className={cn(
-                    'relative rounded-xl border p-3 text-left transition-all min-h-[80px] flex flex-col justify-between',
-                    isLocked
-                      ? 'border-atfr-gold/8 bg-atfr-ink/30 opacity-50 cursor-not-allowed'
-                      : selected
-                        ? 'border-atfr-gold/60 bg-atfr-gold/12 shadow-sm shadow-atfr-gold/20'
-                        : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
-                  )}
-                >
-                  {isLocked && (
-                    <div className="absolute top-2 right-2 text-atfr-fog/40">
-                      <Lock size={10} />
-                    </div>
-                  )}
-                  {selected && !isLocked && (
-                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />
-                  )}
-                  <div>
-                    {item.type === 'skin' && (
-                      <SkinSwatch skinId={item.id.replace('skin-', '')} />
+          {/* Tab: Couleur */}
+          {tab === 'color' && (
+            <div className="space-y-4">
+              {/* Couleur primaire */}
+              <div>
+                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">
+                  Couleur principale
+                </p>
+                <div className="grid grid-cols-8 gap-2">
+                  {PRIMARY_COLORS.map((color) => {
+                    const isLocked = color.levelRequired > playerLevel;
+                    const selected = draft.primaryColorId === color.id;
+                    return (
+                      <button
+                        key={color.id}
+                        onClick={() => !isLocked && selectColor(color.id)}
+                        disabled={isLocked}
+                        title={`${color.label}${isLocked ? ` (Niv. ${color.levelRequired})` : ''}`}
+                        className={cn(
+                          'relative w-8 h-8 rounded-full transition-all',
+                          isLocked
+                            ? 'opacity-35 cursor-not-allowed grayscale'
+                            : 'cursor-pointer hover:scale-110',
+                          selected && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
+                        )}
+                        style={{ backgroundColor: color.hex }}
+                      >
+                        {selected && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Check size={12} className="text-white drop-shadow" />
+                          </span>
+                        )}
+                        {isLocked && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Lock size={8} className="text-white/60" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Couleur accent */}
+              <div>
+                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">
+                  Accent (Niv. 4+)
+                </p>
+                <div className="grid grid-cols-8 gap-2">
+                  {/* Option "Aucun accent" */}
+                  <button
+                    onClick={() => selectAccent(null)}
+                    title="Aucun accent"
+                    className={cn(
+                      'relative w-8 h-8 rounded-full border border-atfr-fog/30 transition-all flex items-center justify-center cursor-pointer hover:scale-110 bg-atfr-ink',
+                      draft.accentColorId === null && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
                     )}
-                    <p className="text-xs font-medium text-atfr-bone mt-1.5 leading-tight">
-                      {item.label}
-                    </p>
-                    {item.description && (
-                      <p className="text-[10px] text-atfr-fog/60 mt-0.5 leading-tight">
-                        {item.description}
+                  >
+                    <X size={10} className="text-atfr-fog/60" />
+                  </button>
+                  {ACCENT_COLORS.map((color) => {
+                    const isLocked = color.levelRequired > playerLevel;
+                    const selected = draft.accentColorId === color.id;
+                    return (
+                      <button
+                        key={color.id}
+                        onClick={() => !isLocked && selectAccent(color.id)}
+                        disabled={isLocked}
+                        title={`${color.label}${isLocked ? ` (Niv. ${color.levelRequired})` : ''}`}
+                        className={cn(
+                          'relative w-8 h-8 rounded-full transition-all',
+                          isLocked
+                            ? 'opacity-35 cursor-not-allowed grayscale'
+                            : 'cursor-pointer hover:scale-110',
+                          selected && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
+                        )}
+                        style={{ backgroundColor: color.hex }}
+                      >
+                        {selected && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Check size={12} className="text-white drop-shadow" />
+                          </span>
+                        )}
+                        {isLocked && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Lock size={8} className="text-white/60" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Emblèmes */}
+          {tab === 'emblem' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {UNLOCKS.filter((u) => u.type === 'emblem').map((item) => {
+                const isLocked = !unlocked.has(item.id);
+                const selected = draft.emblemId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => !isLocked && selectEmblem(item.id)}
+                    disabled={isLocked}
+                    className={cn(
+                      'relative rounded-xl border p-3 text-left transition-all min-h-[80px] flex flex-col justify-between',
+                      isLocked
+                        ? 'border-atfr-gold/8 bg-atfr-ink/30 opacity-50 cursor-not-allowed'
+                        : selected
+                          ? 'border-atfr-gold/60 bg-atfr-gold/12 shadow-sm shadow-atfr-gold/20'
+                          : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
+                    )}
+                  >
+                    {isLocked && (
+                      <div className="absolute top-2 right-2 text-atfr-fog/40">
+                        <Lock size={10} />
+                      </div>
+                    )}
+                    {selected && !isLocked && (
+                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />
+                    )}
+                    <div>
+                      <p className="text-xs font-medium text-atfr-bone mt-1.5 leading-tight">
+                        {item.label}
+                      </p>
+                      {item.description && (
+                        <p className="text-[10px] text-atfr-fog/60 mt-0.5 leading-tight">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                    {isLocked && (
+                      <p className="text-[9px] text-atfr-fog/40 uppercase tracking-widest mt-1">
+                        Niv. {item.levelRequired}
                       </p>
                     )}
-                  </div>
-                  {isLocked && (
-                    <p className="text-[9px] text-atfr-fog/40 uppercase tracking-widest mt-1">
-                      Niv. {item.levelRequired}
-                    </p>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tab: Titres */}
+          {tab === 'title' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {UNLOCKS.filter((u) => u.type === 'title').map((item) => {
+                const isLocked = !unlocked.has(item.id);
+                const selected = draft.titleId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => !isLocked && selectTitle(item.id)}
+                    disabled={isLocked}
+                    className={cn(
+                      'relative rounded-xl border p-3 text-left transition-all min-h-[80px] flex flex-col justify-between',
+                      isLocked
+                        ? 'border-atfr-gold/8 bg-atfr-ink/30 opacity-50 cursor-not-allowed'
+                        : selected
+                          ? 'border-atfr-gold/60 bg-atfr-gold/12 shadow-sm shadow-atfr-gold/20'
+                          : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
+                    )}
+                  >
+                    {isLocked && (
+                      <div className="absolute top-2 right-2 text-atfr-fog/40">
+                        <Lock size={10} />
+                      </div>
+                    )}
+                    {selected && !isLocked && (
+                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />
+                    )}
+                    <div>
+                      <p className="text-xs font-medium text-atfr-bone mt-1.5 leading-tight">
+                        {item.label}
+                      </p>
+                    </div>
+                    {isLocked && (
+                      <p className="text-[9px] text-atfr-fog/40 uppercase tracking-widest mt-1">
+                        Niv. {item.levelRequired}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardBody>
 
         {/* Footer */}
@@ -213,31 +345,6 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
           </Button>
         </div>
       </Card>
-    </div>
-  );
-}
-
-// Small color swatch for skin items
-const SKIN_SWATCH_COLORS: Record<string, string[]> = {
-  default:  ['#556B2F', '#6B7E38'],
-  desert:   ['#C19A3E', '#CDA844'],
-  winter:   ['#C4CDD6', '#D2DBE4'],
-  urban:    ['#6B7280', '#7D8D9A'],
-  forest:   ['#2D4A1E', '#3A5E27'],
-  digital:  ['#4A6741', '#5A7A4E'],
-  arctic:   ['#D0E0EC', '#DDE8F4'],
-  atfr:     ['#0F1923', '#C9A227'],
-  chrome:   ['#A8B4C4', '#D0DCE8'],
-  prestige: ['#0C0C0C', '#C9A227'],
-};
-
-function SkinSwatch({ skinId }: { skinId: string }) {
-  const colors = SKIN_SWATCH_COLORS[skinId] ?? ['#556B2F', '#6B7E38'];
-  return (
-    <div className="flex gap-1 h-4">
-      {colors.map((c, i) => (
-        <div key={i} className="flex-1 rounded-sm" style={{ background: c }} />
-      ))}
     </div>
   );
 }

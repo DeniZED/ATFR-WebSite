@@ -11,6 +11,7 @@ import {
 import {
   usePlayerModuleScores,
 } from '@/features/leaderboard/queries';
+import { TankAvatar } from '@/components/geoguesser/TankAvatar';
 import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AvatarCustomizer } from '@/components/geoguesser/AvatarCustomizer';
 import { ACADEMY_MODULE_CONTRIBUTIONS } from '@/features/academy/moduleContributions';
@@ -116,6 +117,16 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   </p>
                 )}
               </div>
+
+              {/* Academy Badge */}
+              <AcademyBadge
+                levelInfo={profile.levelInfo}
+                primaryColorId={profile.avatarConfig.primaryColorId}
+                accentColorId={profile.avatarConfig.accentColorId}
+                emblemId={profile.avatarConfig.emblemId}
+                size={148}
+                className="drop-shadow-xl"
+              />
 
               {/* Level + XP */}
               <div className="w-full max-w-xs space-y-1.5">

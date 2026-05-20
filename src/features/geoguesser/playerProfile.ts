@@ -2,7 +2,7 @@ import type { LeaderboardEntry } from '@/features/leaderboard/queries';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UnlockType = 'skin' | 'title' | 'emblem';
+export type UnlockType = 'title' | 'emblem';
 
 export interface Unlock {
   id: string;
@@ -13,13 +13,15 @@ export interface Unlock {
 }
 
 export interface AvatarConfig {
-  skinId: string;
+  primaryColorId: string;
+  accentColorId: string | null;
   titleId: string | null;
   emblemId: string | null;
 }
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
-  skinId: 'default',
+  primaryColorId: 'col-olive',
+  accentColorId: null,
   titleId: null,
   emblemId: null,
 };
@@ -56,21 +58,21 @@ export interface LevelInfo {
 // ─── Level table ─────────────────────────────────────────────────────────────
 
 export const LEVEL_TABLE: LevelDef[] = [
-  { level: 1,  title: 'Soldat',             xpRequired: 0 },
-  { level: 2,  title: 'Éclaireur',          xpRequired: 300 },
-  { level: 3,  title: 'Caporal',            xpRequired: 750 },
-  { level: 4,  title: 'Sergent',            xpRequired: 1500 },
-  { level: 5,  title: 'Sous-lieutenant',    xpRequired: 3000 },
-  { level: 6,  title: 'Lieutenant',         xpRequired: 5500 },
-  { level: 7,  title: 'Capitaine',          xpRequired: 9000 },
-  { level: 8,  title: 'Commandant',         xpRequired: 14000 },
-  { level: 9,  title: 'Colonel',            xpRequired: 21000 },
-  { level: 10, title: 'Général de brigade', xpRequired: 30000 },
-  { level: 11, title: 'Général de division',xpRequired: 42000 },
-  { level: 12, title: 'Maréchal',           xpRequired: 57000 },
-  { level: 13, title: 'As des maps',        xpRequired: 75000 },
-  { level: 14, title: 'Cartographe ATFR',   xpRequired: 97000 },
-  { level: 15, title: 'Légende ATFR',       xpRequired: 125000 },
+  { level: 1,  title: 'Soldat',              xpRequired: 0 },
+  { level: 2,  title: 'Éclaireur',           xpRequired: 200 },
+  { level: 3,  title: 'Caporal',             xpRequired: 500 },
+  { level: 4,  title: 'Sergent',             xpRequired: 1_000 },
+  { level: 5,  title: 'Sous-lieutenant',     xpRequired: 1_800 },
+  { level: 6,  title: 'Lieutenant',          xpRequired: 3_000 },
+  { level: 7,  title: 'Capitaine',           xpRequired: 5_000 },
+  { level: 8,  title: 'Commandant',          xpRequired: 8_000 },
+  { level: 9,  title: 'Colonel',             xpRequired: 12_500 },
+  { level: 10, title: 'Général de brigade',  xpRequired: 18_000 },
+  { level: 11, title: 'Général de division', xpRequired: 26_000 },
+  { level: 12, title: 'Maréchal',            xpRequired: 36_000 },
+  { level: 13, title: 'As des maps',         xpRequired: 48_000 },
+  { level: 14, title: 'Cartographe ATFR',    xpRequired: 62_000 },
+  { level: 15, title: 'Légende ATFR',        xpRequired: 75_000 },
 ];
 
 const MAX_LEVEL = LEVEL_TABLE[LEVEL_TABLE.length - 1];
@@ -100,6 +102,63 @@ export function levelFromXp(totalXp: number): LevelInfo {
   };
 }
 
+// ─── Colour catalogue ─────────────────────────────────────────────────────────
+
+export interface ColorDef {
+  id: string;
+  label: string;
+  hex: string;
+  levelRequired: number;
+  metallic?: boolean;
+}
+
+export const PRIMARY_COLORS: ColorDef[] = [
+  { id: 'col-olive',    label: 'Kaki olive',     hex: '#4E7828', levelRequired: 1 },
+  { id: 'col-forest',   label: 'Vert forêt',     hex: '#2D5016', levelRequired: 1 },
+  { id: 'col-desert',   label: 'Sable désert',   hex: '#B08828', levelRequired: 1 },
+  { id: 'col-savanna',  label: 'Brun savane',    hex: '#7A5B28', levelRequired: 1 },
+  { id: 'col-steel',    label: 'Gris acier',     hex: '#586068', levelRequired: 1 },
+  { id: 'col-storm',    label: 'Bleu orage',     hex: '#2A3A5A', levelRequired: 1 },
+  { id: 'col-teal',     label: 'Sarcelle',       hex: '#1A5A5A', levelRequired: 1 },
+  { id: 'col-navy',     label: 'Marine',         hex: '#1A2A3A', levelRequired: 1 },
+  { id: 'col-burgundy', label: 'Bordeaux',       hex: '#6A1A1A', levelRequired: 1 },
+  { id: 'col-purple',   label: 'Violet nuit',    hex: '#3A1A5A', levelRequired: 1 },
+  { id: 'col-charcoal', label: 'Anthracite',     hex: '#282828', levelRequired: 1 },
+  { id: 'col-iron',     label: 'Blanc fer',      hex: '#C8C8D0', levelRequired: 1 },
+  { id: 'col-copper',   label: 'Cuivre brun',    hex: '#8A4A1A', levelRequired: 1 },
+  { id: 'col-jungle',   label: 'Vert jungle',    hex: '#1A4A1A', levelRequired: 1 },
+  { id: 'col-slate',    label: 'Ardoise bleue',  hex: '#2A2A6A', levelRequired: 1 },
+  { id: 'col-rust',     label: 'Rouille',        hex: '#7A3018', levelRequired: 1 },
+  { id: 'col-bronze',   label: 'Bronze patiné',  hex: '#7A5018', levelRequired: 5,  metallic: true },
+  { id: 'col-silver',   label: 'Argent poli',    hex: '#8A9AB0', levelRequired: 8,  metallic: true },
+  { id: 'col-gold',     label: 'Or antique',     hex: '#B89018', levelRequired: 10, metallic: true },
+  { id: 'col-crimson',  label: 'Cramoisi royal', hex: '#8A0A0A', levelRequired: 12 },
+  { id: 'col-atfr',     label: 'Marine ATFR',    hex: '#0A1828', levelRequired: 13 },
+  { id: 'col-chrome',   label: 'Chrome pur',     hex: '#9AAABB', levelRequired: 14, metallic: true },
+  { id: 'col-prestige', label: 'Noir prestige',  hex: '#080808', levelRequired: 15 },
+];
+
+export const ACCENT_COLORS: ColorDef[] = [
+  { id: 'acc-brass',     label: 'Laiton',      hex: '#B8860B', levelRequired: 4 },
+  { id: 'acc-silver',    label: 'Argent',      hex: '#C0C0C0', levelRequired: 4 },
+  { id: 'acc-ivory',     label: 'Ivoire',      hex: '#F0EAD6', levelRequired: 4 },
+  { id: 'acc-gold',      label: 'Or',          hex: '#C9A227', levelRequired: 7 },
+  { id: 'acc-copper',    label: 'Cuivre',      hex: '#B87333', levelRequired: 7 },
+  { id: 'acc-royal',     label: 'Bleu royal',  hex: '#2828AA', levelRequired: 7 },
+  { id: 'acc-platinum',  label: 'Platine',     hex: '#E0DFE0', levelRequired: 10 },
+  { id: 'acc-blood',     label: 'Rouge sang',  hex: '#8B0000', levelRequired: 10 },
+  { id: 'acc-iridescent', label: 'Irisé',      hex: '#C9A227', levelRequired: 14, metallic: true },
+];
+
+export function getPrimaryColor(id: string): ColorDef {
+  return PRIMARY_COLORS.find(c => c.id === id) ?? PRIMARY_COLORS[0];
+}
+
+export function getAccentColor(id: string | null): ColorDef | null {
+  if (!id) return null;
+  return ACCENT_COLORS.find(c => c.id === id) ?? null;
+}
+
 // ─── XP calculation ──────────────────────────────────────────────────────────
 
 function getMetaNumber(meta: unknown, key: string): number | null {
@@ -116,46 +175,49 @@ function getMetaString(meta: unknown, key: string): string | null {
 
 export function calculateGameXp(entry: LeaderboardEntry): number {
   const ratio = entry.max_score > 0 ? entry.score / entry.max_score : 0;
-  // Base XP: 5 to 100 based on performance ratio
   const base = Math.max(5, Math.round(ratio * 100));
 
-  const gameMode = getMetaString(entry.meta, 'game_mode');
+  const gameMode    = getMetaString(entry.meta, 'game_mode');
   const mapAccuracy = getMetaNumber(entry.meta, 'map_accuracy_pct') ?? 0;
-  const bestStreak = getMetaNumber(entry.meta, 'best_streak') ?? 0;
+  const bestStreak  = getMetaNumber(entry.meta, 'best_streak') ?? 0;
+  const isDaily     = (entry.meta as Record<string,unknown>)?.is_daily_challenge === true;
 
-  // Mode difficulty bonus
-  const modeBonus =
-    gameMode === 'blind' ? 25 :
-    gameMode === 'sprint' ? 10 : 0;
-
-  // Map accuracy bonus (up to 25 extra XP)
+  const modeBonus     = gameMode === 'blind' ? 25 : gameMode === 'sprint' ? 10 : 0;
   const accuracyBonus = Math.round(Math.max(0, mapAccuracy - 50) / 2);
+  const streakBonus   = Math.min(20, bestStreak * 2);
+  const perfBonus     = ratio >= 1.0 ? 50 : ratio >= 0.8 ? 15 : 0;
+  const dailyBonus    = isDaily ? 30 : 0;
 
-  // Streak bonus (2 XP per consecutive correct map, capped at 20)
-  const streakBonus = Math.min(20, bestStreak * 2);
+  return base + modeBonus + accuracyBonus + streakBonus + perfBonus + dailyBonus;
+}
 
-  return base + modeBonus + accuracyBonus + streakBonus;
+/** Bonus XP pour les jours joués consécutifs (calculé depuis l'historique). */
+export function consecutiveDaysBonus(scores: LeaderboardEntry[]): number {
+  const MS_DAY = 86_400_000;
+  const todayDay = Math.floor(Date.now() / MS_DAY);
+
+  const playedDays = new Set(
+    scores
+      .filter((s) => (s as unknown as { played_at?: string }).played_at)
+      .map((s) => Math.floor(new Date((s as unknown as { played_at: string }).played_at).getTime() / MS_DAY))
+  );
+
+  let streak = 0;
+  for (let i = 0; i <= 30; i++) {
+    if (playedDays.has(todayDay - i)) streak++;
+    else if (i > 0) break;
+  }
+  return Math.min(streak * 10, 100);
 }
 
 export function totalXpFromScores(scores: LeaderboardEntry[]): number {
-  return scores.reduce((sum, s) => sum + calculateGameXp(s), 0);
+  const base = scores.reduce((sum, s) => sum + calculateGameXp(s), 0);
+  return base + consecutiveDaysBonus(scores);
 }
 
 // ─── Unlocks catalog ─────────────────────────────────────────────────────────
 
 export const UNLOCKS: Unlock[] = [
-  // Skins
-  { id: 'skin-default',  type: 'skin', levelRequired: 1,  label: 'Kaki standard',       description: 'Peinture réglementaire de base.' },
-  { id: 'skin-desert',   type: 'skin', levelRequired: 2,  label: 'Désert',               description: 'Ton sable et ocre pour terrain aride.' },
-  { id: 'skin-winter',   type: 'skin', levelRequired: 3,  label: 'Hiver',                description: 'Gris-blanc pour opérations en terrain enneigé.' },
-  { id: 'skin-urban',    type: 'skin', levelRequired: 5,  label: 'Urbain',               description: 'Camo gris mélangé pour la ville.' },
-  { id: 'skin-forest',   type: 'skin', levelRequired: 7,  label: 'Forêt profonde',       description: 'Vert sombre pour les zones boisées.' },
-  { id: 'skin-digital',  type: 'skin', levelRequired: 9,  label: 'Digital',              description: 'Motif pixelisé tactique.' },
-  { id: 'skin-arctic',   type: 'skin', levelRequired: 11, label: 'Arctique',             description: 'Bleu glacier pour les missions polaires.' },
-  { id: 'skin-atfr',     type: 'skin', levelRequired: 13, label: 'ATFR Elite',           description: 'Livrée officielle de l\'escadron ATFR.' },
-  { id: 'skin-chrome',   type: 'skin', levelRequired: 14, label: 'Chrome',               description: 'Finition métal brossé pour les vrais.' },
-  { id: 'skin-prestige', type: 'skin', levelRequired: 15, label: 'Prestige Noir',        description: 'Noir absolu réservé aux légendes.' },
-
   // Titles
   { id: 'title-rookie',       type: 'title', levelRequired: 1,  label: 'Recrue des maps',    description: '' },
   { id: 'title-scout',        type: 'title', levelRequired: 2,  label: 'Scout cartographe',  description: '' },
@@ -167,12 +229,12 @@ export const UNLOCKS: Unlock[] = [
   { id: 'title-legend',       type: 'title', levelRequired: 13, label: 'Légende des Maps',   description: '' },
   { id: 'title-master',       type: 'title', levelRequired: 15, label: 'Maître Géographe',   description: '' },
 
-  // Emblems (displayed on the badge shield)
-  { id: 'emb-crosshair', type: 'emblem', levelRequired: 1,  label: 'Réticule',   description: 'Viseur de précision.' },
-  { id: 'emb-star',      type: 'emblem', levelRequired: 4,  label: 'Étoile',     description: 'Simple et élégante.' },
-  { id: 'emb-bolt',      type: 'emblem', levelRequired: 7,  label: 'Éclair',     description: 'Vitesse et puissance.' },
-  { id: 'emb-diamond',   type: 'emblem', levelRequired: 10, label: 'Diamant',    description: 'Précision cristalline.' },
-  { id: 'emb-compass',   type: 'emblem', levelRequired: 13, label: 'Boussole',   description: "Maître de l'orientation." },
+  // Emblems
+  { id: 'emb-crosshair', type: 'emblem', levelRequired: 2,  label: 'Réticule',      description: 'Viseur de précision.' },
+  { id: 'emb-star',      type: 'emblem', levelRequired: 4,  label: 'Étoile',        description: 'Étoile de mérite.' },
+  { id: 'emb-bolt',      type: 'emblem', levelRequired: 6,  label: 'Éclair',        description: 'Frappe rapide.' },
+  { id: 'emb-diamond',   type: 'emblem', levelRequired: 9,  label: 'Diamant',       description: 'Diamant de l\'élite.' },
+  { id: 'emb-compass',   type: 'emblem', levelRequired: 12, label: 'Boussole',      description: 'Maître géographe.' },
 ];
 
 export function getUnlockedIds(level: number): Set<string> {

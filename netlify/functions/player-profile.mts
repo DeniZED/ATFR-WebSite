@@ -5,9 +5,15 @@ import { verifyPlayerToken } from './_player-token.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const ALLOWED_SKIN_IDS = new Set([
-  'default', 'desert', 'winter', 'urban', 'forest',
-  'digital', 'arctic', 'atfr', 'chrome', 'prestige',
+const ALLOWED_PRIMARY_COLOR_IDS = new Set([
+  'col-olive','col-forest','col-desert','col-savanna','col-steel','col-storm',
+  'col-teal','col-navy','col-burgundy','col-purple','col-charcoal','col-iron',
+  'col-copper','col-jungle','col-slate','col-rust','col-bronze','col-silver',
+  'col-gold','col-crimson','col-atfr','col-chrome','col-prestige',
+]);
+const ALLOWED_ACCENT_COLOR_IDS = new Set([
+  'acc-brass','acc-silver','acc-ivory','acc-gold','acc-copper',
+  'acc-royal','acc-platinum','acc-blood','acc-iridescent',
 ]);
 const ALLOWED_TITLE_IDS = new Set([
   'title-rookie', 'title-scout', 'title-corporal', 'title-sergeant',
@@ -28,9 +34,13 @@ function json(body: unknown, status = 200) {
 function isValidAvatarConfig(c: unknown): boolean {
   if (typeof c !== 'object' || c === null) return false;
   const cfg = c as Record<string, unknown>;
-  if (typeof cfg.skinId !== 'string' || !ALLOWED_SKIN_IDS.has(cfg.skinId)) return false;
-  if (cfg.titleId !== null && cfg.titleId !== undefined && (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
-  if (cfg.emblemId !== null && cfg.emblemId !== undefined && (typeof cfg.emblemId !== 'string' || !ALLOWED_EMBLEM_IDS.has(cfg.emblemId))) return false;
+  if (typeof cfg.primaryColorId !== 'string' || !ALLOWED_PRIMARY_COLOR_IDS.has(cfg.primaryColorId)) return false;
+  if (cfg.accentColorId !== null && cfg.accentColorId !== undefined &&
+      (typeof cfg.accentColorId !== 'string' || !ALLOWED_ACCENT_COLOR_IDS.has(cfg.accentColorId))) return false;
+  if (cfg.titleId !== null && cfg.titleId !== undefined &&
+      (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
+  if (cfg.emblemId !== null && cfg.emblemId !== undefined &&
+      (typeof cfg.emblemId !== 'string' || !ALLOWED_EMBLEM_IDS.has(cfg.emblemId))) return false;
   return true;
 }
 

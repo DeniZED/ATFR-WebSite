@@ -12,10 +12,25 @@ import {
 const AVATAR_CONFIG_KEY = 'atfr.geoguesser.avatar.v1';
 const PROFILE_ENDPOINT = '/.netlify/functions/player-profile';
 
+function migrateConfig(raw: Partial<AvatarConfig> & { skinId?: string }): AvatarConfig {
+  const base: AvatarConfig = { ...DEFAULT_AVATAR_CONFIG, ...raw };
+  // Migration skinId → primaryColorId
+  if (!raw.primaryColorId && raw.skinId) {
+    const map: Record<string, string> = {
+      default: 'col-olive', desert: 'col-desert', winter: 'col-storm',
+      urban: 'col-steel', forest: 'col-forest', digital: 'col-teal',
+      arctic: 'col-iron', atfr: 'col-atfr', chrome: 'col-chrome',
+      prestige: 'col-prestige',
+    };
+    base.primaryColorId = map[raw.skinId] ?? 'col-olive';
+  }
+  return base;
+}
+
 function loadAvatarConfig(): AvatarConfig {
   try {
     const raw = localStorage.getItem(AVATAR_CONFIG_KEY);
-    if (raw) return { ...DEFAULT_AVATAR_CONFIG, ...JSON.parse(raw) };
+    if (raw) return migrateConfig(JSON.parse(raw) as Partial<AvatarConfig> & { skinId?: string });
   } catch { /* ignore */ }
   return { ...DEFAULT_AVATAR_CONFIG };
 }
