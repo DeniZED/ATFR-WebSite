@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gift, Lock, Palette, Shield, Sparkles, Star, Tag, X } from 'lucide-react';
+import { Gift, Lock, Palette, Shield, Tag, X } from 'lucide-react';
 import { Badge, Button, Card, CardBody } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -13,11 +13,9 @@ import {
 import { AcademyBadge } from './AcademyBadge';
 
 const TABS: { id: UnlockType; label: string; icon: typeof Palette }[] = [
-  { id: 'skin',      label: 'Skins',      icon: Palette },
-  { id: 'emblem',    label: 'Emblèmes',   icon: Shield },
-  { id: 'accessory', label: 'Accessoires',icon: Star },
-  { id: 'effect',    label: 'Effets',     icon: Sparkles },
-  { id: 'title',     label: 'Titres',     icon: Tag },
+  { id: 'skin',   label: 'Skins',     icon: Palette },
+  { id: 'emblem', label: 'Emblèmes',  icon: Shield },
+  { id: 'title',  label: 'Titres',    icon: Tag },
 ];
 
 interface AvatarCustomizerProps {
@@ -34,25 +32,9 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
   const unlocked = getUnlockedIds(levelInfo.level);
   const items = UNLOCKS.filter((u) => u.type === tab);
 
-  function toggleAccessory(id: string) {
-    setDraft((prev) => {
-      const already = prev.accessoryIds.includes(id);
-      return {
-        ...prev,
-        accessoryIds: already
-          ? prev.accessoryIds.filter((a) => a !== id)
-          : [...prev.accessoryIds, id],
-      };
-    });
-  }
-
   function selectSkin(id: string) {
     // UNLOCKS use 'skin-' prefix; stored skinId omits it to match server allowlist
     setDraft((prev) => ({ ...prev, skinId: id.replace(/^skin-/, '') }));
-  }
-
-  function selectEffect(id: string) {
-    setDraft((prev) => ({ ...prev, effectId: prev.effectId === id ? null : id }));
   }
 
   function selectTitle(id: string) {
@@ -65,19 +47,15 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
   function handleItem(type: UnlockType, id: string, isLocked: boolean) {
     if (isLocked) return;
-    if (type === 'skin')      selectSkin(id);
-    else if (type === 'accessory') toggleAccessory(id);
-    else if (type === 'effect')    selectEffect(id);
-    else if (type === 'title')     selectTitle(id);
-    else if (type === 'emblem')    selectEmblem(id);
+    if (type === 'skin')        selectSkin(id);
+    else if (type === 'title')  selectTitle(id);
+    else if (type === 'emblem') selectEmblem(id);
   }
 
   function isSelected(type: UnlockType, id: string): boolean {
-    if (type === 'skin')      return draft.skinId === id.replace(/^skin-/, '');
-    if (type === 'accessory') return draft.accessoryIds.includes(id);
-    if (type === 'effect')    return draft.effectId === id;
-    if (type === 'title')     return draft.titleId === id;
-    if (type === 'emblem')    return draft.emblemId === id;
+    if (type === 'skin')   return draft.skinId === id.replace(/^skin-/, '');
+    if (type === 'title')  return draft.titleId === id;
+    if (type === 'emblem') return draft.emblemId === id;
     return false;
   }
 

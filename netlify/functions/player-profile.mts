@@ -9,17 +9,11 @@ const ALLOWED_SKIN_IDS = new Set([
   'default', 'desert', 'winter', 'urban', 'forest',
   'digital', 'arctic', 'atfr', 'chrome', 'prestige',
 ]);
-const ALLOWED_ACCESSORY_IDS = new Set([
-  'acc-antenna', 'acc-star1', 'acc-mudguards', 'acc-flag',
-  'acc-star3', 'acc-hatch', 'acc-ace',
-]);
-const ALLOWED_EFFECT_IDS = new Set(['fx-worn', 'fx-glow-gold', 'fx-prestige', null]);
 const ALLOWED_TITLE_IDS = new Set([
   'title-rookie', 'title-scout', 'title-corporal', 'title-sergeant',
   'title-lieutenant', 'title-captain', 'title-commander', 'title-legend',
   'title-master', null,
 ]);
-const ALLOWED_TANK_IDS = new Set(['tank-default', null, undefined]);
 const ALLOWED_EMBLEM_IDS = new Set([
   'emb-crosshair', 'emb-star', 'emb-bolt', 'emb-diamond', 'emb-compass', null,
 ]);
@@ -35,11 +29,7 @@ function isValidAvatarConfig(c: unknown): boolean {
   if (typeof c !== 'object' || c === null) return false;
   const cfg = c as Record<string, unknown>;
   if (typeof cfg.skinId !== 'string' || !ALLOWED_SKIN_IDS.has(cfg.skinId)) return false;
-  if (!Array.isArray(cfg.accessoryIds)) return false;
-  if (cfg.accessoryIds.some((a) => typeof a !== 'string' || !ALLOWED_ACCESSORY_IDS.has(a))) return false;
-  if (cfg.effectId !== null && (typeof cfg.effectId !== 'string' || !ALLOWED_EFFECT_IDS.has(cfg.effectId))) return false;
-  if (cfg.titleId !== null && (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
-  if (cfg.tankId !== undefined && cfg.tankId !== null && (typeof cfg.tankId !== 'string' || !ALLOWED_TANK_IDS.has(cfg.tankId))) return false;
+  if (cfg.titleId !== null && cfg.titleId !== undefined && (typeof cfg.titleId !== 'string' || !ALLOWED_TITLE_IDS.has(cfg.titleId))) return false;
   if (cfg.emblemId !== null && cfg.emblemId !== undefined && (typeof cfg.emblemId !== 'string' || !ALLOWED_EMBLEM_IDS.has(cfg.emblemId))) return false;
   return true;
 }
