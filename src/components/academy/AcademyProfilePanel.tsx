@@ -94,7 +94,8 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
               {/* Insigne de rang */}
               <AcademyBadge
                 levelInfo={profile.levelInfo}
-                skinId={profile.avatarConfig.skinId}
+                primaryColorId={profile.avatarConfig.primaryColorId}
+                accentColorId={profile.avatarConfig.accentColorId}
                 emblemId={profile.avatarConfig.emblemId}
                 size={148}
                 className="drop-shadow-xl"

@@ -81,6 +81,33 @@ const SKINS: Record<string, { base: string; track: string; accent?: string }> = 
   prestige: { base: '#242424', track: '#0a0a0a', accent: '#c9a227' },
 };
 
+// Mapping primaryColorId → internal SKINS key
+const COLOR_TO_SKIN: Record<string, string> = {
+  'col-olive':    'default',
+  'col-forest':   'forest',
+  'col-desert':   'desert',
+  'col-savanna':  'desert',
+  'col-steel':    'urban',
+  'col-storm':    'winter',
+  'col-teal':     'digital',
+  'col-navy':     'atfr',
+  'col-burgundy': 'urban',
+  'col-purple':   'urban',
+  'col-charcoal': 'prestige',
+  'col-iron':     'arctic',
+  'col-copper':   'desert',
+  'col-jungle':   'forest',
+  'col-slate':    'atfr',
+  'col-rust':     'desert',
+  'col-bronze':   'desert',
+  'col-silver':   'chrome',
+  'col-gold':     'desert',
+  'col-crimson':  'urban',
+  'col-atfr':     'atfr',
+  'col-chrome':   'chrome',
+  'col-prestige': 'prestige',
+};
+
 // ── 3D layout (all in isometric units) ───────────────────────────────────
 // Hull
 const HX = -4, HY = -3.5, HZ = 0, HW = 8, HD = 7, HH = 2.8;
@@ -134,7 +161,8 @@ export function TankAvatar({ config, size = 'md', fallback, className }: TankAva
     );
   }
 
-  const skinKey = config.skinId.replace(/^skin-/, '');
+  // Map primaryColorId to internal skin key
+  const skinKey = COLOR_TO_SKIN[config.primaryColorId] ?? 'default';
   const skin = SKINS[skinKey] ?? SKINS.default;
   const { base: b, track: tr, accent: acc } = skin;
 
