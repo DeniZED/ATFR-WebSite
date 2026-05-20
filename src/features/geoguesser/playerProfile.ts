@@ -2,7 +2,7 @@ import type { LeaderboardEntry } from '@/features/leaderboard/queries';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UnlockType = 'skin' | 'accessory' | 'effect' | 'title' | 'emblem';
+export type UnlockType = 'skin' | 'title' | 'emblem';
 
 export interface Unlock {
   id: string;
@@ -14,18 +14,12 @@ export interface Unlock {
 
 export interface AvatarConfig {
   skinId: string;
-  tankId?: string;
-  accessoryIds: string[];
-  effectId: string | null;
   titleId: string | null;
   emblemId: string | null;
 }
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   skinId: 'default',
-  tankId: undefined,
-  accessoryIds: [],
-  effectId: null,
   titleId: null,
   emblemId: null,
 };
@@ -162,15 +156,6 @@ export const UNLOCKS: Unlock[] = [
   { id: 'skin-chrome',   type: 'skin', levelRequired: 14, label: 'Chrome',               description: 'Finition métal brossé pour les vrais.' },
   { id: 'skin-prestige', type: 'skin', levelRequired: 15, label: 'Prestige Noir',        description: 'Noir absolu réservé aux légendes.' },
 
-  // Accessories
-  { id: 'acc-antenna',   type: 'accessory', levelRequired: 2,  label: 'Antenne longue',  description: 'Antenne radio de terrain allongée.' },
-  { id: 'acc-star1',     type: 'accessory', levelRequired: 3,  label: '1 étoile de kill',description: 'Marque une victoire de map.' },
-  { id: 'acc-mudguards', type: 'accessory', levelRequired: 4,  label: 'Boue de combat',  description: 'Traces de terrain sur les chenilles.' },
-  { id: 'acc-flag',      type: 'accessory', levelRequired: 6,  label: 'Fanion ATFR',     description: 'Petit fanion de clan sur la tourelle.' },
-  { id: 'acc-star3',     type: 'accessory', levelRequired: 8,  label: '3 étoiles de kill',description: 'Triple kill sur les maps.' },
-  { id: 'acc-hatch',     type: 'accessory', levelRequired: 10, label: 'Commandant dehors',description: 'Commandant en position de combat.' },
-  { id: 'acc-ace',       type: 'accessory', levelRequired: 12, label: 'Médaille As',      description: 'Médaille d\'As de la carte dorée.' },
-
   // Titles
   { id: 'title-rookie',       type: 'title', levelRequired: 1,  label: 'Recrue des maps',    description: '' },
   { id: 'title-scout',        type: 'title', levelRequired: 2,  label: 'Scout cartographe',  description: '' },
@@ -181,11 +166,6 @@ export const UNLOCKS: Unlock[] = [
   { id: 'title-commander',    type: 'title', levelRequired: 11, label: 'Commandant ATFR',    description: '' },
   { id: 'title-legend',       type: 'title', levelRequired: 13, label: 'Légende des Maps',   description: '' },
   { id: 'title-master',       type: 'title', levelRequired: 15, label: 'Maître Géographe',   description: '' },
-
-  // Effects
-  { id: 'fx-worn',       type: 'effect', levelRequired: 7,  label: 'Combat usé',         description: 'Rayures et marques de bataille.' },
-  { id: 'fx-glow-gold',  type: 'effect', levelRequired: 10, label: 'Halo doré',          description: 'Aura or autour du char.' },
-  { id: 'fx-prestige',   type: 'effect', levelRequired: 15, label: 'Aura Prestige',      description: 'Halo irisé pour les légendes.' },
 
   // Emblems (displayed on the badge shield)
   { id: 'emb-crosshair', type: 'emblem', levelRequired: 1,  label: 'Réticule',   description: 'Viseur de précision.' },
