@@ -94,39 +94,14 @@ const TIER_DEFAULT_ACCENT: Record<Tier, string> = {
   5: '#D4AF37',
 };
 
-// ─── Baroque shield ───────────────────────────────────────────────────────────
-// Outer path: centre X=80, top y≈13, bottom y≈162
-// Notable feature: waist notch at y≈80-95 (sides curve inward)
-const SHIELD = [
-  `M ${SX} 13`,
-  `L 64 17`,
-  `C 30 17 19 30 19 50`,
-  `C 19 65 23 71 26 80`,
-  `C 17 86 17 96 19 110`,
-  `C 22 128 44 150 ${SX} 163`,
-  `C 116 150 138 128 141 110`,
-  `C 143 96 143 86 134 80`,
-  `C 137 71 141 65 141 50`,
-  `C 141 30 130 17 96 17`,
-  `L ${SX} 13`,
-  'Z',
-].join(' ');
+// ─── WoT-style shield ─────────────────────────────────────────────────────────
+// Octagonal silhouette matching the World of Tanks logo:
+// flat top · 45° chamfered corners · straight sides · curved pointed base
+// w/h ≈ 0.92, same as the WoT logo
+const SHIELD = 'M 42 12 L 118 12 L 150 46 L 150 128 C 150 149 115 159 80 164 C 45 159 10 149 10 128 L 10 46 Z';
 
-// Inner frame (≈7-8 units inset)
-const SHIELD_INNER = [
-  `M ${SX} 20`,
-  `L 68 23`,
-  `C 38 23 27 34 27 52`,
-  `C 27 66 31 71 33 79`,
-  `C 25 85 25 95 27 108`,
-  `C 30 124 50 143 ${SX} 155`,
-  `C 110 143 130 124 133 108`,
-  `C 135 95 135 85 127 79`,
-  `C 129 71 133 66 133 52`,
-  `C 133 34 122 23 92 23`,
-  `L ${SX} 20`,
-  'Z',
-].join(' ');
+// Inner frame (≈6-7 units inset)
+const SHIELD_INNER = 'M 48 18 L 112 18 L 143 50 L 143 124 C 143 143 111 153 80 157 C 49 153 17 143 17 124 L 17 50 Z';
 
 // ─── Star helper ──────────────────────────────────────────────────────────────
 function makeStar(cx: number, cy: number, r: number): string {
@@ -366,9 +341,9 @@ export function AcademyBadge({
 
   // ── Laurel leaves along a quadratic bezier branch ─────────────────────────
   function laurelLeaves(isRight: boolean, leafCount: number): React.ReactElement[] {
-    const P0 = isRight ? [86, 155] : [74, 155];
-    const P1 = isRight ? [122, 88] : [38, 88];
-    const P2 = isRight ? [130, 30] : [30, 30];
+    const P0 = isRight ? [84, 154] : [76, 154];
+    const P1 = isRight ? [156, 88] : [4, 88];
+    const P2 = isRight ? [148, 28] : [12, 28];
     const out: React.ReactElement[] = [];
     for (let i = 0; i < leafCount; i++) {
       const t2 = (i + 0.5) / leafCount;
@@ -559,11 +534,11 @@ export function AcademyBadge({
         {/* Horizontal divider (tier 2+) */}
         {showDetails && t >= 2 && (
           <>
-            <line x1={30} y1={55} x2={130} y2={55}
+            <line x1={26} y1={52} x2={134} y2={52}
                   stroke={accent} strokeWidth={0.9} opacity={0.50} />
             {/* Corner ornaments at divider ends */}
-            <circle cx={30} cy={55} r={2} fill={accent} opacity={0.40} />
-            <circle cx={130} cy={55} r={2} fill={accent} opacity={0.40} />
+            <circle cx={26} cy={52} r={2} fill={accent} opacity={0.40} />
+            <circle cx={134} cy={52} r={2} fill={accent} opacity={0.40} />
           </>
         )}
 
@@ -580,7 +555,7 @@ export function AcademyBadge({
         )}
 
         {/* Crown (tier 5) */}
-        {showDetails && t === 5 && renderCrown(55, accent, bLight, bDark)}
+        {showDetails && t === 5 && renderCrown(52, accent, bLight, bDark)}
 
         {/* Emblem (upper zone y≈40) */}
         {showEmblem && emblemId && renderEmblem(emblemId, SX, 40, accent)}
