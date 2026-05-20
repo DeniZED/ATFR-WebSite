@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,13 +16,11 @@ import {
   Flame,
   Info,
   Map as MapIcon,
-  Pencil,
   RotateCcw,
   ShieldCheck,
   Shuffle,
   Target,
   Trophy,
-  User,
   Users,
   X,
   XCircle,
@@ -533,20 +531,14 @@ export default function Geoguesser() {
       <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit">
         <div className="mx-auto max-w-6xl space-y-4">
           {/* Nav + Identity header (single row) */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
             <Link
               to="/modules"
               className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold shrink-0"
             >
               <ArrowLeft size={12} /> Académie
             </Link>
-            <div className="flex-1 min-w-0">
-              <GeoIdentityBar
-                identity={identity}
-                hasStats={personalStats.games > 0}
-                onShowStats={() => setShowStatsPanel(true)}
-              />
-            </div>
+            <AcademyIdentityWidget />
           </div>
 
           {/* Avatar customizer modal */}
@@ -1772,131 +1764,6 @@ function getEntryGameMode(entry: LeaderboardEntry): GameMode {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-
-// ---------------------------------------------------------------------------
-// Compact identity bar (top of intro, single row)
-// ---------------------------------------------------------------------------
-
-function GeoIdentityBar({
-  identity,
-  hasStats,
-  onShowStats,
-}: {
-  identity: ReturnType<typeof usePlayerIdentity>;
-  hasStats: boolean;
-  onShowStats: () => void;
-}) {
-  const [editing, setEditing] = useState(!identity.nickname && !identity.isVerified);
-  const [draft, setDraft] = useState(identity.nickname);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (draft.trim().length < 1) return;
-    identity.setNickname(draft.trim());
-    setEditing(false);
-  }
-
-  // Ouvre l'édition du pseudo depuis l'extérieur (e.g. clic sur Pencil)
-  function startEdit() {
-    setDraft(identity.nickname);
-    setEditing(true);
-    setTimeout(() => inputRef.current?.focus(), 10);
-  }
-
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-atfr-gold/20 bg-atfr-graphite/50 px-3 py-2">
-      {/* Icône statut */}
-      {identity.isVerified ? (
-        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-success/40 bg-atfr-success/10 text-atfr-success">
-          <ShieldCheck size={15} />
-        </div>
-      ) : (
-        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-gold/20 bg-atfr-gold/8 text-atfr-fog">
-          <User size={15} />
-        </div>
-      )}
-
-      {/* Zone identité */}
-      <div className="flex-1 min-w-0">
-        {identity.isVerified ? (
-          /* Compte WG vérifié */
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-atfr-bone truncate">
-              {identity.nickname}
-            </span>
-            <span className="text-[10px] text-atfr-success/80 uppercase tracking-wide">
-              WG vérifié
-            </span>
-          </div>
-        ) : editing ? (
-          /* Saisie du pseudo */
-          <form onSubmit={save} className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Ton pseudo…"
-              maxLength={32}
-              autoFocus
-              className="flex-1 min-w-0 bg-atfr-ink/60 border border-atfr-gold/30 rounded-lg px-2.5 py-1 text-sm text-atfr-bone placeholder-atfr-fog/50 focus:outline-none focus:border-atfr-gold/60"
-            />
-            <button
-              type="submit"
-              disabled={draft.trim().length < 1}
-              className="px-3 py-1 text-xs font-semibold rounded-lg bg-atfr-gold text-atfr-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-atfr-gold/90 transition-colors"
-            >
-              OK
-            </button>
-          </form>
-        ) : identity.nickname ? (
-          /* Pseudo invité */
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-atfr-bone truncate">
-              {identity.nickname}
-            </span>
-            <span className="text-[10px] text-atfr-fog/60">Invité</span>
-          </div>
-        ) : (
-          /* Pas de pseudo */
-          <span className="text-sm text-atfr-fog/70">
-            Connecte-toi ou saisis un pseudo
-          </span>
-        )}
-      </div>
-
-      {/* Actions à droite */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {/* Éditer pseudo (invité non en édition) */}
-        {!identity.isVerified && !editing && identity.nickname && (
-          <button
-            type="button"
-            onClick={startEdit}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-gold/15 text-atfr-fog/50 hover:text-atfr-bone hover:border-atfr-gold/40 transition-colors"
-            title="Modifier le pseudo"
-          >
-            <Pencil size={12} />
-          </button>
-        )}
-
-        {/* Icône stats (invité) */}
-        {!identity.isVerified && hasStats && (
-          <button
-            type="button"
-            onClick={onShowStats}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-atfr-gold/25 text-atfr-gold/60 hover:text-atfr-gold hover:border-atfr-gold/60 bg-atfr-gold/5 transition-colors"
-            title="Voir mes stats"
-          >
-            <BarChart3 size={13} />
-          </button>
-        )}
-
-        {/* Bulle de profil — login WG géré depuis la page Académie */}
-        <AcademyIdentityWidget />
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Game mode selector
