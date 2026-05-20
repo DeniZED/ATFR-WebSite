@@ -30,7 +30,7 @@ import {
 } from '@/features/quiz/queries';
 import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import { IdentityBar } from '@/components/quiz/IdentityBar';
+import { AcademyIdentityWidget } from '@/components/academy/AcademyIdentityWidget';
 import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import { DIFFICULTY_LABELS } from '@/types/database';
 
@@ -184,14 +184,15 @@ export default function GuideBots() {
         description="Une situation de bataille, plusieurs réponses crédibles, une seule bonne. Pédagogique, parodique, utile."
       >
         <div className="max-w-3xl mx-auto space-y-6">
-          <Link
-            to="/modules"
-            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
-          >
-            <ArrowLeft size={12} /> Retour à l'académie
-          </Link>
-
-          <IdentityBar />
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              to="/modules"
+              className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold shrink-0"
+            >
+              <ArrowLeft size={12} /> Retour à l'académie
+            </Link>
+            <AcademyIdentityWidget />
+          </div>
 
           {quiz.isLoading ? (
             <div className="flex justify-center py-20">
