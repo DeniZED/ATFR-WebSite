@@ -143,6 +143,8 @@ export function TankAvatar({ config, size = 'md', fallback, className }: TankAva
   const uT = lt(b, 0.16), uS = dk(b, 0.22), uR = dk(b, 0.38);
   const tT = lt(tr, 0.20), tS = dk(tr, 0.22), tR = dk(tr, 0.38);
 
+  const [hatchX, hatchY] = iso(UX + 1.8, UY + 1.8, UZ + UH);
+
   // Display size: width=pxSize, height proportional to viewBox
   const dW = pxSize;
   const dH = Math.round(pxSize * VH / VW);
