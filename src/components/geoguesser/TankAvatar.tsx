@@ -164,8 +164,6 @@ export function TankAvatar({ config, size = 'md', fallback, className }: TankAva
   // Map primaryColorId to internal skin key
   const skinKey = COLOR_TO_SKIN[config.primaryColorId] ?? 'default';
   const skin = SKINS[skinKey] ?? SKINS.default;
-  const has = (_id: string) => false; // accessories removed from AvatarConfig
-  const eff: string | null = null;   // effects removed from AvatarConfig
   const { base: b, track: tr, accent: acc } = skin;
 
   // Face colors — top brightest, right darkest (isometric lighting)

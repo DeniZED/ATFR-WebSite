@@ -11,7 +11,6 @@ import {
 import {
   usePlayerModuleScores,
 } from '@/features/leaderboard/queries';
-import { TankAvatar } from '@/components/geoguesser/TankAvatar';
 import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AvatarCustomizer } from '@/components/geoguesser/AvatarCustomizer';
 import { ACADEMY_MODULE_CONTRIBUTIONS } from '@/features/academy/moduleContributions';

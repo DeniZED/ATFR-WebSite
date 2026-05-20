@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
-import { TankAvatar } from '@/components/geoguesser/TankAvatar';
 import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AcademyProfilePanel } from './AcademyProfilePanel';
 import { env } from '@/lib/env';
