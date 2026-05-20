@@ -528,18 +528,15 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   if (stage === 'intro') {
     return (
-      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit">
+      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit" headerAction={<AcademyIdentityWidget />}>
         <div className="mx-auto max-w-6xl space-y-4">
-          {/* Nav + Identity header (single row) */}
-          <div className="flex items-center justify-between gap-3">
-            <Link
-              to="/modules"
-              className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold shrink-0"
-            >
-              <ArrowLeft size={12} /> Académie
-            </Link>
-            <AcademyIdentityWidget />
-          </div>
+          {/* Retour académie */}
+          <Link
+            to="/modules"
+            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
+          >
+            <ArrowLeft size={12} /> Académie
+          </Link>
 
           {/* Avatar customizer modal */}
           {showCustomizer && (

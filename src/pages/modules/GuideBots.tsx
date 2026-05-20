@@ -182,17 +182,15 @@ export default function GuideBots() {
         eyebrow="Guide pour les bots"
         title="Le code de la route WoT"
         description="Une situation de bataille, plusieurs réponses crédibles, une seule bonne. Pédagogique, parodique, utile."
+        headerAction={<AcademyIdentityWidget />}
       >
         <div className="max-w-3xl mx-auto space-y-6">
-          <div className="flex items-center justify-between gap-3">
-            <Link
-              to="/modules"
-              className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold shrink-0"
-            >
-              <ArrowLeft size={12} /> Retour à l'académie
-            </Link>
-            <AcademyIdentityWidget />
-          </div>
+          <Link
+            to="/modules"
+            className="inline-flex items-center gap-1 text-xs text-atfr-fog hover:text-atfr-gold"
+          >
+            <ArrowLeft size={12} /> Retour à l'académie
+          </Link>
 
           {quiz.isLoading ? (
             <div className="flex justify-center py-20">
