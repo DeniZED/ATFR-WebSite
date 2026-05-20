@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
-import { Alert, Section, Spinner } from '@/components/ui';
+import { Alert, Section } from '@/components/ui';
 import { useContent } from '@/hooks/useContent';
 import { useAchievements } from '@/features/content/queries';
 

@@ -27,16 +27,9 @@ export function DiscordCommunity() {
   const invite = get('discord_invite_url');
   const { data: widget, isLoading } = useDiscordWidget(serverId || null);
 
-  if (!serverId && !invite) return null;
-
-  const inviteUrl = widget?.instant_invite || invite;
-  const name = widget?.name ?? 'Rejoindre le Discord';
-  const presenceCount = widget?.presence_count ?? null;
-
-  const channels = widget?.channels ?? [];
-  const members = widget?.members ?? [];
-
   const { voiceGroups, voiceCount, onlineNotInVoice } = useMemo(() => {
+    const channels = widget?.channels ?? [];
+    const members = widget?.members ?? [];
     const voiceMembers = members.filter((m) => !!m.channel_id);
     const channelsById = new Map(channels.map((c) => [c.id, c]));
     const groupsMap = new Map<string, VoiceChannelGroup>();
@@ -58,7 +51,13 @@ export function DiscordCommunity() {
       voiceCount: voiceMembers.length,
       onlineNotInVoice: members.filter((m) => !m.channel_id).slice(0, 8),
     };
-  }, [members, channels]);
+  }, [widget]);
+
+  if (!serverId && !invite) return null;
+
+  const inviteUrl = widget?.instant_invite || invite;
+  const name = widget?.name ?? 'Rejoindre le Discord';
+  const presenceCount = widget?.presence_count ?? null;
 
   return (
     <Section
