@@ -29,7 +29,7 @@ export function Section({
     >
       <div className="container">
         {(eyebrow || title || description || headerAction) && (
-          <div className="relative mb-14">
+          <div className="relative mb-10 sm:mb-14">
             {/* Top-right action slot */}
             {headerAction && (
               <div className="absolute top-0 right-0 z-10">

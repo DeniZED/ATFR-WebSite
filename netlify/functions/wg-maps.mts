@@ -73,11 +73,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     const res = await fetch(url);
     const text = await res.text();
     if (!res.ok) {
+      console.error('[wg-maps] WG HTTP error:', res.status, text.slice(0, 400));
       return new Response(
-        JSON.stringify({
-          error: `WG HTTP ${res.status}`,
-          body: text.slice(0, 400),
-        }),
+        JSON.stringify({ error: 'Internal server error' }),
         { status: 502, headers: { 'content-type': 'application/json' } },
       );
     }
@@ -86,18 +84,17 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     try {
       json = JSON.parse(text) as WgArenasResponse;
     } catch {
+      console.error('[wg-maps] WG payload not JSON:', text.slice(0, 400));
       return new Response(
-        JSON.stringify({ error: 'WG payload not JSON', body: text.slice(0, 400) }),
+        JSON.stringify({ error: 'Internal server error' }),
         { status: 502, headers: { 'content-type': 'application/json' } },
       );
     }
 
     if (json.status !== 'ok') {
+      console.error('[wg-maps] WG API error:', json.error);
       return new Response(
-        JSON.stringify({
-          error: 'WG error',
-          wg: json.error ?? null,
-        }),
+        JSON.stringify({ error: 'Internal server error' }),
         { status: 502, headers: { 'content-type': 'application/json' } },
       );
     }
@@ -120,8 +117,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       },
     });
   } catch (err) {
+    console.error('[wg-maps] internal error:', err);
     return new Response(
-      JSON.stringify({ error: (err as Error).message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 502, headers: { 'content-type': 'application/json' } },
     );
   }

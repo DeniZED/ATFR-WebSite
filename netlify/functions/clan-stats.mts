@@ -440,8 +440,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       },
     });
   } catch (err) {
+    console.error('[clan-stats] internal error:', err);
     return new Response(
-      JSON.stringify({ error: (err as Error).message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 502, headers: { 'content-type': 'application/json' } },
     );
   }

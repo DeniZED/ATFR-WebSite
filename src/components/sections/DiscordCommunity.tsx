@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Headphones, MessageSquare, Mic, Radio } from 'lucide-react';
 import { Button, Card, CardBody, Section } from '@/components/ui';
@@ -9,9 +10,9 @@ import {
 } from '@/features/discord/queries';
 
 const STATUS_DOT = {
-  online: 'bg-emerald-400',
-  idle: 'bg-amber-400',
-  dnd: 'bg-red-400',
+  online: 'bg-atfr-success',
+  idle: 'bg-atfr-warning',
+  dnd: 'bg-atfr-danger',
 } as const;
 
 interface VoiceChannelGroup {
@@ -35,30 +36,29 @@ export function DiscordCommunity() {
   const channels = widget?.channels ?? [];
   const members = widget?.members ?? [];
 
-  // Group voice members by channel.
-  const voiceMembers = members.filter((m) => !!m.channel_id);
-  const voiceCount = voiceMembers.length;
-  const channelsById = new Map(channels.map((c) => [c.id, c]));
-  const groupsMap = new Map<string, VoiceChannelGroup>();
-  for (const m of voiceMembers) {
-    const cid = m.channel_id!;
-    const channel = channelsById.get(cid);
-    const channelName = channel?.name ?? 'Salon vocal';
-    if (!groupsMap.has(cid)) {
-      groupsMap.set(cid, { channelId: cid, channelName, members: [] });
+  const { voiceGroups, voiceCount, onlineNotInVoice } = useMemo(() => {
+    const voiceMembers = members.filter((m) => !!m.channel_id);
+    const channelsById = new Map(channels.map((c) => [c.id, c]));
+    const groupsMap = new Map<string, VoiceChannelGroup>();
+    for (const m of voiceMembers) {
+      const cid = m.channel_id!;
+      const channelName = channelsById.get(cid)?.name ?? 'Salon vocal';
+      if (!groupsMap.has(cid)) {
+        groupsMap.set(cid, { channelId: cid, channelName, members: [] });
+      }
+      groupsMap.get(cid)!.members.push(m);
     }
-    groupsMap.get(cid)!.members.push(m);
-  }
-  const voiceGroups = [...groupsMap.values()].sort((a, b) => {
-    const pa = channelsById.get(a.channelId)?.position ?? 0;
-    const pb = channelsById.get(b.channelId)?.position ?? 0;
-    return pa - pb;
-  });
-
-  // Members not in voice — used as fallback when no voice activity.
-  const onlineNotInVoice = members
-    .filter((m) => !m.channel_id)
-    .slice(0, 8);
+    const groups = [...groupsMap.values()].sort((a, b) => {
+      const pa = channelsById.get(a.channelId)?.position ?? 0;
+      const pb = channelsById.get(b.channelId)?.position ?? 0;
+      return pa - pb;
+    });
+    return {
+      voiceGroups: groups,
+      voiceCount: voiceMembers.length,
+      onlineNotInVoice: members.filter((m) => !m.channel_id).slice(0, 8),
+    };
+  }, [members, channels]);
 
   return (
     <Section
@@ -144,7 +144,7 @@ export function DiscordCommunity() {
                     className="rounded-lg border border-atfr-gold/15 bg-atfr-graphite/40 p-4"
                   >
                     <div className="mb-3 flex items-center gap-2 text-sm text-atfr-bone">
-                      <Mic size={14} className="text-emerald-400" />
+                      <Mic size={14} className="text-atfr-success" />
                       <span className="font-medium">{g.channelName}</span>
                       <span className="text-xs text-atfr-fog">
                         · {g.members.length}{' '}
@@ -201,14 +201,14 @@ function Stat({
       className={cn(
         'rounded-lg border p-3 text-center transition-colors',
         highlight
-          ? 'border-emerald-400/40 bg-emerald-400/5'
+          ? 'border-atfr-success/40 bg-atfr-success/5'
           : 'border-atfr-gold/15 bg-atfr-graphite/40',
       )}
     >
       <div
         className={cn(
           'inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]',
-          highlight ? 'text-emerald-300' : 'text-atfr-fog',
+          highlight ? 'text-atfr-success' : 'text-atfr-fog',
         )}
       >
         {icon}

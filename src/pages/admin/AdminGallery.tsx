@@ -44,9 +44,13 @@ export default function AdminGallery() {
   });
 
   async function copy(url: string) {
-    await navigator.clipboard.writeText(url);
-    setCopied(url);
-    setTimeout(() => setCopied(null), 1500);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(url);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      // Clipboard access denied — silently ignore
+    }
   }
 
   return (

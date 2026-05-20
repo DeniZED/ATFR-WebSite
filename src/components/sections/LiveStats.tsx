@@ -13,7 +13,7 @@ import {
   Wifi,
   Zap,
 } from 'lucide-react';
-import { Section, StatCard } from '@/components/ui';
+import { Alert, Section, StatCard } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useClanStats } from '@/features/stats/queries';
 
@@ -35,7 +35,7 @@ interface CardSpec {
 }
 
 export function LiveStats() {
-  const { data, isLoading } = useClanStats();
+  const { data, isLoading, isError } = useClanStats();
   const [scope, setScope] = useState<Scope>('overview');
 
   const sampled = data?.sampledMembers ?? 0;
@@ -136,14 +136,21 @@ export function LiveStats() {
       title="Stats live"
       description="Données agrégées depuis l'API Wargaming sur l'ensemble des membres du clan. WN8, winrate et dégâts moyens sont calculés sur les random battles."
     >
+      {isError && (
+        <div className="mb-6">
+          <Alert tone="danger">Les statistiques sont temporairement indisponibles. Réessaie dans quelques instants.</Alert>
+        </div>
+      )}
+
       <div className="mb-8 flex flex-wrap justify-center gap-2">
         {SCOPES.map((s) => (
           <button
             key={s.id}
             type="button"
             onClick={() => setScope(s.id)}
+            aria-pressed={scope === s.id}
             className={cn(
-              'rounded-full border px-4 py-1.5 text-xs uppercase tracking-[0.2em] transition-colors',
+              'rounded-full border px-4 py-2.5 text-xs uppercase tracking-[0.2em] transition-colors min-h-[44px] inline-flex items-center',
               scope === s.id
                 ? 'bg-atfr-gold text-atfr-ink border-atfr-gold'
                 : 'border-atfr-gold/30 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/60',

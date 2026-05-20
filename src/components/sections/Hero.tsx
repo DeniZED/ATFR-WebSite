@@ -30,7 +30,7 @@ export function Hero() {
         <video
           key={videoUrl}
           className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
+          autoPlay={!reduceMotion}
           loop
           muted
           playsInline

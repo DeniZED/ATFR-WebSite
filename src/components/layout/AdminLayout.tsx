@@ -72,7 +72,16 @@ export function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-atfr-ink">
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-atfr-ink/60 lg:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <aside
+        id="admin-sidebar"
         className={cn(
           'fixed inset-y-0 left-0 z-40 w-64 bg-atfr-carbon border-r border-atfr-gold/10',
           'transition-transform duration-300 ease-emphasized lg:translate-x-0',
@@ -92,7 +101,7 @@ export function AdminLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav aria-label="Navigation administration" className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {visibleNav.map((item) => (
             <NavLink
               key={item.to}
@@ -140,7 +149,9 @@ export function AdminLayout() {
           </Link>
           <button
             onClick={() => setOpen((o) => !o)}
-            aria-label="Menu"
+            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={open}
+            aria-controls="admin-sidebar"
             className="h-10 w-10 inline-flex items-center justify-center"
           >
             {open ? <X size={20} /> : <Menu size={20} />}

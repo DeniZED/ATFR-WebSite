@@ -14,8 +14,10 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && user) {
-    const from =
+    const rawFrom =
       (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/admin';
+    // Reject external redirects (paths starting with // or \).
+    const from = rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/admin';
     return <Navigate to={from} replace />;
   }
 
