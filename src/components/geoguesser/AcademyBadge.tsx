@@ -11,8 +11,9 @@ import {
 // ─── ViewBox ──────────────────────────────────────────────────────────────────
 const VW = 160;
 const VH = 190;
+const SX = 80; // shield center X
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface AcademyBadgeProps {
   levelInfo: LevelInfo;
   primaryColorId?: string;
@@ -41,66 +42,93 @@ function getStarCount(level: number): number {
   return 5;
 }
 
-// ─── Chiffres romains ─────────────────────────────────────────────────────────
+// ─── Roman numerals ───────────────────────────────────────────────────────────
 const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
-function toRoman(n: number): string { return ROMAN[(n - 1)] ?? String(n); }
+function toRoman(n: number): string { return ROMAN[n - 1] ?? String(n); }
 
-// ─── Couleurs ─────────────────────────────────────────────────────────────────
+// ─── Colour helpers ───────────────────────────────────────────────────────────
 function lighten(hex: string, f: number): string {
-  const n = parseInt(hex.replace('#',''), 16);
-  const r = Math.min(255, Math.round(((n >> 16) & 255) + f * 255));
-  const g = Math.min(255, Math.round(((n >> 8)  & 255) + f * 255));
-  const b = Math.min(255, Math.round((n          & 255) + f * 255));
-  return `#${[r,g,b].map(v => v.toString(16).padStart(2,'0')).join('')}`;
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return `#${[
+    Math.min(255, Math.round(r + (255 - r) * f)),
+    Math.min(255, Math.round(g + (255 - g) * f)),
+    Math.min(255, Math.round(b + (255 - b) * f)),
+  ].map(v => v.toString(16).padStart(2, '0')).join('')}`;
 }
-function darken(hex: string, f: number): string { return lighten(hex, -f); }
+function darken(hex: string, f: number): string {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return `#${[
+    Math.round(r * (1 - f)),
+    Math.round(g * (1 - f)),
+    Math.round(b * (1 - f)),
+  ].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
 
-// Couleur d'accent par défaut selon le tier (si aucun accent choisi)
+// Metallic type from color id — drives specular parameters
+type MetallicType = 'gold' | 'silver' | 'bronze' | 'iron' | null;
+function getMetallicType(primaryId: string, accentId: string | null): MetallicType {
+  const ids = [primaryId, accentId].filter(Boolean).join(' ');
+  if (/col-gold|col-bronze|acc-gold|acc-brass|acc-copper|acc-iridescent/.test(ids)) return 'gold';
+  if (/col-silver|col-chrome|acc-silver|acc-platinum|acc-ivory/.test(ids)) return 'silver';
+  if (/col-iron/.test(ids)) return 'iron';
+  if (/col-prestige|col-void/.test(ids)) return 'iron';
+  return null;
+}
+
+function specularExponent(mt: MetallicType, tier: Tier): number {
+  if (mt === 'silver') return 80;
+  if (mt === 'gold')   return 48;
+  if (mt === 'bronze') return 36;
+  if (mt === 'iron')   return 22;
+  return tier >= 4 ? 28 : 18;
+}
+
+// Default accent per tier (used when no accent selected)
 const TIER_DEFAULT_ACCENT: Record<Tier, string> = {
-  1: '#A0B080',
-  2: '#9AAAB8',
+  1: '#9AAA88',
+  2: '#8899AA',
   3: '#C9A227',
   4: '#C9A227',
-  5: '#C9A227',
+  5: '#D4AF37',
 };
 
-// ─── Forme du bouclier baroque ────────────────────────────────────────────────
-// Shield centré sur (80, 82), de y=14 à y=155, x de 22 à 138
-const SX = 80; // centre X
-
-// Baroque shield path
+// ─── Baroque shield ───────────────────────────────────────────────────────────
+// Outer path: centre X=80, top y≈13, bottom y≈162
+// Notable feature: waist notch at y≈80-95 (sides curve inward)
 const SHIELD = [
-  `M ${SX} 14`,
-  `C 95 14 135 26 138 38`,     // top-right
-  `C 140 50 136 58 134 64`,    // upper-right side (slight baroque bow)
-  `C 132 70 136 76 138 84`,    // baroque notch right
-  `C 140 92 138 108 130 122`,  // lower-right
-  `Q 120 142 ${SX} 155`,       // bottom-right to point
-  `Q 40 142 30 122`,           // bottom-left from point
-  `C 22 108 20 92 22 84`,      // lower-left
-  `C 24 76 28 70 26 64`,       // baroque notch left
-  `C 24 58 20 50 22 38`,       // upper-left side
-  `C 25 26 65 14 ${SX} 14`,    // top-left
+  `M ${SX} 13`,
+  `L 64 17`,
+  `C 30 17 19 30 19 50`,
+  `C 19 65 23 71 26 80`,
+  `C 17 86 17 96 19 110`,
+  `C 22 128 44 150 ${SX} 163`,
+  `C 116 150 138 128 141 110`,
+  `C 143 96 143 86 134 80`,
+  `C 137 71 141 65 141 50`,
+  `C 141 30 130 17 96 17`,
+  `L ${SX} 13`,
   'Z',
 ].join(' ');
 
-// Inner frame path (slightly inset)
+// Inner frame (≈7-8 units inset)
 const SHIELD_INNER = [
   `M ${SX} 20`,
-  `C 93 20 128 30 131 40`,
-  `C 133 50 129 58 127 64`,
-  `C 125 70 129 76 131 83`,
-  `C 133 91 131 106 124 118`,
-  `Q 115 136 ${SX} 148`,
-  `Q 45 136 36 118`,
-  `C 29 106 27 91 29 83`,
-  `C 31 76 35 70 33 64`,
-  `C 31 58 27 50 29 40`,
-  `C 32 30 67 20 ${SX} 20`,
+  `L 68 23`,
+  `C 38 23 27 34 27 52`,
+  `C 27 66 31 71 33 79`,
+  `C 25 85 25 95 27 108`,
+  `C 30 124 50 143 ${SX} 155`,
+  `C 110 143 130 124 133 108`,
+  `C 135 95 135 85 127 79`,
+  `C 129 71 133 66 133 52`,
+  `C 133 34 122 23 92 23`,
+  `L ${SX} 20`,
   'Z',
 ].join(' ');
 
-// ─── Star path ────────────────────────────────────────────────────────────────
+// ─── Star helper ──────────────────────────────────────────────────────────────
 function makeStar(cx: number, cy: number, r: number): string {
   const pts: string[] = [];
   for (let i = 0; i < 10; i++) {
@@ -111,68 +139,184 @@ function makeStar(cx: number, cy: number, r: number): string {
   return `M ${pts.join(' L ')} Z`;
 }
 
-// ─── Feuille de laurier ───────────────────────────────────────────────────────
-function leafPath(cx: number, cy: number, angle: number, size: number): string {
-  const a = angle * Math.PI / 180;
-  const cos = Math.cos(a), sin = Math.sin(a);
-  const pts = [
-    [0, 0], [size*0.3, -size*0.5], [size*0.5, -size],
-    [size*0.2, -size*1.3], [0, -size*1.5],
-    [-size*0.2, -size*1.3], [-size*0.3, -size*0.8],
-    [-size*0.1, -size*0.3],
-  ].map(([x, y]) => {
-    const rx = (x ?? 0) * cos - (y ?? 0) * sin + cx;
-    const ry = (x ?? 0) * sin + (y ?? 0) * cos + cy;
-    return `${rx.toFixed(1)},${ry.toFixed(1)}`;
-  });
-  return `M ${pts[0]} C ${pts[1]} ${pts[2]} ${pts[3]} C ${pts[4]} ${pts[5]} ${pts[6]} ${pts[7]} Z`;
+// ─── Leaf helper ──────────────────────────────────────────────────────────────
+// Proper oval leaf: base at (cx,cy), growing in the direction of `angle` (0=up)
+function leafSVG(cx: number, cy: number, angle: number, w: number, h: number): string {
+  const rad = angle * (Math.PI / 180);
+  const ux = Math.sin(rad), uy = -Math.cos(rad);   // "up" direction
+  const rx = Math.cos(rad), ry =  Math.sin(rad);   // "right" direction
+  const p = (lx: number, ly: number) =>
+    `${(cx + lx * rx + ly * ux).toFixed(1)} ${(cy + lx * ry + ly * uy).toFixed(1)}`;
+  return [
+    `M ${p(0, 0)}`,
+    `C ${p(-w * 0.2, h * 0.08)} ${p(-w, h * 0.22)} ${p(-w, h * 0.42)}`,
+    `C ${p(-w, h * 0.64)} ${p(-w * 0.25, h * 0.86)} ${p(0, h)}`,
+    `C ${p(w * 0.25, h * 0.86)} ${p(w, h * 0.64)} ${p(w, h * 0.42)}`,
+    `C ${p(w, h * 0.22)} ${p(w * 0.2, h * 0.08)} ${p(0, 0)}`,
+    'Z',
+  ].join(' ');
 }
 
-// ─── Emblème ──────────────────────────────────────────────────────────────────
-function renderEmblem(id: string, cx: number, cy: number, color: string): React.ReactElement | null {
+// Midrib line along the leaf axis
+function midribSVG(cx: number, cy: number, angle: number, h: number): string {
+  const rad = angle * (Math.PI / 180);
+  const x2 = (cx + h * 0.88 * Math.sin(rad)).toFixed(1);
+  const y2 = (cy - h * 0.88 * Math.cos(rad)).toFixed(1);
+  return `M ${cx.toFixed(1)} ${cy.toFixed(1)} L ${x2} ${y2}`;
+}
+
+// ─── Emblem renderer ──────────────────────────────────────────────────────────
+function renderEmblem(id: string, cx: number, cy: number, col: string): React.ReactElement | null {
   switch (id) {
     case 'emb-crosshair':
       return (
-        <g stroke={color} fill="none" strokeLinecap="round" opacity={0.9}>
+        <g stroke={col} fill="none" strokeLinecap="round" opacity={0.9}>
           <circle cx={cx} cy={cy} r={7} strokeWidth={1.2} />
-          <line x1={cx} y1={cy-11} x2={cx} y2={cy-8} strokeWidth={1.2} />
-          <line x1={cx} y1={cy+8} x2={cx} y2={cy+11} strokeWidth={1.2} />
-          <line x1={cx-11} y1={cy} x2={cx-8} y2={cy} strokeWidth={1.2} />
-          <line x1={cx+8} y1={cy} x2={cx+11} y2={cy} strokeWidth={1.2} />
+          <line x1={cx} y1={cy - 11} x2={cx} y2={cy - 8}  strokeWidth={1.2} />
+          <line x1={cx} y1={cy + 8}  x2={cx} y2={cy + 11} strokeWidth={1.2} />
+          <line x1={cx - 11} y1={cy} x2={cx - 8}  y2={cy} strokeWidth={1.2} />
+          <line x1={cx + 8}  y1={cy} x2={cx + 11} y2={cy} strokeWidth={1.2} />
         </g>
       );
     case 'emb-star':
-      return <path d={makeStar(cx, cy, 9)} fill={color} opacity={0.9} />;
+      return <path d={makeStar(cx, cy, 9)} fill={col} opacity={0.9} />;
     case 'emb-bolt':
       return (
         <path
           d={`M ${cx+3} ${cy-11} L ${cx-4} ${cy-1} L ${cx+2} ${cy-1} L ${cx-4} ${cy+11} L ${cx+6} ${cy+1} L ${cx+1} ${cy+1} Z`}
-          fill={color} opacity={0.9}
+          fill={col} opacity={0.9}
         />
       );
     case 'emb-diamond':
       return (
         <g opacity={0.9}>
           <path d={`M ${cx} ${cy-11} L ${cx+8} ${cy} L ${cx} ${cy+11} L ${cx-8} ${cy} Z`}
-                fill="none" stroke={color} strokeWidth={1.2} />
+                fill="none" stroke={col} strokeWidth={1.2} />
           <path d={`M ${cx} ${cy-6} L ${cx+4.5} ${cy} L ${cx} ${cy+6} L ${cx-4.5} ${cy} Z`}
-                fill={color} opacity={0.3} />
+                fill={col} opacity={0.3} />
         </g>
       );
     case 'emb-compass':
       return (
         <g opacity={0.9}>
-          <path d={`M ${cx} ${cy-12} L ${cx+2.5} ${cy-3} L ${cx} ${cy} L ${cx-2.5} ${cy-3} Z`} fill={color} />
+          <path d={`M ${cx} ${cy-12} L ${cx+2.5} ${cy-3} L ${cx} ${cy} L ${cx-2.5} ${cy-3} Z`} fill={col} />
           <path d={`M ${cx} ${cy+12} L ${cx+2.5} ${cy+3} L ${cx} ${cy} L ${cx-2.5} ${cy+3} Z`}
-                fill="none" stroke={color} strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={4} fill="none" stroke={color} strokeWidth={1} />
+                fill="none" stroke={col} strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={4} fill="none" stroke={col} strokeWidth={1} />
         </g>
       );
     default: return null;
   }
 }
 
-// ─── Composant ────────────────────────────────────────────────────────────────
+// ─── Sword renderer ───────────────────────────────────────────────────────────
+// Both swords share the same design, just rotated ±38° around the shield center.
+function renderSword(
+  rotSign: 1 | -1,
+  uid: string,
+  accent: string,
+  bLight: string,
+  bDark: string,
+): React.ReactElement {
+  const G = 106; // guard Y position (unrotated)
+  const TIP = 18; // blade tip Y
+  const POMMEL_Y = 122;
+
+  return (
+    <g transform={`rotate(${rotSign * 38}, ${SX}, 85)`} key={rotSign}>
+      {/* Blade — tapered polygon */}
+      <polygon
+        points={`${SX},${TIP} ${SX + 3.8},${G} ${SX - 3.8},${G}`}
+        fill={`url(#${uid}blade)`}
+      />
+      {/* Fuller (centre groove) */}
+      <line x1={SX} y1={TIP + 10} x2={SX} y2={G - 6}
+            stroke={bDark} strokeWidth={0.8} opacity={0.55} />
+      {/* Blade edge highlight */}
+      <line x1={SX - 3.4} y1={TIP + 6} x2={SX - 3.8} y2={G}
+            stroke={bLight} strokeWidth={0.4} opacity={0.45} />
+      {/* Cross-guard — curved with ball ends */}
+      <path
+        d={`M ${SX - 18} ${G + 1} C ${SX - 16} ${G - 3},${SX - 5} ${G - 1},${SX} ${G - 1} C ${SX + 5} ${G - 1},${SX + 16} ${G - 3},${SX + 18} ${G + 1} C ${SX + 16} ${G + 4},${SX + 5} ${G + 3},${SX} ${G + 3} C ${SX - 5} ${G + 3},${SX - 16} ${G + 4},${SX - 18} ${G + 1} Z`}
+        fill={accent}
+        stroke={bLight} strokeWidth={0.5}
+      />
+      <circle cx={SX - 18} cy={G + 1} r={2.8} fill={bLight} />
+      <circle cx={SX + 18} cy={G + 1} r={2.8} fill={bLight} />
+      {/* Grip */}
+      <rect x={SX - 3} y={G + 3} width={6} height={13} rx={1.5}
+            fill={darken(accent, 0.40)} />
+      {/* Grip wrapping lines */}
+      {([G + 6, G + 9, G + 12] as number[]).map((gy) => (
+        <line key={gy} x1={SX - 3} y1={gy} x2={SX + 3} y2={gy}
+              stroke={bLight} strokeWidth={0.6} opacity={0.35} />
+      ))}
+      {/* Pommel */}
+      <ellipse cx={SX} cy={POMMEL_Y} rx={7} ry={5.2}
+               fill={accent} stroke={bLight} strokeWidth={0.5} />
+      <ellipse cx={SX - 1} cy={POMMEL_Y - 1} rx={3} ry={2.2}
+               fill={bLight} opacity={0.35} />
+    </g>
+  );
+}
+
+// ─── Crown renderer (tier 5) ─────────────────────────────────────────────────
+// 5-point heraldic crown centred at SX, band base at baseY
+function renderCrown(
+  baseY: number,
+  accent: string,
+  bLight: string,
+  bDark: string,
+): React.ReactElement {
+  const bTop = baseY - 7;   // top of band
+  const bBot = baseY;       // bottom of band
+  // 5 tips: [tall, short, tall(center), short, tall]
+  const tips = [
+    { x: SX - 22, y: bTop - 21, tall: true },
+    { x: SX - 11, y: bTop - 13, tall: false },
+    { x: SX,      y: bTop - 26, tall: true },
+    { x: SX + 11, y: bTop - 13, tall: false },
+    { x: SX + 22, y: bTop - 21, tall: true },
+  ];
+
+  // Build crown silhouette path
+  let d = `M ${SX - 26} ${bBot} L ${SX - 26} ${bTop}`;
+  for (const tip of tips) {
+    const hw = tip.tall ? 4.5 : 3;
+    d += ` L ${tip.x - hw} ${bTop}`;
+    d += ` C ${tip.x - hw} ${tip.y + 8},${tip.x - 2} ${tip.y + 2},${tip.x} ${tip.y}`;
+    d += ` C ${tip.x + 2} ${tip.y + 2},${tip.x + hw} ${tip.y + 8},${tip.x + hw} ${bTop}`;
+  }
+  d += ` L ${SX + 26} ${bTop} L ${SX + 26} ${bBot} Z`;
+
+  return (
+    <g>
+      <path d={d} fill={accent} stroke={bDark} strokeWidth={0.6} />
+      {/* Band highlight */}
+      <rect x={SX - 26} y={bTop} width={52} height={3} rx={0}
+            fill={bLight} opacity={0.25} />
+      {/* Band bottom shadow */}
+      <rect x={SX - 26} y={bTop + 4} width={52} height={3} rx={0}
+            fill={bDark} opacity={0.30} />
+      {/* Gems at tall point tips */}
+      {tips.filter(t => t.tall).map((tip, i) => (
+        <g key={i}>
+          <circle cx={tip.x} cy={tip.y} r={3.8}
+                  fill={i === 1 ? '#D8686880' : '#6868C880'}
+                  stroke={bLight} strokeWidth={0.6} />
+          <circle cx={tip.x - 1} cy={tip.y - 1} r={1.4}
+                  fill="white" opacity={0.45} />
+        </g>
+      ))}
+      {/* Left edge highlight */}
+      <path d={`M ${SX - 26} ${bBot} L ${SX - 26} ${bTop} L ${SX - 26 + (tips[0]?.tall ? 4.5 : 3)} ${bTop} L ${tips[0]?.x} ${tips[0]?.y}`}
+            fill="none" stroke={bLight} strokeWidth={0.6} opacity={0.35}
+            strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export function AcademyBadge({
   levelInfo,
   primaryColorId = 'col-olive',
@@ -186,35 +330,72 @@ export function AcademyBadge({
   const stars = getStarCount(levelInfo.level);
   const lvl = levelInfo.level;
 
-  // Couleurs
+  // Colours
   const primaryDef = getPrimaryColor(primaryColorId);
   const accentDef  = getAccentColor(accentColorId ?? null);
   const base   = primaryDef.hex;
   const accent = accentDef?.hex ?? TIER_DEFAULT_ACCENT[t];
-  const isMetallic = primaryDef.metallic || accentDef?.metallic;
 
-  const bg1 = lighten(base, 0.08);
+  const mt = getMetallicType(primaryColorId, accentColorId ?? null);
+  const isMetallic = mt !== null || primaryDef.metallic || accentDef?.metallic;
+  const specExp = specularExponent(mt, t);
+
+  // Gradient colour ramps
+  const bg0 = lighten(base, 0.28);
+  const bg1 = lighten(base, 0.10);
   const bg2 = base;
-  const bg3 = darken(base, 0.12);
-  const bg4 = darken(base, 0.22);
+  const bg3 = darken(base, 0.16);
+  const bg4 = darken(base, 0.30);
 
-  const borderLight = lighten(accent, 0.25);
-  const borderDark  = darken(accent, 0.30);
+  const bLight = lighten(accent, 0.30);
+  const bDark  = darken(accent, 0.35);
 
   const w = size;
   const h = Math.round(size * VH / VW);
 
-  const showDetails  = size >= 50;
-  const showOrnaments= size >= 80;
-  const showEmblem   = size >= 65 && !!emblemId;
+  const showDetails   = size >= 50;
+  const showOrnaments = size >= 80;
+  const showEmblem    = size >= 65 && !!emblemId;
 
-  // Taille polices
   const roman = toRoman(lvl);
   const numFontSize = roman.length <= 2 ? 34 : roman.length <= 4 ? 28 : 22;
 
-  // Stars layout (centrées, zone y≈130-140)
+  // Stars row
   const SR = 5.5, SS = 14;
   const sx0 = SX - ((stars - 1) * SS) / 2;
+
+  // ── Laurel leaves along a quadratic bezier branch ─────────────────────────
+  function laurelLeaves(isRight: boolean, leafCount: number): React.ReactElement[] {
+    const P0 = isRight ? [86, 155] : [74, 155];
+    const P1 = isRight ? [122, 88] : [38, 88];
+    const P2 = isRight ? [130, 30] : [30, 30];
+    const out: React.ReactElement[] = [];
+    for (let i = 0; i < leafCount; i++) {
+      const t2 = (i + 0.5) / leafCount;
+      const bx = (1 - t2) * (1 - t2) * P0[0] + 2 * t2 * (1 - t2) * P1[0] + t2 * t2 * P2[0];
+      const by = (1 - t2) * (1 - t2) * P0[1] + 2 * t2 * (1 - t2) * P1[1] + t2 * t2 * P2[1];
+      const tx = 2 * (1 - t2) * (P1[0] - P0[0]) + 2 * t2 * (P2[0] - P1[0]);
+      const ty = 2 * (1 - t2) * (P1[1] - P0[1]) + 2 * t2 * (P2[1] - P1[1]);
+      const branchAngle = Math.atan2(ty, tx) * (180 / Math.PI);
+      // Alternate leaf to left/right of branch. Flip direction for left branch.
+      const side = (i % 2 === 0 ? 1 : -1) * (isRight ? 1 : -1);
+      const leafAngle = branchAngle + side * 72;
+      const leafW = 4.2 + i * 0.12;
+      const leafH = 8.5 + i * 0.15;
+      const opacity = 0.82 + (i / leafCount) * 0.10;
+      const fill = leafSVG(bx, by, leafAngle, leafW, leafH);
+      const midrib = midribSVG(bx, by, leafAngle, leafH);
+      out.push(
+        <g key={`${isRight ? 'r' : 'l'}${i}`}>
+          <path d={fill} fill={`url(#${uid}leaf)`} opacity={opacity} />
+          <path d={midrib} fill="none" stroke={bDark} strokeWidth={0.4} opacity={0.45} />
+        </g>,
+      );
+    }
+    return out;
+  }
+
+  const leafCount = t === 3 ? 6 : t === 4 ? 8 : 10;
 
   return (
     <svg
@@ -226,92 +407,97 @@ export function AcademyBadge({
       aria-label={`Insigne niveau ${lvl} — ${levelInfo.title}`}
     >
       <defs>
-        {/* Gradient principal (effet convexe 3D) */}
-        <radialGradient id={`${uid}bg`} cx="42%" cy="32%" r="65%" fx="38%" fy="28%">
-          <stop offset="0%"   stopColor={lighten(base, 0.22)} />
-          <stop offset="30%"  stopColor={bg1} />
-          <stop offset="60%"  stopColor={bg2} />
-          <stop offset="85%"  stopColor={bg3} />
+        {/* ── Shield body gradient (convex 3D) ── */}
+        <radialGradient id={`${uid}bg`} cx="40%" cy="28%" r="68%" fx="36%" fy="22%">
+          <stop offset="0%"   stopColor={bg0} />
+          <stop offset="22%"  stopColor={bg1} />
+          <stop offset="55%"  stopColor={bg2} />
+          <stop offset="82%"  stopColor={bg3} />
           <stop offset="100%" stopColor={bg4} />
         </radialGradient>
 
-        {/* Reflet highlight (arc lumineux en haut) */}
-        <radialGradient id={`${uid}hl`} cx="50%" cy="15%" r="50%" fx="50%" fy="10%">
-          <stop offset="0%"   stopColor="white" stopOpacity="0.22" />
+        {/* ── Top highlight arc ── */}
+        <radialGradient id={`${uid}hl`} cx="50%" cy="12%" r="52%" fx="50%" fy="8%">
+          <stop offset="0%"   stopColor="white" stopOpacity="0.25" />
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </radialGradient>
 
-        {/* Gradient médaillon (effet pièce) */}
-        <radialGradient id={`${uid}med`} cx="38%" cy="32%" r="70%">
-          <stop offset="0%"   stopColor={lighten(base, 0.35)} />
-          <stop offset="40%"  stopColor={lighten(base, 0.15)} />
-          <stop offset="100%" stopColor={darken(base, 0.25)} />
+        {/* ── Medallion (inner circle) ── */}
+        <radialGradient id={`${uid}med`} cx="36%" cy="28%" r="72%">
+          <stop offset="0%"   stopColor={lighten(base, 0.40)} />
+          <stop offset="45%"  stopColor={lighten(base, 0.16)} />
+          <stop offset="100%" stopColor={darken(base, 0.28)} />
         </radialGradient>
 
-        {/* Gradient étoile */}
-        <radialGradient id={`${uid}star`} cx="35%" cy="30%" r="70%">
-          <stop offset="0%"   stopColor={lighten(accent, 0.40)} />
-          <stop offset="60%"  stopColor={accent} />
-          <stop offset="100%" stopColor={darken(accent, 0.30)} />
-        </radialGradient>
-
-        {/* Gradient feuille laurier */}
-        <linearGradient id={`${uid}leaf`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor={lighten(accent, 0.20)} />
+        {/* ── Star gradient ── */}
+        <radialGradient id={`${uid}star`} cx="32%" cy="28%" r="72%">
+          <stop offset="0%"   stopColor={lighten(accent, 0.45)} />
+          <stop offset="55%"  stopColor={accent} />
           <stop offset="100%" stopColor={darken(accent, 0.35)} />
+        </radialGradient>
+
+        {/* ── Laurel leaf gradient ── */}
+        <linearGradient id={`${uid}leaf`} x1="0%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%"   stopColor={lighten(accent, 0.25)} />
+          <stop offset="50%"  stopColor={accent} />
+          <stop offset="100%" stopColor={darken(accent, 0.40)} />
         </linearGradient>
 
-        {/* Gradient lame épée */}
+        {/* ── Sword blade gradient ── */}
         <linearGradient id={`${uid}blade`} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor={darken(accent, 0.20)} />
-          <stop offset="40%"  stopColor={lighten(accent, 0.30)} />
-          <stop offset="60%"  stopColor={lighten(accent, 0.50)} />
-          <stop offset="100%" stopColor={darken(accent, 0.20)} />
+          <stop offset="0%"   stopColor={darken(accent, 0.22)} />
+          <stop offset="35%"  stopColor={lighten(accent, 0.28)} />
+          <stop offset="58%"  stopColor={lighten(accent, 0.55)} />
+          <stop offset="100%" stopColor={darken(accent, 0.22)} />
         </linearGradient>
 
-        {/* Filter specular (rendu métal) */}
+        {/* ── Specular lighting (metallic + tier 3+) ── */}
         {(t >= 3 || isMetallic) && (
           <filter id={`${uid}spec`} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur" />
-            <feSpecularLighting in="blur" surfaceScale="6" specularConstant="0.8"
-                                specularExponent={isMetallic ? 40 : 20} result="spec">
-              <fePointLight x="60" y="30" z="120" />
+            <feGaussianBlur in="SourceAlpha" stdDeviation={isMetallic ? 2.5 : 3} result="blur" />
+            <feSpecularLighting
+              in="blur"
+              surfaceScale={isMetallic ? 9 : 6}
+              specularConstant={isMetallic ? 1.0 : 0.75}
+              specularExponent={specExp}
+              result="spec"
+            >
+              <fePointLight x="55" y="25" z="130" />
             </feSpecularLighting>
             <feComposite in="spec" in2="SourceAlpha" operator="in" result="specClip" />
             <feBlend in="SourceGraphic" in2="specClip" mode="screen" />
           </filter>
         )}
 
-        {/* Filter ombre portée */}
+        {/* ── Drop shadow ── */}
         <filter id={`${uid}shadow`} x="-15%" y="-15%" width="130%" height="130%">
           <feDropShadow dx="2" dy="4" stdDeviation="4" floodOpacity="0.45" />
         </filter>
 
-        {/* Filter glow (tier 4-5) */}
+        {/* ── Glow (tier 4–5) ── */}
         {t >= 4 && (
-          <filter id={`${uid}glow`} x="-25%" y="-25%" width="150%" height="150%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+          <filter id={`${uid}glow`} x="-28%" y="-28%" width="156%" height="156%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2.8" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         )}
 
-        {/* Clip path bouclier (pour confiner les éléments internes) */}
-        <clipPath id={`${uid}clip`}>
-          <path d={SHIELD} />
-        </clipPath>
+        {/* ── Shield clip ── */}
+        <clipPath id={`${uid}clip`}><path d={SHIELD} /></clipPath>
       </defs>
 
-      {/* ── RAYONS DE GLOIRE (tier 5, fond) ── */}
+      {/* ═══ GLORY RAYS — tier 5, background ═══ */}
       {showOrnaments && t === 5 && (
-        <g opacity={0.35}>
-          {Array.from({ length: 16 }, (_, i) => {
-            const angle = (i * 22.5 - 90) * Math.PI / 180;
-            const r1 = 55, r2 = i % 2 === 0 ? 95 : 78;
+        <g opacity={0.30}>
+          {Array.from({ length: 20 }, (_, i) => {
+            const ang = (i * 18 - 90) * (Math.PI / 180);
+            const r1 = 52, r2 = i % 2 === 0 ? 100 : 80;
             return (
               <line key={i}
-                x1={SX + r1 * Math.cos(angle)} y1={85 + r1 * Math.sin(angle)}
-                x2={SX + r2 * Math.cos(angle)} y2={85 + r2 * Math.sin(angle)}
-                stroke={accent} strokeWidth={i % 2 === 0 ? 2.5 : 1.5}
+                x1={SX + r1 * Math.cos(ang)} y1={88 + r1 * Math.sin(ang)}
+                x2={SX + r2 * Math.cos(ang)} y2={88 + r2 * Math.sin(ang)}
+                stroke={accent}
+                strokeWidth={i % 2 === 0 ? 2.8 : 1.4}
                 strokeLinecap="round"
               />
             );
@@ -319,178 +505,109 @@ export function AcademyBadge({
         </g>
       )}
 
-      {/* ── ÉPÉES CROISÉES (tier 4+, derrière le bouclier) ── */}
+      {/* ═══ CROSSED SWORDS — tier 4+, behind shield ═══ */}
       {showOrnaments && t >= 4 && (
-        <g opacity={0.75}>
-          {/* Épée gauche (de bas-gauche vers haut-droite) */}
-          <g transform={`rotate(-38, ${SX}, 85)`}>
-            {/* Lame */}
-            <rect x={SX-3} y={20} width={6} height={90} rx={1}
-                  fill={`url(#${uid}blade)`} />
-            {/* Garde */}
-            <rect x={SX-16} y={108} width={32} height={5} rx={2}
-                  fill={accent} />
-            {/* Pommeau */}
-            <ellipse cx={SX} cy={117} rx={7} ry={5}
-                     fill={lighten(accent, 0.20)} />
-          </g>
-          {/* Épée droite (de bas-droite vers haut-gauche) */}
-          <g transform={`rotate(38, ${SX}, 85)`}>
-            <rect x={SX-3} y={20} width={6} height={90} rx={1}
-                  fill={`url(#${uid}blade)`} />
-            <rect x={SX-16} y={108} width={32} height={5} rx={2}
-                  fill={accent} />
-            <ellipse cx={SX} cy={117} rx={7} ry={5}
-                     fill={lighten(accent, 0.20)} />
-          </g>
+        <g>
+          {renderSword(-1, uid, accent, bLight, bDark)}
+          {renderSword( 1, uid, accent, bLight, bDark)}
         </g>
       )}
 
-      {/* ── LAURIER (tier 3+, derrière le bouclier) ── */}
-      {showOrnaments && t >= 3 && (() => {
-        const leafCount = t === 3 ? 5 : t === 4 ? 7 : 9;
-        const leaves: React.ReactElement[] = [];
-        // Parametric: stem part follows the shield outline
-        for (let i = 0; i < leafCount; i++) {
-          const frac = i / (leafCount - 1); // 0 → 1
-          // Right branch: from bottom (80,150) up to top-right (130, 35)
-          const rx = SX + (50 * frac) + 5;
-          const ry = 150 - (115 * frac);
-          const rAngle = -30 - frac * 100;
-          // Left branch: mirror
-          const lx = SX - (50 * frac) - 5;
-          const ly = ry;
-          const lAngle = 30 + frac * 100;
-          leaves.push(
-            <path key={`r${i}`} d={leafPath(rx, ry, rAngle, 8)}
-                  fill={`url(#${uid}leaf)`} opacity={0.85} />,
-            <path key={`l${i}`} d={leafPath(lx, ly, lAngle, 8)}
-                  fill={`url(#${uid}leaf)`} opacity={0.85} />,
-          );
-        }
-        return <g>{leaves}</g>;
-      })()}
-
-      {/* ── BOUCLIER : ombre portée ── */}
-      {t >= 2 && (
-        <path d={SHIELD} fill={darken(base, 0.40)} opacity={0.4}
-              transform="translate(2.5, 4)" />
+      {/* ═══ LAUREL BRANCHES — tier 3+, behind shield ═══ */}
+      {showOrnaments && t >= 3 && (
+        <g>
+          {laurelLeaves(true,  leafCount)}
+          {laurelLeaves(false, leafCount)}
+        </g>
       )}
 
-      {/* ── BOUCLIER : corps principal ── */}
+      {/* ═══ SHIELD: drop shadow ═══ */}
+      {t >= 2 && (
+        <path d={SHIELD} fill={darken(base, 0.45)} opacity={0.38}
+              transform="translate(2.5,4)" />
+      )}
+
+      {/* ═══ SHIELD: body ═══ */}
       <path
         d={SHIELD}
         fill={`url(#${uid}bg)`}
         filter={(t >= 3 || isMetallic) ? `url(#${uid}spec)` : undefined}
       />
 
-      {/* ── BOUCLIER : reflet highlight ── */}
+      {/* ═══ SHIELD: highlight arc ═══ */}
       <path d={SHIELD} fill={`url(#${uid}hl)`} />
 
-      {/* ── BOUCLIER : bord biseauté (effet 3D) ── */}
+      {/* ═══ SHIELD: bevelled border ═══ */}
       {showDetails && (
         <>
-          {/* Ombre du bord (côté bas-droit) */}
-          <path d={SHIELD} fill="none" stroke={borderDark}
-                strokeWidth={t >= 3 ? 3.5 : 2.5} opacity={0.7} />
-          {/* Lumière du bord (côté haut-gauche) */}
-          <path d={SHIELD} fill="none" stroke={borderLight}
-                strokeWidth={1.2} opacity={0.65} />
+          <path d={SHIELD} fill="none" stroke={bDark}
+                strokeWidth={t >= 3 ? 4 : 2.8} opacity={0.65} />
+          <path d={SHIELD} fill="none" stroke={bLight}
+                strokeWidth={1.4} opacity={0.60} />
         </>
       )}
 
-      {/* ── CONTENU INTERNE (clipé dans le bouclier) ── */}
+      {/* ═══ CONTENT clipped to shield ═══ */}
       <g clipPath={`url(#${uid}clip)`}>
 
-        {/* Cadre intérieur (tier 2+) */}
+        {/* Inner decorative frame (tier 2+) */}
         {showDetails && t >= 2 && (
           <path d={SHIELD_INNER} fill="none" stroke={accent}
-                strokeWidth={0.8} opacity={0.45} />
+                strokeWidth={0.9} opacity={0.40} />
         )}
 
-        {/* Ligne séparatrice haute (tier 2+) */}
+        {/* Horizontal divider (tier 2+) */}
         {showDetails && t >= 2 && (
-          <line x1={32} y1={54} x2={128} y2={54}
-                stroke={accent} strokeWidth={0.8} opacity={0.55} />
+          <>
+            <line x1={30} y1={55} x2={130} y2={55}
+                  stroke={accent} strokeWidth={0.9} opacity={0.50} />
+            {/* Corner ornaments at divider ends */}
+            <circle cx={30} cy={55} r={2} fill={accent} opacity={0.40} />
+            <circle cx={130} cy={55} r={2} fill={accent} opacity={0.40} />
+          </>
         )}
 
-        {/* Rivets (tier 2 seulement) */}
-        {showDetails && t === 2 && (
-          [0, 1, 2, 3, 4, 5, 6].map((_, i) => {
-            // Rivets along the inner frame perimeter (approximated positions)
-            const angles = [225, 250, 270, 290, 315, 190, 170];
-            const a = (angles[i] ?? 0) * Math.PI / 180;
-            const r = 51;
-            const cx = SX + r * Math.cos(a);
-            const cy = 85 + r * Math.sin(a);
-            return (
-              <circle key={i} cx={cx} cy={cy} r={2.2}
-                      fill={darken(accent, 0.10)}
-                      stroke={lighten(accent, 0.30)} strokeWidth={0.6} />
-            );
-          })
-        )}
-
-        {/* Couronne (tier 5) */}
-        {showDetails && t === 5 && (
-          <g>
-            {/* Base de la couronne */}
-            <path
-              d={`M ${SX-18} 42 L ${SX-18} 30 L ${SX-12} 22 L ${SX-6} 30 L ${SX} 20 L ${SX+6} 30 L ${SX+12} 22 L ${SX+18} 30 L ${SX+18} 42 Z`}
-              fill={accent}
-              stroke={borderLight} strokeWidth={0.8}
-            />
-            {/* Gems sur les pointes */}
-            {([[SX-12, 22], [SX, 20], [SX+12, 22]] as [number, number][]).map(([gx, gy], i) => (
-              <circle key={i} cx={gx} cy={gy} r={3.5}
-                      fill={i === 1 ? '#E0A0A0' : '#A0A0E0'}
-                      stroke={lighten(accent, 0.40)} strokeWidth={0.6} />
-            ))}
-            {/* Reflet couronne */}
-            <path
-              d={`M ${SX-18} 42 L ${SX-18} 30 L ${SX-12} 22`}
-              fill="none" stroke="white" strokeWidth={0.7} opacity={0.4}
-              strokeLinecap="round"
-            />
-          </g>
-        )}
-
-        {/* Emblème (dans la zone haute, y≈38) */}
-        {showEmblem && emblemId && renderEmblem(emblemId, SX, 38, accent)}
-
-        {/* Médaillon central (tier 3+) */}
+        {/* Corner diamonds — tier 3+ */}
         {showDetails && t >= 3 && (
-          <circle cx={SX} cy={90} r={28}
-                  fill={`url(#${uid}med)`}
-                  stroke={accent} strokeWidth={0.8} opacity={0.4} />
+          <>
+            {([[30, 38], [130, 38]] as [number, number][]).map(([cx, cy], i) => (
+              <path key={i}
+                d={`M ${cx} ${cy - 4} L ${cx + 3.5} ${cy} L ${cx} ${cy + 4} L ${cx - 3.5} ${cy} Z`}
+                fill={accent} opacity={0.45}
+              />
+            ))}
+          </>
         )}
 
-        {/* Chiffre romain */}
-        <text
-          x={SX}
-          y={stars > 0 ? 98 : 104}
-          textAnchor="middle"
-          fontFamily="'Rajdhani','Georgia','Times New Roman',serif"
-          fontWeight="700"
-          fontSize={numFontSize}
-          fill={lighten(base, 0.55)}
-          filter={t >= 4 ? `url(#${uid}glow)` : undefined}
-          letterSpacing="1"
-        >
-          {roman}
-        </text>
+        {/* Crown (tier 5) */}
+        {showDetails && t === 5 && renderCrown(55, accent, bLight, bDark)}
 
-        {/* Ombre portée sous le chiffre (effet gravé) */}
+        {/* Emblem (upper zone y≈40) */}
+        {showEmblem && emblemId && renderEmblem(emblemId, SX, 40, accent)}
+
+        {/* Medallion ring (tier 3+) */}
+        {showDetails && t >= 3 && (
+          <>
+            <circle cx={SX} cy={92} r={30}
+                    fill={`url(#${uid}med)`}
+                    stroke={accent} strokeWidth={0.9} opacity={0.38} />
+            {/* Medallion inner ring */}
+            <circle cx={SX} cy={92} r={26}
+                    fill="none"
+                    stroke={bLight} strokeWidth={0.4} opacity={0.30} />
+          </>
+        )}
+
+        {/* Roman numeral — shadow layer */}
         {showDetails && (
           <text
-            x={SX + 0.8}
-            y={(stars > 0 ? 98 : 104) + 1}
+            x={SX + 1} y={(stars > 0 ? 100 : 106) + 1.2}
             textAnchor="middle"
             fontFamily="'Rajdhani','Georgia','Times New Roman',serif"
             fontWeight="700"
             fontSize={numFontSize}
-            fill={darken(base, 0.40)}
-            opacity={0.5}
+            fill={darken(base, 0.45)}
+            opacity={0.55}
             letterSpacing="1"
             aria-hidden
           >
@@ -498,41 +615,55 @@ export function AcademyBadge({
           </text>
         )}
 
+        {/* Roman numeral — main */}
+        <text
+          x={SX} y={stars > 0 ? 100 : 106}
+          textAnchor="middle"
+          fontFamily="'Rajdhani','Georgia','Times New Roman',serif"
+          fontWeight="700"
+          fontSize={numFontSize}
+          fill={lighten(base, 0.58)}
+          filter={t >= 4 ? `url(#${uid}glow)` : undefined}
+          letterSpacing="1"
+        >
+          {roman}
+        </text>
+
       </g>
 
-      {/* ── ÉTOILES (en dessous du bouclier, devant tout) ── */}
+      {/* ═══ STARS ═══ */}
       {Array.from({ length: stars }, (_, i) => (
         <path
           key={i}
-          d={makeStar(sx0 + i * SS, 165, SR)}
+          d={makeStar(sx0 + i * SS, 167, SR)}
           fill={`url(#${uid}star)`}
           filter={t >= 4 ? `url(#${uid}glow)` : undefined}
         />
       ))}
 
-      {/* ── BANNIÈRE (tier 3+) ── */}
+      {/* ═══ BANNER — tier 3+ ═══ */}
       {showOrnaments && t >= 3 && levelInfo.title && (
         <g>
-          {/* Corps du ruban */}
+          {/* Ribbon body */}
           <path
-            d={`M 25 173 C 20 170 18 175 22 178 L 60 178 Q 80 176 100 178 L 138 178 C 142 175 140 170 135 173 L 100 176 Q 80 178 60 176 Z`}
-            fill={darken(accent, 0.25)}
+            d={`M 23 174 C 18 171 16 177 20 179 L 58 179 Q ${SX} 177 102 179 L 140 179 C 144 177 142 171 137 174 L 102 177 Q ${SX} 179 58 177 Z`}
+            fill={darken(accent, 0.28)}
             stroke={accent} strokeWidth={0.7}
           />
-          {/* Replis du ruban (côtés) */}
-          <path d={`M 22 178 L 18 183 L 30 181 Z`} fill={darken(accent, 0.40)} />
-          <path d={`M 138 178 L 142 183 L 130 181 Z`} fill={darken(accent, 0.40)} />
-          {/* Texte du titre */}
+          {/* Ribbon folds */}
+          <path d={`M 20 179 L 15 185 L 28 183 Z`} fill={darken(accent, 0.42)} />
+          <path d={`M 140 179 L 145 185 L 132 183 Z`} fill={darken(accent, 0.42)} />
+          {/* Title text */}
           <text
-            x={SX} y={176}
+            x={SX} y={177.5}
             textAnchor="middle"
             fontFamily="'Rajdhani','Arial Narrow',sans-serif"
             fontWeight="600"
-            fontSize={8}
-            fill={lighten(accent, 0.50)}
-            letterSpacing="1.5"
+            fontSize={7.5}
+            fill={lighten(accent, 0.55)}
+            letterSpacing="1.8"
           >
-            {levelInfo.title.toUpperCase().slice(0, 18)}
+            {levelInfo.title.toUpperCase().slice(0, 20)}
           </text>
         </g>
       )}
