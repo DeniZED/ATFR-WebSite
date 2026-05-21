@@ -94,14 +94,14 @@ const TIER_DEFAULT_ACCENT: Record<Tier, string> = {
   5: '#D4AF37',
 };
 
-// ─── WoT-style shield ─────────────────────────────────────────────────────────
-// Octagonal silhouette matching the World of Tanks logo:
-// flat top · 45° chamfered corners · straight sides · curved pointed base
-// w/h ≈ 0.92, same as the WoT logo
-const SHIELD = 'M 42 12 L 118 12 L 150 46 L 150 128 C 150 149 115 159 80 164 C 45 159 10 149 10 128 L 10 46 Z';
+// ─── WoT octagonal shield ────────────────────────────────────────────────────
+// Derived from the official World of Tanks SVG (viewBox 0 0 24 43).
+// Outer contour: first sub-path uniformly scaled to y=[12,164], centred at x=80.
+//   scale=4.606, offset=(+24.73, -11.03)
+const SHIELD = 'M 80.1 164 L 25.3 110 L 25.3 41.1 L 54.7 12 L 106 12 L 134.7 40.4 L 134.7 110 Z';
 
-// Inner frame (≈6-7 units inset)
-const SHIELD_INNER = 'M 48 18 L 112 18 L 143 50 L 143 124 C 143 143 111 153 80 157 C 49 153 17 143 17 124 L 17 50 Z';
+// Inner frame: second sub-path, same scale/offset
+const SHIELD_INNER = 'M 128.9 42.6 L 103.2 17.3 L 57.4 17.3 L 31.2 43.2 L 31.2 107.3 L 80.1 155.5 L 128.9 107.3 Z';
 
 // ─── Star helper ──────────────────────────────────────────────────────────────
 function makeStar(cx: number, cy: number, r: number): string {
@@ -534,18 +534,18 @@ export function AcademyBadge({
         {/* Horizontal divider (tier 2+) */}
         {showDetails && t >= 2 && (
           <>
-            <line x1={26} y1={52} x2={134} y2={52}
+            <line x1={32} y1={55} x2={128} y2={55}
                   stroke={accent} strokeWidth={0.9} opacity={0.50} />
             {/* Corner ornaments at divider ends */}
-            <circle cx={26} cy={52} r={2} fill={accent} opacity={0.40} />
-            <circle cx={134} cy={52} r={2} fill={accent} opacity={0.40} />
+            <circle cx={32} cy={55} r={2} fill={accent} opacity={0.40} />
+            <circle cx={128} cy={55} r={2} fill={accent} opacity={0.40} />
           </>
         )}
 
         {/* Corner diamonds — tier 3+ */}
         {showDetails && t >= 3 && (
           <>
-            {([[30, 38], [130, 38]] as [number, number][]).map(([cx, cy], i) => (
+            {([[37, 38], [123, 38]] as [number, number][]).map(([cx, cy], i) => (
               <path key={i}
                 d={`M ${cx} ${cy - 4} L ${cx + 3.5} ${cy} L ${cx} ${cy + 4} L ${cx - 3.5} ${cy} Z`}
                 fill={accent} opacity={0.45}
