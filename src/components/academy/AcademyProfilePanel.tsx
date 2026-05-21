@@ -96,7 +96,11 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                 levelInfo={profile.levelInfo}
                 primaryColorId={profile.avatarConfig.primaryColorId}
                 accentColorId={profile.avatarConfig.accentColorId}
+                numeralColorId={profile.avatarConfig.numeralColorId}
                 emblemId={profile.avatarConfig.emblemId}
+                emblemColorId={profile.avatarConfig.emblemColorId}
+                patternId={profile.avatarConfig.patternId}
+                borderStyleId={profile.avatarConfig.borderStyleId}
                 size={148}
                 className="drop-shadow-xl"
               />

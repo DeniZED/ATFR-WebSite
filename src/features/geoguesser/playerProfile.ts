@@ -15,15 +15,23 @@ export interface Unlock {
 export interface AvatarConfig {
   primaryColorId: string;
   accentColorId: string | null;
-  titleId: string | null;
+  numeralColorId: string | null;
   emblemId: string | null;
+  emblemColorId: string | null;
+  patternId: string | null;
+  borderStyleId: string;
+  titleId: string | null;
 }
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   primaryColorId: 'col-olive',
   accentColorId: null,
-  titleId: null,
+  numeralColorId: null,
   emblemId: null,
+  emblemColorId: null,
+  patternId: null,
+  borderStyleId: 'standard',
+  titleId: null,
 };
 
 // ─── Tank catalog ─────────────────────────────────────────────────────────────
