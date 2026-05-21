@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import {
   getPrimaryColor,
   getAccentColor,
+  resolveColor,
   type LevelInfo,
 } from '@/features/geoguesser/playerProfile';
 
@@ -18,7 +19,11 @@ interface AcademyBadgeProps {
   levelInfo: LevelInfo;
   primaryColorId?: string;
   accentColorId?: string | null;
+  numeralColorId?: string | null;
   emblemId?: string | null;
+  emblemColorId?: string | null;
+  patternId?: string | null;
+  borderStyleId?: string;
   size?: number;
   className?: string;
 }
@@ -296,7 +301,11 @@ export function AcademyBadge({
   levelInfo,
   primaryColorId = 'col-olive',
   accentColorId = null,
+  numeralColorId = null,
   emblemId = null,
+  emblemColorId = null,
+  patternId = null,
+  borderStyleId = 'standard',
   size = 80,
   className,
 }: AcademyBadgeProps) {
@@ -324,6 +333,10 @@ export function AcademyBadge({
 
   const bLight = lighten(accent, 0.30);
   const bDark  = darken(accent, 0.35);
+
+  const numeralColor = resolveColor(numeralColorId) ?? lighten(base, 0.58);
+  const emblemColor  = resolveColor(emblemColorId)  ?? accent;
+  const border = borderStyleId as 'none' | 'thin' | 'standard' | 'double';
 
   const w = size;
   const h = Math.round(size * VH / VW);
@@ -426,6 +439,24 @@ export function AcademyBadge({
           <stop offset="100%" stopColor={darken(accent, 0.22)} />
         </linearGradient>
 
+        {/* ── Background pattern ── */}
+        {patternId && (
+          <pattern id={`${uid}pat`} x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+            {patternId === 'pat-hatch' && (
+              <line x1="0" y1="8" x2="8" y2="0" stroke={accent} strokeWidth="0.8" opacity="0.4" />
+            )}
+            {patternId === 'pat-grid' && (
+              <>
+                <line x1="0" y1="0" x2="0" y2="8" stroke={accent} strokeWidth="0.6" opacity="0.3" />
+                <line x1="0" y1="0" x2="8" y2="0" stroke={accent} strokeWidth="0.6" opacity="0.3" />
+              </>
+            )}
+            {patternId === 'pat-dots' && (
+              <circle cx="4" cy="4" r="1.2" fill={accent} opacity="0.35" />
+            )}
+          </pattern>
+        )}
+
         {/* ── Specular lighting (metallic + tier 3+) ── */}
         {(t >= 3 || isMetallic) && (
           <filter id={`${uid}spec`} x="-20%" y="-20%" width="140%" height="140%">
@@ -512,13 +543,21 @@ export function AcademyBadge({
       {/* ═══ SHIELD: highlight arc ═══ */}
       <path d={SHIELD} fill={`url(#${uid}hl)`} />
 
+      {/* ═══ SHIELD: pattern overlay ═══ */}
+      {patternId && <path d={SHIELD} fill={`url(#${uid}pat)`} />}
+
       {/* ═══ SHIELD: bevelled border ═══ */}
-      {showDetails && (
+      {showDetails && border !== 'none' && (
         <>
           <path d={SHIELD} fill="none" stroke={bDark}
-                strokeWidth={t >= 3 ? 4 : 2.8} opacity={0.65} />
+                strokeWidth={border === 'thin' ? 1.5 : border === 'double' ? 6 : (t >= 3 ? 4 : 2.8)}
+                opacity={0.65} />
+          {border === 'double' && (
+            <path d={SHIELD} fill="none" stroke={accent} strokeWidth={3.2} opacity={0.55} />
+          )}
           <path d={SHIELD} fill="none" stroke={bLight}
-                strokeWidth={1.4} opacity={0.60} />
+                strokeWidth={border === 'thin' ? 0.8 : 1.4}
+                opacity={border === 'thin' ? 0.45 : 0.60} />
         </>
       )}
 
@@ -558,7 +597,7 @@ export function AcademyBadge({
         {showDetails && t === 5 && renderCrown(52, accent, bLight, bDark)}
 
         {/* Emblem (upper zone y≈40) */}
-        {showEmblem && emblemId && renderEmblem(emblemId, SX, 40, accent)}
+        {showEmblem && emblemId && renderEmblem(emblemId, SX, 40, emblemColor)}
 
         {/* Medallion ring (tier 3+) */}
         {showDetails && t >= 3 && (
@@ -581,7 +620,7 @@ export function AcademyBadge({
             fontFamily="'Rajdhani','Georgia','Times New Roman',serif"
             fontWeight="700"
             fontSize={numFontSize}
-            fill={darken(base, 0.45)}
+            fill={darken(numeralColor, 0.45)}
             opacity={0.55}
             letterSpacing="1"
             aria-hidden
@@ -597,7 +636,7 @@ export function AcademyBadge({
           fontFamily="'Rajdhani','Georgia','Times New Roman',serif"
           fontWeight="700"
           fontSize={numFontSize}
-          fill={lighten(base, 0.58)}
+          fill={numeralColor}
           filter={t >= 4 ? `url(#${uid}glow)` : undefined}
           letterSpacing="1"
         >

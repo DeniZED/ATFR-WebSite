@@ -159,6 +159,36 @@ export function getAccentColor(id: string | null): ColorDef | null {
   return ACCENT_COLORS.find(c => c.id === id) ?? null;
 }
 
+export function resolveColor(id: string | null | undefined): string | null {
+  if (!id) return null;
+  const p = PRIMARY_COLORS.find(c => c.id === id);
+  if (p) return p.hex;
+  const a = ACCENT_COLORS.find(c => c.id === id);
+  if (a) return a.hex;
+  return null;
+}
+
+export interface PatternDef {
+  id: string;
+  label: string;
+}
+export const PATTERNS: PatternDef[] = [
+  { id: 'pat-hatch', label: 'Hachures diagonales' },
+  { id: 'pat-grid',  label: 'Quadrillage' },
+  { id: 'pat-dots',  label: 'Pointillés' },
+];
+
+export interface BorderStyleDef {
+  id: string;
+  label: string;
+}
+export const BORDER_STYLES: BorderStyleDef[] = [
+  { id: 'none',     label: 'Aucun' },
+  { id: 'thin',     label: 'Fin' },
+  { id: 'standard', label: 'Standard' },
+  { id: 'double',   label: 'Double' },
+];
+
 // ─── XP calculation ──────────────────────────────────────────────────────────
 
 function getMetaNumber(meta: unknown, key: string): number | null {
