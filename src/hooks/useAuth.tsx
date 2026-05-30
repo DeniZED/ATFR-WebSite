@@ -32,16 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setState({
-        session: data.session,
-        user: data.session?.user ?? null,
-        loading: false,
-      });
-    });
-
+    // onAuthStateChange emits INITIAL_SESSION on mount in Supabase v2, so
+    // getSession() is redundant and can cause a race if it resolves after a
+    // state-change event, overwriting more recent auth state.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
       setState({ session, user: session?.user ?? null, loading: false });
     });
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, ChevronLeft, ChevronRight, Search, Send } from 'lucide-react';
@@ -50,6 +50,7 @@ export default function Recruitment() {
   const errors = formState.errors;
 
   const playerName = useWatch({ control, name: 'playerName' }) ?? '';
+  const discordTag = useWatch({ control, name: 'discordTag' }) ?? '';
   const targetClan = useWatch({ control, name: 'targetClan' });
   const availability = useWatch({ control, name: 'availability' });
   const lookup = usePlayerLookup(lookupName, lookupName.length >= 3);
@@ -57,9 +58,15 @@ export default function Recruitment() {
   const submit = useSubmitApplication();
   const submitted = submit.isSuccess;
 
+  // Reset lookup stats when the player name changes to avoid submitting
+  // stats for a different account than the one typed.
+  useEffect(() => {
+    setLookupName('');
+  }, [playerName]);
+
   const canGoNext = useMemo(() => {
     if (step === 1) {
-      return playerName.trim().length >= 3 && !!targetClan;
+      return playerName.trim().length >= 3 && !!targetClan && discordTag.trim().length >= 2;
     }
     if (step === 2) {
       return (
@@ -68,7 +75,7 @@ export default function Recruitment() {
       );
     }
     return true;
-  }, [availability, playerName, step, targetClan]);
+  }, [availability, discordTag, playerName, step, targetClan]);
 
   async function onSubmit(values: ApplicationValue) {
     const result = lookup.data;
