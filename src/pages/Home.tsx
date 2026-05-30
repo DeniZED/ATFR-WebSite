@@ -17,17 +17,17 @@ export default function Home() {
     <>
       <Hero />
       <PrestigeBanner />
-      <LiveStats />
-      <WhyJoin />
-      <NextOperation />
-      <About />
-      <Activities />
-      <AcademyPreview />
-      <Highlights />
-      <Achievements />
-      <Testimonials />
-      <DiscordCommunity />
-      <JoinCta />
+      <LiveStats />        {/* tinted HUD */}
+      <WhyJoin />          {/* transparent */}
+      <NextOperation />    {/* tinted */}
+      <About />            {/* tinted */}
+      <Activities />       {/* transparent */}
+      <AcademyPreview />   {/* tinted */}
+      <Highlights />       {/* tinted */}
+      <Achievements />     {/* transparent */}
+      <Testimonials />     {/* tinted */}
+      <DiscordCommunity /> {/* transparent */}
+      <JoinCta />          {/* transparent, dramatic finish */}
     </>
   );
 }
