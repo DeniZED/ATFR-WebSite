@@ -44,7 +44,6 @@ export function AcademyPreview() {
       eyebrow={get('academy_preview_eyebrow')}
       title={get('academy_preview_title')}
       description={get('academy_preview_text')}
-      variant="tinted"
     >
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <motion.div

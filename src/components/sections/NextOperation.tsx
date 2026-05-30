@@ -67,7 +67,6 @@ export function NextOperation() {
       eyebrow={get('next_operation_eyebrow')}
       title={get('next_operation_title')}
       description={get('next_operation_text')}
-      variant="tinted"
       className="pt-10 sm:pt-16"
     >
       {isLoading ? (
