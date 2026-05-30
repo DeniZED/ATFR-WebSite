@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, Shield, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 
 const links = [
@@ -16,6 +17,7 @@ const links = [
 ];
 
 export function Navbar() {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -80,11 +82,13 @@ export function Navbar() {
         </nav>
 
         <div className="hidden lg:flex items-center gap-2">
-          <Link to="/admin">
-            <Button variant="ghost" size="sm" leadingIcon={<Shield size={16} />}>
-              Admin
-            </Button>
-          </Link>
+          {user && (
+            <Link to="/admin">
+              <Button variant="ghost" size="sm" leadingIcon={<Shield size={16} />}>
+                Admin
+              </Button>
+            </Link>
+          )}
           <Link to="/recrutement">
             <Button size="sm">Postuler</Button>
           </Link>
@@ -129,9 +133,11 @@ export function Navbar() {
                   {l.label}
                 </NavLink>
               ))}
-              <Link to="/admin" className="px-3 py-2 text-sm text-atfr-fog/80">
-                Admin
-              </Link>
+              {user && (
+                <Link to="/admin" className="px-3 py-2 text-sm text-atfr-fog/80">
+                  Admin
+                </Link>
+              )}
             </nav>
           </motion.div>
         )}

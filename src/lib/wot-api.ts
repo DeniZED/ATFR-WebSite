@@ -38,7 +38,10 @@ export async function searchPlayer(nickname: string): Promise<WotPlayer | null> 
     search: nickname,
     limit: 5,
   });
-  return data[0] ?? null;
+  // /account/list/ is a prefix search — find exact match first to avoid
+  // returning a different player (e.g. "Tiger_007" when looking for "Tiger")
+  const exact = data.find((p) => p.nickname.toLowerCase() === nickname.toLowerCase());
+  return exact ?? data[0] ?? null;
 }
 
 export interface WotPlayerStats {

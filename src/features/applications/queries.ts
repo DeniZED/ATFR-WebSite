@@ -33,18 +33,24 @@ export function useSubmitApplication() {
 
       if (error) throw error;
 
-      await notifyNewApplication({
-        playerName: input.player_name,
-        discordTag: input.discord_tag,
-        targetClan: input.target_clan,
-        wn8: input.wn8 ?? null,
-        winRate: input.win_rate ?? null,
-        battles: input.battles ?? null,
-        availability: input.availability,
-        motivation: input.motivation,
-        previousClans: input.previous_clans,
-        accountId: input.account_id,
-      });
+      // Discord notification is best-effort — a webhook failure must not
+      // make the user think their application was lost.
+      try {
+        await notifyNewApplication({
+          playerName: input.player_name,
+          discordTag: input.discord_tag,
+          targetClan: input.target_clan,
+          wn8: input.wn8 ?? null,
+          winRate: input.win_rate ?? null,
+          battles: input.battles ?? null,
+          availability: input.availability,
+          motivation: input.motivation,
+          previousClans: input.previous_clans,
+          accountId: input.account_id,
+        });
+      } catch (notifyErr) {
+        console.error('[discord] notification failed (application saved)', notifyErr);
+      }
 
       return data as ApplicationRow;
     },

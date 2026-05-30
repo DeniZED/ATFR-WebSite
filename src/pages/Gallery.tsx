@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Play, X } from 'lucide-react';
 import { Section, Spinner } from '@/components/ui';
@@ -10,13 +10,13 @@ type MediaRow = Database['public']['Tables']['media_assets']['Row'];
 
 export default function Gallery() {
   const [filter, setFilter] = useState<MediaKind | 'all'>('all');
-  const { data, isLoading } = useMediaAssets(
+  const { data, isLoading, error } = useMediaAssets(
     filter === 'all' ? undefined : filter,
     { galleryOnly: true },
   );
   const [selected, setSelected] = useState<MediaRow | null>(null);
 
-  const filtered = useMemo(() => data ?? [], [data]);
+  const filtered = data ?? [];
 
   useEffect(() => {
     if (!selected) return;
@@ -56,7 +56,9 @@ export default function Gallery() {
           ))}
         </div>
 
-        {isLoading ? (
+        {error ? (
+          <p className="text-center text-red-400 py-20">Impossible de charger les médias.</p>
+        ) : isLoading ? (
           <div className="flex justify-center py-20">
             <Spinner label="Chargement…" />
           </div>
@@ -121,7 +123,8 @@ export default function Gallery() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             role="dialog"
-            aria-modal
+            aria-modal={true}
+            aria-label={selected?.caption ?? 'Média en plein écran'}
             onClick={() => setSelected(null)}
             className="fixed inset-0 z-[60] flex items-center justify-center bg-atfr-ink/90 backdrop-blur-md p-4"
           >
@@ -151,7 +154,6 @@ export default function Gallery() {
                 <video
                   src={selected.public_url}
                   controls
-                  autoPlay
                   className="max-h-[85vh] max-w-full rounded-lg"
                 />
               )}

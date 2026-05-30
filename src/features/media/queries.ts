@@ -87,13 +87,14 @@ export function useUploadMedia() {
       const kind: MediaKind = file.type.startsWith('video/') ? 'video' : 'image';
 
       // Détection de doublons : même taille + même type = même fichier
+      // Uses maybeSingle() so a missing row returns null instead of an error.
       const { data: existing } = await supabase
         .from('media_assets')
         .select('*')
         .eq('size_bytes', file.size)
         .eq('mime', file.type)
         .limit(1)
-        .single();
+        .maybeSingle();
       if (existing) return existing as MediaRow;
 
       const { publicId, publicUrl, width, height } = await uploadToCloudinary(
@@ -151,7 +152,7 @@ export function useDeleteMedia() {
       // Suppression Cloudinary côté serveur (API secret non exposé au browser).
       // The function requires a valid editor session token to authorize the deletion.
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch('/.netlify/functions/cloudinary-delete', {
+      const cdnRes = await fetch('/.netlify/functions/cloudinary-delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,6 +163,10 @@ export function useDeleteMedia() {
           resourceType: asset.kind,
         }),
       });
+      if (!cdnRes.ok) {
+        const text = await cdnRes.text().catch(() => '');
+        throw new Error(`Cloudinary delete failed (${cdnRes.status}): ${text}`);
+      }
 
       const { error } = await supabase
         .from('media_assets')

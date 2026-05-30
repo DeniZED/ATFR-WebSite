@@ -9,6 +9,8 @@ jobs:
   quality:
     name: Lint, typecheck, build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +34,7 @@ jobs:
           VITE_WOT_APPLICATION_ID: dummy
           VITE_CLAN_ID: '500191501'
           VITE_CLAN_TAG: ATFR
-          VITE_DISCORD_WEBHOOK_URL: ''
           VITE_SITE_URL: https://example.com
+          VITE_CLOUDINARY_CLOUD_NAME: dummy
+          VITE_CLOUDINARY_UPLOAD_PRESET: dummy
         run: npm run build
