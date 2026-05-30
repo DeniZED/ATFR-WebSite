@@ -1,4 +1,5 @@
 import { Hero } from '@/components/sections/Hero';
+import { PrestigeBanner } from '@/components/sections/PrestigeBanner';
 import { LiveStats } from '@/components/sections/LiveStats';
 import { WhyJoin } from '@/components/sections/WhyJoin';
 import { NextOperation } from '@/components/sections/NextOperation';
@@ -15,6 +16,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <PrestigeBanner />
       <LiveStats />
       <WhyJoin />
       <NextOperation />
