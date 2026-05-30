@@ -55,7 +55,7 @@ export function Achievements() {
   if (isError) {
     return (
       <Section
-        eyebrow={get('achievements_eybrow')}
+        eyebrow={get('achievements_eyebrow')}
         title={get('achievements_title')}
       >
         <Alert tone="danger">Le palmarès est temporairement indisponible.</Alert>

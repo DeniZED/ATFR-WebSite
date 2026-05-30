@@ -42,7 +42,17 @@ function WordReveal({ text, delay = 0 }: { text: string; delay?: number }) {
   );
 }
 
-function BigCountUp({ to, decimals = 0, suffix = '' }: { to: number | null; decimals?: number; suffix?: string }) {
+function BigCountUp({
+  to,
+  decimals = 0,
+  suffix = '',
+  loading = false,
+}: {
+  to: number | null;
+  decimals?: number;
+  suffix?: string;
+  loading?: boolean;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
   const [display, setDisplay] = useState(0);
@@ -51,7 +61,9 @@ function BigCountUp({ to, decimals = 0, suffix = '' }: { to: number | null; deci
   useEffect(() => {
     if (to == null) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setStarted(true); },
+      ([entry]) => {
+        if (entry.isIntersecting) setStarted(true);
+      },
       { threshold: 0.1 },
     );
     if (ref.current) observer.observe(ref.current);
@@ -60,12 +72,15 @@ function BigCountUp({ to, decimals = 0, suffix = '' }: { to: number | null; deci
 
   useEffect(() => {
     if (!started || to == null) return;
-    if (reduceMotion) { setDisplay(to); return; }
-    const start = performance.now();
+    if (reduceMotion) {
+      setDisplay(to);
+      return;
+    }
+    const startTime = performance.now();
     const dur = 1400;
     let raf = 0;
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / dur);
+      const t = Math.min(1, (now - startTime) / dur);
       const eased = 1 - Math.pow(1 - t, 3);
       setDisplay(to * eased);
       if (t < 1) raf = requestAnimationFrame(tick);
@@ -74,16 +89,26 @@ function BigCountUp({ to, decimals = 0, suffix = '' }: { to: number | null; deci
     return () => cancelAnimationFrame(raf);
   }, [started, to, reduceMotion]);
 
+  if (loading) {
+    return (
+      <span
+        ref={ref}
+        className="inline-block h-8 w-20 rounded shimmer align-middle"
+        aria-hidden
+      />
+    );
+  }
+
   return (
     <span ref={ref}>
-      {to == null ? '—' : display.toFixed(decimals)}{suffix}
+      {to == null ? '—' : `${display.toFixed(decimals)}${suffix}`}
     </span>
   );
 }
 
 export function Hero() {
   const { data: clan } = useClanInfo();
-  const { data: stats } = useClanStats();
+  const { data: stats, isLoading: statsLoading } = useClanStats();
   const { get } = useContent();
   const { data: pendingCount = 0 } = usePendingApplicationsCount();
   const reduceMotion = useReducedMotion();
@@ -237,7 +262,12 @@ export function Hero() {
                     {m.label}
                   </p>
                   <p className="font-display text-3xl sm:text-4xl font-semibold text-atfr-bone group-hover:text-atfr-gold transition-colors">
-                    <BigCountUp to={m.value} decimals={m.decimals} suffix={m.suffix} />
+                    <BigCountUp
+                      to={m.value}
+                      decimals={m.decimals}
+                      suffix={m.suffix}
+                      loading={statsLoading}
+                    />
                   </p>
                 </motion.div>
               ))}

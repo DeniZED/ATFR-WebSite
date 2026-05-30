@@ -7,10 +7,13 @@ const EXP_URL = 'https://static.modxvm.com/wn8-data-exp/json/wn8exp.json';
 
 // Wargaming server-app rate limit is 10 req/s. We fan out /tanks/stats/ one
 // request per player, so keep parallel concurrency comfortably below the cap.
-const TANKS_CONCURRENCY = 5;
+const TANKS_CONCURRENCY = 8;
 // /account/info/ and /clans/info/ accept up to 100 IDs per call. Chunk just
 // in case a clan is ever ≥ 100 members.
 const ACCOUNT_INFO_CHUNK = 100;
+// Max members sampled for heavy per-player stats (WN8, damage, frags).
+// Account info (activity, online) is always fetched for all members.
+const TANKS_SAMPLE_SIZE = 30;
 
 interface ExpectedValue {
   IDNum: number;
@@ -305,9 +308,16 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       );
     }
 
+    // Sample members for expensive per-player tank stats to stay within function timeout.
+    // Account info (activity, online) is still fetched for all members.
+    const sampledForTanks =
+      members.length <= TANKS_SAMPLE_SIZE
+        ? members
+        : [...members].sort(() => Math.random() - 0.5).slice(0, TANKS_SAMPLE_SIZE);
+
     const [accountMap, tanksMap, expected] = await Promise.all([
       fetchAccountsInfo(members),
-      fetchTanksForMembers(members),
+      fetchTanksForMembers(sampledForTanks),
       getExpected(),
     ]);
 
