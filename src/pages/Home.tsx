@@ -1,5 +1,4 @@
 import { Hero } from '@/components/sections/Hero';
-import { PrestigeBanner } from '@/components/sections/PrestigeBanner';
 import { LiveStats } from '@/components/sections/LiveStats';
 import { WhyJoin } from '@/components/sections/WhyJoin';
 import { NextOperation } from '@/components/sections/NextOperation';
@@ -16,18 +15,17 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <PrestigeBanner />
-      <LiveStats />        {/* tinted HUD */}
-      <WhyJoin />          {/* transparent */}
-      <NextOperation />    {/* tinted */}
-      <About />            {/* tinted */}
-      <Activities />       {/* transparent */}
-      <AcademyPreview />   {/* tinted */}
-      <Highlights />       {/* tinted */}
-      <Achievements />     {/* transparent */}
-      <Testimonials />     {/* tinted */}
-      <DiscordCommunity /> {/* transparent */}
-      <JoinCta />          {/* transparent, dramatic finish */}
+      <LiveStats />
+      <WhyJoin />
+      <NextOperation />
+      <About />
+      <Activities />
+      <AcademyPreview />
+      <Highlights />
+      <Achievements />
+      <Testimonials />
+      <DiscordCommunity />
+      <JoinCta />
     </>
   );
 }

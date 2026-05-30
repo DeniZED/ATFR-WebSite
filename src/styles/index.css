@@ -58,15 +58,6 @@
     @apply h-px w-full bg-gradient-to-r from-transparent via-atfr-gold/40 to-transparent;
   }
 
-  .hud-border {
-    @apply border border-atfr-gold/15 rounded-xl relative overflow-hidden;
-  }
-
-  .hud-border::before {
-    content: '';
-    @apply absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-atfr-gold/40 to-transparent;
-  }
-
   .shimmer {
     background: linear-gradient(
       90deg,

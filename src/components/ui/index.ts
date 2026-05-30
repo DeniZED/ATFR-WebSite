@@ -1,5 +1,4 @@
 export { Alert } from './Alert';
-export { HeroParticles } from './HeroParticles';
 export { Badge } from './Badge';
 export { Button } from './Button';
 export { Card, CardBody, CardFooter, CardHeader, CardTitle } from './Card';
