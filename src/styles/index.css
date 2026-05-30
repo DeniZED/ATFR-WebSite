@@ -68,4 +68,65 @@
     background-size: 200% 100%;
     @apply animate-shimmer;
   }
+
+  /* Scanlines overlay — tactical HUD aesthetic */
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(0, 0, 0, 0.08) 3px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* HUD corner brackets */
+  .hud-corner {
+    @apply absolute w-8 h-8 border-atfr-gold/60;
+    border-width: 0;
+  }
+  .hud-corner-tl {
+    @apply top-0 left-0 border-t-2 border-l-2;
+  }
+  .hud-corner-tr {
+    @apply top-0 right-0 border-t-2 border-r-2;
+  }
+  .hud-corner-bl {
+    @apply bottom-0 left-0 border-b-2 border-l-2;
+  }
+  .hud-corner-br {
+    @apply bottom-0 right-0 border-b-2 border-r-2;
+  }
+
+  /* Hexagon clip for emblem */
+  .hex-clip {
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  }
+
+  /* Glitch text layers */
+  .glitch-text {
+    position: relative;
+  }
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .glitch-text::before {
+    color: rgba(232, 176, 67, 0.8);
+    text-shadow: 2px 0 #0B0B0C;
+    animation: glitch 4s steps(1) infinite;
+  }
+  .glitch-text::after {
+    color: rgba(255,255,255,0.15);
+    text-shadow: -2px 0 rgba(232, 176, 67, 0.5);
+    animation: glitch-2 4s steps(1) infinite;
+  }
 }
