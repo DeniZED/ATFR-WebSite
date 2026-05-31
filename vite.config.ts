@@ -12,6 +12,14 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Proxy Netlify Functions to the local netlify dev server (port 8888).
+    // Run `netlify dev` instead of `npm run dev` to use the functions locally.
+    proxy: {
+      '/.netlify/functions': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',
