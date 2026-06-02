@@ -9,7 +9,6 @@ import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import { AcademyBadge } from '@/components/geoguesser/AcademyBadge';
 import { AcademyProfilePanel } from '@/components/academy/AcademyProfilePanel';
-import { Button } from '@/components/ui/Button';
 
 const links = [
   { to: '/', label: 'Accueil', end: true },
@@ -135,9 +134,6 @@ export function Navbar() {
 
         <div className="hidden lg:flex items-center gap-2">
           <WgProfileBubble />
-          <Link to="/recrutement">
-            <Button size="sm">Postuler</Button>
-          </Link>
         </div>
 
         <button

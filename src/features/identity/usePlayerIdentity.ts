@@ -68,17 +68,20 @@ function readIdentity(): PlayerIdentity {
 export function usePlayerIdentity() {
   const [state, setState] = useState<PlayerIdentity>(() => readIdentity());
 
-  // Sync across tabs.
+  // Sync across tabs (storage event) and within the same tab (custom event).
   useEffect(() => {
+    function refresh() { setState(readIdentity()); }
     function onStorage(e: StorageEvent) {
       if (!e.key) return;
       const watched: string[] = Object.values(KEYS);
-      if (watched.includes(e.key)) {
-        setState(readIdentity());
-      }
+      if (watched.includes(e.key)) refresh();
     }
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener('atfr:identity-updated', refresh);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('atfr:identity-updated', refresh);
+    };
   }, []);
 
   const setNickname = useCallback((next: string) => {
@@ -166,6 +169,8 @@ export const PlayerIdentityStorage = {
     // Sensitive tokens go to sessionStorage only — never persisted to localStorage.
     sessionStorage.setItem(SESSION_KEYS.accessToken, args.accessToken);
     sessionStorage.setItem(SESSION_KEYS.playerToken, args.playerToken);
+    // Notify same-tab hooks (storage event only fires in other tabs).
+    window.dispatchEvent(new Event('atfr:identity-updated'));
   },
   popReturnUrl(): string {
     const raw = sessionStorage.getItem(RETURN_KEY) ?? '/';
