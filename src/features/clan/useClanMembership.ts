@@ -5,7 +5,8 @@ import { env } from '@/lib/env';
 
 type Status = 'unknown' | 'loading' | 'member' | 'guest';
 
-interface CacheEntry { isMember: boolean; clanTag: string | null; ts: number }
+// v:2 — entrées sans version (ancien format sans clanTag) sont invalidées
+interface CacheEntry { isMember: boolean; clanTag: string | null; ts: number; v: 2 }
 
 const CACHE_KEY = 'atfr.player.clan_membership';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -14,9 +15,14 @@ function readCache(accountId: number): CacheEntry | null {
   try {
     const raw = localStorage.getItem(`${CACHE_KEY}.${accountId}`);
     if (!raw) return null;
-    const entry = JSON.parse(raw) as CacheEntry;
-    if (Date.now() - entry.ts > CACHE_TTL) return null;
-    return entry;
+    const entry = JSON.parse(raw) as Partial<CacheEntry>;
+    // Invalide les entrées de l'ancien format (sans v:2 → sans clanTag)
+    if (entry.v !== 2) {
+      localStorage.removeItem(`${CACHE_KEY}.${accountId}`);
+      return null;
+    }
+    if (Date.now() - (entry.ts ?? 0) > CACHE_TTL) return null;
+    return entry as CacheEntry;
   } catch {
     return null;
   }
@@ -25,7 +31,7 @@ function readCache(accountId: number): CacheEntry | null {
 function writeCache(accountId: number, isMember: boolean, clanTag: string | null) {
   localStorage.setItem(
     `${CACHE_KEY}.${accountId}`,
-    JSON.stringify({ isMember, clanTag, ts: Date.now() } satisfies CacheEntry),
+    JSON.stringify({ isMember, clanTag, ts: Date.now(), v: 2 } satisfies CacheEntry),
   );
 }
 

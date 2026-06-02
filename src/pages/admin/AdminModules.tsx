@@ -11,7 +11,7 @@ import {
   Switch,
   Textarea,
 } from '@/components/ui';
-import { useAdminModules, useUpsertModule } from '@/features/modules/queries';
+import { useAdminModules, useModuleRows, useUpsertModule } from '@/features/modules/queries';
 import {
   useResetLeaderboard,
   useScoreCount,
@@ -34,25 +34,36 @@ const empty: DraftRow = {
 };
 
 export default function AdminModules() {
+  const { data: rawRows } = useModuleRows(); // référence stable React Query
   const { data, isLoading } = useAdminModules();
   const upsert = useUpsertModule();
 
   const [drafts, setDrafts] = useState<Record<string, DraftRow>>({});
 
+  // Dépend de rawRows (stable — ne change que quand la DB change),
+  // pas de data (recomputed à chaque render → boucle infinie de reset)
   useEffect(() => {
     if (!data) return;
-    const next: Record<string, DraftRow> = {};
-    for (const { registry, row } of data) {
-      next[registry.slug] = {
-        is_published: row?.is_published ?? false,
-        sort_order: row?.sort_order ?? 0,
-        badge_label: row?.badge_label ?? '',
-        custom_title: row?.custom_title ?? '',
-        custom_description: row?.custom_description ?? '',
-      };
-    }
-    setDrafts(next);
-  }, [data]);
+    setDrafts((prev) => {
+      const next: Record<string, DraftRow> = {};
+      for (const { registry, row } of data) {
+        // Ne réinitialise que si on n'a pas de draft local (première charge)
+        if (prev[registry.slug] === undefined) {
+          next[registry.slug] = {
+            is_published: row?.is_published ?? false,
+            sort_order: row?.sort_order ?? 0,
+            badge_label: row?.badge_label ?? '',
+            custom_title: row?.custom_title ?? '',
+            custom_description: row?.custom_description ?? '',
+          };
+        } else {
+          next[registry.slug] = prev[registry.slug];
+        }
+      }
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawRows]); // rawRows = référence stable depuis React Query cache
 
   const dirtySlugs = useMemo(() => {
     if (!data) return [] as string[];
