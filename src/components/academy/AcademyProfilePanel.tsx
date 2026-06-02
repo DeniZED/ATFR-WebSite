@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Gift, X, LogOut, Palette, Shield } from 'lucide-react';
 import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
 import { useAuth } from '@/hooks/useAuth';
+import { useClanMembership } from '@/features/clan/useClanMembership';
+import { env } from '@/lib/env';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import {
   getNextReward,
@@ -29,6 +31,7 @@ interface Props {
 export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const { user } = useAuth();
+  const { isMember } = useClanMembership();
 
   // Fetch geoguesser scores to compute level accurately
   const scores = usePlayerModuleScores({
@@ -130,9 +133,16 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   </p>
                 )}
                 {identity.isVerified && (
-                  <p className="text-xs text-atfr-success/80 uppercase tracking-wider mt-0.5">
-                    Compte WG vérifié
-                  </p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap mt-1">
+                    <p className="text-xs text-atfr-success/80 uppercase tracking-wider">
+                      Compte WG vérifié
+                    </p>
+                    {isMember && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-atfr-gold/40 bg-atfr-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-atfr-gold">
+                        {env.clanTag}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 

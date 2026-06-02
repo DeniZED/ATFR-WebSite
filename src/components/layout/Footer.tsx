@@ -69,11 +69,8 @@ export function Footer() {
       </div>
 
       <div className="border-t border-atfr-gold/10">
-        <div className="container py-4 text-xs text-atfr-fog/80 flex items-center justify-between">
+        <div className="container py-4 text-xs text-atfr-fog/60">
           <p>© {new Date().getFullYear()} {env.clanTag}. Fan site non affilié à Wargaming.net.</p>
-          <Link to="/admin" className="hover:text-atfr-gold transition-colors duration-200">
-            Administration
-          </Link>
         </div>
       </div>
     </footer>

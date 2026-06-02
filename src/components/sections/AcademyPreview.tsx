@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Map, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Map, Users } from 'lucide-react';
 import { Button, Section, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePublishedModules } from '@/features/modules/queries';
@@ -54,7 +54,7 @@ export function AcademyPreview() {
           className="rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-7"
         >
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-atfr-gold/40 bg-atfr-gold/10 text-atfr-gold">
-            <Sparkles size={22} strokeWidth={1.6} />
+            <GraduationCap size={22} strokeWidth={1.6} />
           </div>
           <h3 className="mt-5 font-display text-3xl text-atfr-bone">
             {get('academy_preview_card_title')}
@@ -62,7 +62,11 @@ export function AcademyPreview() {
           <p className="mt-4 text-sm leading-relaxed text-atfr-fog">
             {get('academy_preview_card_text')}
           </p>
-          <Link to="/modules" className="mt-7 inline-flex">
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-atfr-gold/25 bg-atfr-gold/5 px-3 py-1">
+            <Users size={11} className="text-atfr-gold/70" />
+            <span className="text-[11px] text-atfr-fog/80">Ouvert à toute la communauté WoT</span>
+          </div>
+          <Link to="/modules" className="mt-6 inline-flex">
             <Button variant="outline" trailingIcon={<ArrowRight size={14} />}>
               {get('academy_preview_cta')}
             </Button>
