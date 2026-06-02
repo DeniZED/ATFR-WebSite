@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { Spinner } from '@/components/ui';
@@ -70,12 +71,17 @@ export const router = createBrowserRouter([
           { path: '/membres', element: <Members /> },
           { path: '/evenements', element: <Events /> },
           { path: '/galerie', element: <Gallery /> },
+          { path: '/recrutement', element: <Recruitment /> },
+          { path: '/auth/wg/callback', element: <AuthWgCallback /> },
+        ],
+      },
+      {
+        element: <AcademyLayout />,
+        children: [
           { path: '/modules', element: <Modules /> },
           { path: '/modules/guide-bots', element: <GuideBots /> },
           { path: '/modules/wot-geoguesser', element: <Geoguesser /> },
           { path: '/modules/:slug', element: <ModuleStub /> },
-          { path: '/recrutement', element: <Recruitment /> },
-          { path: '/auth/wg/callback', element: <AuthWgCallback /> },
         ],
       },
       { path: '/admin/login', element: <Login /> },
