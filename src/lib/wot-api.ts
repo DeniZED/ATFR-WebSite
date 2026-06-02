@@ -120,7 +120,7 @@ export async function getPlayerClan(accountId: number): Promise<{
     '/clans/accountinfo/',
     {
       account_id: accountId,
-      fields: 'clan_id,clan.tag',
+      fields: 'clan_id,clan',
     },
   );
   const info = data[String(accountId)];

@@ -63,8 +63,7 @@ export function useClanMembership() {
         setStatus(isMember ? 'member' : 'guest');
         setClanTag(tag);
       })
-      .catch((err: unknown) => {
-        console.error('[useClanMembership] getPlayerClan failed:', err);
+      .catch(() => {
         setStatus('guest');
         setClanTag(null);
       });
