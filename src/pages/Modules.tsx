@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, GraduationCap, Hourglass, LogIn, Users } from 'lucide-react';
+import { ArrowRight, GraduationCap, Hourglass, Lock, LogIn, Users } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
@@ -170,10 +170,17 @@ export default function Modules() {
                         <span className="text-[10px] uppercase tracking-[0.25em] text-atfr-fog">
                           {CATEGORY_LABEL[registry.category]}
                         </span>
-                        {row.badge_label && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-atfr-gold/15 border border-atfr-gold/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-atfr-gold">
-                            {row.badge_label}
+                        {registry.membersOnly ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                            <Lock size={10} />
+                            Membres {env.clanTag}
                           </span>
+                        ) : (
+                          row.badge_label && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-atfr-gold/15 border border-atfr-gold/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-atfr-gold">
+                              {row.badge_label}
+                            </span>
+                          )
                         )}
                       </div>
                     </div>

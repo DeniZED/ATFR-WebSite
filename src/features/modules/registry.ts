@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, Map } from 'lucide-react';
+import { BookOpen, Calendar, Map } from 'lucide-react';
 
 // Pôle "Modules" : guide pédagogique + mini-jeux thématiques.
 // La visibilité publique et les overrides éditoriaux (titre, description,
@@ -20,6 +20,9 @@ export interface ModuleDefinition {
   category: 'pédagogie' | 'jeu' | 'outil';
   /** Texte du CTA par défaut sur la carte. */
   cta: string;
+  /** true = réservé aux membres du clan ATFR. Les non-membres voient le module
+   * sur le hub mais ne peuvent pas y accéder (affiche un gate avec CTA). */
+  membersOnly?: boolean;
   /** Affiche un état "implémentation à venir" tant que le composant n'est
    * pas prêt — la carte reste cliquable mais on annonce clairement le
    * statut. */
@@ -50,6 +53,20 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     accentGradient: 'from-emerald-500/25 to-transparent',
     category: 'jeu',
     cta: 'Lancer une partie',
+  },
+  {
+    slug: 'internal-events',
+    title: 'Événements internes',
+    description:
+      'Inscriptions aux clan wars, tournois internes et opérations spéciales du clan.',
+    icon: Calendar,
+    path: 'internal-events',
+    accentBorder: 'border-violet-400/40',
+    accentGradient: 'from-violet-500/25 to-transparent',
+    category: 'outil',
+    cta: 'Consulter',
+    membersOnly: true,
+    comingSoon: true,
   },
 ];
 
