@@ -211,38 +211,50 @@ export default function AdminModules() {
                     <Input
                       label="Ordre d'affichage"
                       type="number"
+                      disabled={upsert.isPending}
                       value={d.sort_order}
                       onChange={(e) =>
                         update(registry.slug, { sort_order: Number(e.target.value) })
                       }
-                      onBlur={() => void saveSlug(registry.slug)}
+                      onBlur={() => {
+                        void saveSlug(registry.slug);
+                      }}
                     />
                     <Input
                       label="Badge (ex. Nouveau, Bêta, Bientôt)"
+                      disabled={upsert.isPending}
                       value={d.badge_label}
                       onChange={(e) =>
                         update(registry.slug, { badge_label: e.target.value })
                       }
-                      onBlur={() => void saveSlug(registry.slug)}
+                      onBlur={() => {
+                        void saveSlug(registry.slug);
+                      }}
                       placeholder=""
                     />
                     <Input
                       label="Titre personnalisé (override)"
+                      disabled={upsert.isPending}
                       value={d.custom_title}
                       onChange={(e) =>
                         update(registry.slug, { custom_title: e.target.value })
                       }
-                      onBlur={() => void saveSlug(registry.slug)}
+                      onBlur={() => {
+                        void saveSlug(registry.slug);
+                      }}
                       placeholder={registry.title}
                       className="sm:col-span-2"
                     />
                     <Textarea
                       label="Description personnalisée (override)"
+                      disabled={upsert.isPending}
                       value={d.custom_description}
                       onChange={(e) =>
                         update(registry.slug, { custom_description: e.target.value })
                       }
-                      onBlur={() => void saveSlug(registry.slug)}
+                      onBlur={() => {
+                        void saveSlug(registry.slug);
+                      }}
                       placeholder={registry.description}
                       rows={3}
                       className="sm:col-span-2"
