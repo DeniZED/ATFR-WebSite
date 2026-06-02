@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Gift, X, LogOut, Palette } from 'lucide-react';
+import { Gift, X, LogOut, Palette, Shield } from 'lucide-react';
 import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
+import { useAuth } from '@/hooks/useAuth';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import {
   getNextReward,
@@ -26,6 +28,7 @@ interface Props {
 
 export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const { user } = useAuth();
 
   // Fetch geoguesser scores to compute level accurately
   const scores = usePlayerModuleScores({
@@ -68,6 +71,17 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-atfr-gold/15 bg-atfr-carbon/95 backdrop-blur-sm px-5 py-4">
               <h2 className="font-display text-lg text-atfr-bone">Profil Académie</h2>
               <div className="flex items-center gap-2">
+                {user && (
+                  <Link
+                    to="/admin"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/30 px-2.5 py-1.5 text-xs text-atfr-gold/80 hover:text-atfr-gold hover:border-atfr-gold/60 transition-colors"
+                    title="Administration"
+                  >
+                    <Shield size={12} />
+                    <span className="hidden sm:inline">Admin</span>
+                  </Link>
+                )}
                 {identity.isVerified && (
                   <button
                     type="button"
