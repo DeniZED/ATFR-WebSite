@@ -1,8 +1,10 @@
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Hourglass } from 'lucide-react';
 import { Button, Card, CardBody, Section } from '@/components/ui';
+import { ModuleGate } from '@/components/academy/ModuleGate';
 import { getModule } from '@/features/modules/registry';
 import { usePublishedModules } from '@/features/modules/queries';
+import { useClanMembership } from '@/features/clan/useClanMembership';
 
 /**
  * Generic placeholder for modules registered in code but whose actual
@@ -14,6 +16,7 @@ export default function ModuleStub() {
   const { slug = '' } = useParams<{ slug: string }>();
   const mod = getModule(slug);
   const { data: published } = usePublishedModules();
+  const { isMember, isLoading } = useClanMembership();
 
   if (!mod) {
     return (
@@ -29,6 +32,16 @@ export default function ModuleStub() {
           </Link>
         </div>
       </Section>
+    );
+  }
+
+  // Module access control: members-only gates non-members
+  if (mod.membersOnly && !isLoading && !isMember) {
+    return (
+      <ModuleGate
+        moduleTitle={mod.title}
+        moduleDescription={mod.description}
+      />
     );
   }
 
