@@ -124,19 +124,21 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
 
               {/* Identity */}
               <div className="text-center">
+                {clanTag && (
+                  <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold/80 mb-1">
+                    [{clanTag}]
+                  </p>
+                )}
                 <p className="font-display text-2xl text-atfr-bone leading-tight">
-                  {clanTag && (
-                    <span className="text-atfr-gold/70 mr-1">[{clanTag}]</span>
-                  )}
                   {identity.nickname || '—'}
                 </p>
                 {profile.avatarConfig.titleId && (
-                  <p className="text-xs text-atfr-gold/70 italic mt-0.5">
+                  <p className="text-xs text-atfr-gold/70 italic mt-1">
                     {getUnlockById(profile.avatarConfig.titleId)?.label}
                   </p>
                 )}
                 {identity.isVerified && (
-                  <div className="flex items-center justify-center gap-2 flex-wrap mt-1">
+                  <div className="flex items-center justify-center gap-2 flex-wrap mt-2">
                     <p className="text-xs text-atfr-success/80 uppercase tracking-wider">
                       Compte WG vérifié
                     </p>
