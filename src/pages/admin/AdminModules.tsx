@@ -79,9 +79,8 @@ export default function AdminModules() {
     }));
   }
 
-  async function togglePublish(slug: string, next: boolean) {
-    update(slug, { is_published: next });
-    const d = { ...(drafts[slug] ?? empty), is_published: next };
+  async function saveSlug(slug: string, overrides?: Partial<DraftRow>) {
+    const d = { ...(drafts[slug] ?? empty), ...overrides };
     await upsert.mutateAsync({
       slug,
       is_published: d.is_published,
@@ -92,18 +91,15 @@ export default function AdminModules() {
     });
   }
 
+  async function togglePublish(slug: string, next: boolean) {
+    update(slug, { is_published: next });
+    await saveSlug(slug, { is_published: next });
+  }
+
   async function save() {
     if (!data) return;
     for (const slug of dirtySlugs) {
-      const d = drafts[slug];
-      await upsert.mutateAsync({
-        slug,
-        is_published: d.is_published,
-        sort_order: d.sort_order,
-        badge_label: d.badge_label || null,
-        custom_title: d.custom_title || null,
-        custom_description: d.custom_description || null,
-      });
+      await saveSlug(slug);
     }
   }
 
@@ -116,9 +112,8 @@ export default function AdminModules() {
           </p>
           <h1 className="font-display text-3xl text-atfr-bone">Modules & mini-jeux</h1>
           <p className="text-sm text-atfr-fog mt-1">
-            Choisis quels modules sont visibles sur la page publique
-            <code className="ml-1 text-atfr-gold">/modules</code>. Les modules
-            sont définis dans le code et déployés au fur et à mesure.
+            Gère la visibilité et le contenu des modules. Les modifications de texte sont
+            sauvegardées automatiquement quand tu quittes un champ.
           </p>
         </div>
         <Button
@@ -218,10 +213,9 @@ export default function AdminModules() {
                       type="number"
                       value={d.sort_order}
                       onChange={(e) =>
-                        update(registry.slug, {
-                          sort_order: Number(e.target.value),
-                        })
+                        update(registry.slug, { sort_order: Number(e.target.value) })
                       }
+                      onBlur={() => void saveSlug(registry.slug)}
                     />
                     <Input
                       label="Badge (ex. Nouveau, Bêta, Bientôt)"
@@ -229,6 +223,7 @@ export default function AdminModules() {
                       onChange={(e) =>
                         update(registry.slug, { badge_label: e.target.value })
                       }
+                      onBlur={() => void saveSlug(registry.slug)}
                       placeholder=""
                     />
                     <Input
@@ -237,6 +232,7 @@ export default function AdminModules() {
                       onChange={(e) =>
                         update(registry.slug, { custom_title: e.target.value })
                       }
+                      onBlur={() => void saveSlug(registry.slug)}
                       placeholder={registry.title}
                       className="sm:col-span-2"
                     />
@@ -244,10 +240,9 @@ export default function AdminModules() {
                       label="Description personnalisée (override)"
                       value={d.custom_description}
                       onChange={(e) =>
-                        update(registry.slug, {
-                          custom_description: e.target.value,
-                        })
+                        update(registry.slug, { custom_description: e.target.value })
                       }
+                      onBlur={() => void saveSlug(registry.slug)}
                       placeholder={registry.description}
                       rows={3}
                       className="sm:col-span-2"

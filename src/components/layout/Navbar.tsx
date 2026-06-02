@@ -5,15 +5,16 @@ import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavVisibility } from '@/features/content/useNavVisibility';
 import { WgProfileBubble } from './WgProfileBubble';
 
-const links = [
-  { to: '/', label: 'Accueil', end: true },
-  { to: '/membres', label: 'Membres' },
-  { to: '/evenements', label: 'Événements' },
-  { to: '/galerie', label: 'Galerie' },
-  { to: '/modules', label: 'Académie' },
-  { to: '/recrutement', label: 'Recrutement' },
+const baseLinks = [
+  { to: '/', label: 'Accueil', end: true, always: true },
+  { to: '/membres', label: 'Membres', key: 'members' as const },
+  { to: '/evenements', label: 'Événements', key: 'events' as const },
+  { to: '/galerie', label: 'Galerie', key: 'gallery' as const },
+  { to: '/modules', label: 'Académie', always: true },
+  { to: '/recrutement', label: 'Recrutement', always: true },
 ];
 
 export function Navbar() {
@@ -21,6 +22,16 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { data: vis } = useNavVisibility();
+
+  const links = baseLinks.filter((l) => {
+    if (l.always) return true;
+    if (!vis) return true; // show all while loading
+    if (l.key === 'members') return vis.members;
+    if (l.key === 'events') return vis.events;
+    if (l.key === 'gallery') return vis.gallery;
+    return true;
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);

@@ -15,7 +15,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
-import { Badge, Button, Section, Spinner } from '@/components/ui';
+import { Badge, Button, Section } from '@/components/ui';
 import { useEvents } from '@/features/events/queries';
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
 import type { Database, EventType } from '@/types/database';
@@ -62,6 +62,10 @@ export function NextOperation() {
   const queue = events.slice(1);
   const FeaturedIcon = featured ? EVENT_ICONS[featured.type] : Calendar;
 
+  // Don't render while loading or if no upcoming events
+  if (isLoading) return null;
+  if (!featured) return null;
+
   return (
     <Section
       eyebrow={get('next_operation_eyebrow')}
@@ -69,38 +73,7 @@ export function NextOperation() {
       description={get('next_operation_text')}
       className="pt-10 sm:pt-16"
     >
-      {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner label="Chargement..." />
-        </div>
-      ) : !featured ? (
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-          className="relative overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-8 text-center"
-        >
-          <div
-            className="absolute inset-0 bg-grid bg-[size:40px_40px] opacity-20"
-            aria-hidden
-          />
-          <div className="relative mx-auto max-w-2xl">
-            <Calendar size={34} className="mx-auto text-atfr-gold" />
-            <h3 className="mt-4 font-display text-2xl text-atfr-bone">
-              {get('next_operation_empty_title')}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-atfr-fog">
-              {get('next_operation_empty_text')}
-            </p>
-            <Link to="/evenements" className="mt-6 inline-flex">
-              <Button variant="outline" trailingIcon={<ArrowRight size={14} />}>
-                {get('next_operation_empty_cta')}
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-      ) : (
+      {(
         <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <motion.article
             initial={{ opacity: 0, y: 22 }}
