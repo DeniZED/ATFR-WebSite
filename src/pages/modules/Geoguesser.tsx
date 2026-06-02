@@ -26,7 +26,6 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { AcademyIdentityWidget } from '@/components/academy/AcademyIdentityWidget';
 import {
   Alert,
   Badge,
@@ -528,7 +527,7 @@ export default function Geoguesser() {
   // -----------------------------------------------------------------
   if (stage === 'intro') {
     return (
-      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit" headerAction={<AcademyIdentityWidget />}>
+      <Section eyebrow="WoT GeoGuesseur" title="Devine la map et l'endroit">
         <div className="mx-auto max-w-6xl space-y-4">
           {/* Retour académie */}
           <Link

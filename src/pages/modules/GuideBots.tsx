@@ -30,7 +30,6 @@ import {
 } from '@/features/quiz/queries';
 import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import { AcademyIdentityWidget } from '@/components/academy/AcademyIdentityWidget';
 import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import { DIFFICULTY_LABELS } from '@/types/database';
 
@@ -182,7 +181,6 @@ export default function GuideBots() {
         eyebrow="Guide pour les bots"
         title="Le code de la route WoT"
         description="Une situation de bataille, plusieurs réponses crédibles, une seule bonne. Pédagogique, parodique, utile."
-        headerAction={<AcademyIdentityWidget />}
       >
         <div className="max-w-3xl mx-auto space-y-6">
           <Link
