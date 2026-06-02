@@ -31,7 +31,7 @@ interface Props {
 export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const { user } = useAuth();
-  const { isMember } = useClanMembership();
+  const { isMember, clanTag } = useClanMembership();
 
   // Fetch geoguesser scores to compute level accurately
   const scores = usePlayerModuleScores({
@@ -125,6 +125,9 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
               {/* Identity */}
               <div className="text-center">
                 <p className="font-display text-2xl text-atfr-bone leading-tight">
+                  {clanTag && (
+                    <span className="text-atfr-gold/70 mr-1">[{clanTag}]</span>
+                  )}
                   {identity.nickname || '—'}
                 </p>
                 {profile.avatarConfig.titleId && (
@@ -139,7 +142,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                     </p>
                     {isMember && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-atfr-gold/40 bg-atfr-gold/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-atfr-gold">
-                        {env.clanTag}
+                        Membre {env.clanTag}
                       </span>
                     )}
                   </div>

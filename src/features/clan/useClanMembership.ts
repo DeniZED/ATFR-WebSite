@@ -5,53 +5,62 @@ import { env } from '@/lib/env';
 
 type Status = 'unknown' | 'loading' | 'member' | 'guest';
 
-const CACHE_KEY = 'atfr.player.clan_membership';
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+interface CacheEntry { isMember: boolean; clanTag: string | null; ts: number }
 
-function readCache(accountId: number): boolean | null {
+const CACHE_KEY = 'atfr.player.clan_membership';
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+function readCache(accountId: number): CacheEntry | null {
   try {
     const raw = localStorage.getItem(`${CACHE_KEY}.${accountId}`);
     if (!raw) return null;
-    const { isMember, ts } = JSON.parse(raw) as { isMember: boolean; ts: number };
-    if (Date.now() - ts > CACHE_TTL) return null;
-    return isMember;
+    const entry = JSON.parse(raw) as CacheEntry;
+    if (Date.now() - entry.ts > CACHE_TTL) return null;
+    return entry;
   } catch {
     return null;
   }
 }
 
-function writeCache(accountId: number, isMember: boolean) {
+function writeCache(accountId: number, isMember: boolean, clanTag: string | null) {
   localStorage.setItem(
     `${CACHE_KEY}.${accountId}`,
-    JSON.stringify({ isMember, ts: Date.now() }),
+    JSON.stringify({ isMember, clanTag, ts: Date.now() } satisfies CacheEntry),
   );
 }
 
 export function useClanMembership() {
   const identity = usePlayerIdentity();
   const [status, setStatus] = useState<Status>('unknown');
+  const [clanTag, setClanTag] = useState<string | null>(null);
 
   useEffect(() => {
     if (!identity.isVerified || !identity.accountId) {
       setStatus('unknown');
+      setClanTag(null);
       return;
     }
 
     const cached = readCache(identity.accountId);
     if (cached !== null) {
-      setStatus(cached ? 'member' : 'guest');
+      setStatus(cached.isMember ? 'member' : 'guest');
+      setClanTag(cached.clanTag);
       return;
     }
 
     setStatus('loading');
     getPlayerClan(identity.accountId)
       .then((clan) => {
-        const isMember =
-          !!clan?.tag && clan.tag.toUpperCase() === env.clanTag?.toUpperCase();
-        writeCache(identity.accountId!, isMember);
+        const tag = clan?.tag ?? null;
+        const isMember = !!tag && tag.toUpperCase() === env.clanTag?.toUpperCase();
+        writeCache(identity.accountId!, isMember, tag);
         setStatus(isMember ? 'member' : 'guest');
+        setClanTag(tag);
       })
-      .catch(() => setStatus('guest'));
+      .catch(() => {
+        setStatus('guest');
+        setClanTag(null);
+      });
   }, [identity.isVerified, identity.accountId]);
 
   return {
@@ -59,5 +68,6 @@ export function useClanMembership() {
     isMember: status === 'member',
     isLoading: status === 'loading',
     isKnown: status === 'member' || status === 'guest',
+    clanTag,
   };
 }
