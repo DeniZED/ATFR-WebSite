@@ -31,7 +31,7 @@ interface Props {
 export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const { user } = useAuth();
-  const { isMember, clanTag } = useClanMembership();
+  const { isMember, clanTag, status: clanStatus } = useClanMembership();
 
   // Fetch geoguesser scores to compute level accurately
   const scores = usePlayerModuleScores({
@@ -129,6 +129,8 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                     [{clanTag}]
                   </p>
                 )}
+                {/* DEBUG TEMPORAIRE — à retirer */}
+                <p className="text-[9px] text-atfr-fog/40 mb-1">clan:{clanStatus} tag:{clanTag ?? 'null'} verified:{String(identity.isVerified)}</p>
                 <p className="font-display text-2xl text-atfr-bone leading-tight">
                   {identity.nickname || '—'}
                 </p>
