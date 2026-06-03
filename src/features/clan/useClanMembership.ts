@@ -5,8 +5,9 @@ import { env } from '@/lib/env';
 
 type Status = 'unknown' | 'loading' | 'member' | 'guest';
 
-// v:2 — entrées sans version (ancien format sans clanTag) sont invalidées
-interface CacheEntry { isMember: boolean; clanTag: string | null; ts: number; v: 2 }
+// v:3 — comparaison par clan_id (plus robuste que le tag textuel)
+//       invalide les v:2 qui pouvaient avoir clanTag: null suite au bug INVALID_FIELDS
+interface CacheEntry { isMember: boolean; clanTag: string | null; ts: number; v: 3 }
 
 const CACHE_KEY = 'atfr.player.clan_membership';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -16,8 +17,7 @@ function readCache(accountId: number): CacheEntry | null {
     const raw = localStorage.getItem(`${CACHE_KEY}.${accountId}`);
     if (!raw) return null;
     const entry = JSON.parse(raw) as Partial<CacheEntry>;
-    // Invalide les entrées de l'ancien format (sans v:2 → sans clanTag)
-    if (entry.v !== 2) {
+    if (entry.v !== 3) {
       localStorage.removeItem(`${CACHE_KEY}.${accountId}`);
       return null;
     }
@@ -31,7 +31,7 @@ function readCache(accountId: number): CacheEntry | null {
 function writeCache(accountId: number, isMember: boolean, clanTag: string | null) {
   localStorage.setItem(
     `${CACHE_KEY}.${accountId}`,
-    JSON.stringify({ isMember, clanTag, ts: Date.now(), v: 2 } satisfies CacheEntry),
+    JSON.stringify({ isMember, clanTag, ts: Date.now(), v: 3 } satisfies CacheEntry),
   );
 }
 
@@ -58,7 +58,8 @@ export function useClanMembership() {
     getPlayerClan(identity.accountId)
       .then((clan) => {
         const tag = clan?.tag ?? null;
-        const isMember = !!tag && tag.toUpperCase() === env.clanTag?.toUpperCase();
+        // Comparaison par clan_id — insensible à la casse et aux changements de tag
+        const isMember = !!clan && String(clan.clan_id) === String(env.clanId);
         writeCache(identity.accountId!, isMember, tag);
         setStatus(isMember ? 'member' : 'guest');
         setClanTag(tag);
