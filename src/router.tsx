@@ -5,9 +5,11 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
+import { RequireMember } from '@/components/layout/RequireMember';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
+const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
@@ -73,6 +75,12 @@ export const router = createBrowserRouter([
           { path: '/galerie', element: <Gallery /> },
           { path: '/recrutement', element: <Recruitment /> },
           { path: '/auth/wg/callback', element: <AuthWgCallback /> },
+          {
+            element: <RequireMember />,
+            children: [
+              { path: '/clan/evenements/CW', element: <ClanCW /> },
+            ],
+          },
         ],
       },
       {

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, Calendar, Map } from 'lucide-react';
+import { BookOpen, Map } from 'lucide-react';
 
 // Pôle "Modules" : guide pédagogique + mini-jeux thématiques.
 // La visibilité publique et les overrides éditoriaux (titre, description,
@@ -53,20 +53,6 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     accentGradient: 'from-emerald-500/25 to-transparent',
     category: 'jeu',
     cta: 'Lancer une partie',
-  },
-  {
-    slug: 'internal-events',
-    title: 'Événements internes',
-    description:
-      'Inscriptions aux clan wars, tournois internes et opérations spéciales du clan.',
-    icon: Calendar,
-    path: 'internal-events',
-    accentBorder: 'border-violet-400/40',
-    accentGradient: 'from-violet-500/25 to-transparent',
-    category: 'outil',
-    cta: 'Consulter',
-    membersOnly: true,
-    comingSoon: true,
   },
 ];
 
