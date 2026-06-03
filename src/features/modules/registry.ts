@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, Calendar, Map } from 'lucide-react';
+import { BookOpen, Map } from 'lucide-react';
 
 // Pôle "Modules" : guide pédagogique + mini-jeux thématiques.
 // La visibilité publique et les overrides éditoriaux (titre, description,
