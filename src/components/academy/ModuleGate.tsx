@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Lock, LogIn } from 'lucide-react';
 import { Button, Card, CardBody, Section } from '@/components/ui';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import { useClanMembership } from '@/features/clan/useClanMembership';
+import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 import { env } from '@/lib/env';
 
 interface Props {

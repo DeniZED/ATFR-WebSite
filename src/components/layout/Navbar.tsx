@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, Shield, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
@@ -93,6 +93,16 @@ export function Navbar() {
         </nav>
 
         <div className="hidden lg:flex items-center gap-2">
+          {user && (
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/25 px-2.5 py-1.5 text-xs text-atfr-gold/70 hover:text-atfr-gold hover:border-atfr-gold/50 transition-colors"
+              title="Administration"
+            >
+              <Shield size={12} />
+              Admin
+            </Link>
+          )}
           <WgProfileBubble />
         </div>
 

@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { usePublishedModules } from '@/features/modules/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import { useClanMembership } from '@/features/clan/useClanMembership';
+import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 
 const CATEGORY_LABEL = {
   pédagogie: 'Pédagogique',
