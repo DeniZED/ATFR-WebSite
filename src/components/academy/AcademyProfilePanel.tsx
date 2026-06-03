@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Gift, X, LogOut, Palette, Shield } from 'lucide-react';
 import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
 import { useAuth } from '@/hooks/useAuth';
-import { useClanMembership } from '@/features/clan/useClanMembership';
+import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 import { env } from '@/lib/env';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import {

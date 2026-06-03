@@ -4,7 +4,7 @@ import { Button, Card, CardBody, Section } from '@/components/ui';
 import { ModuleGate } from '@/components/academy/ModuleGate';
 import { getModule } from '@/features/modules/registry';
 import { usePublishedModules } from '@/features/modules/queries';
-import { useClanMembership } from '@/features/clan/useClanMembership';
+import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 
 /**
  * Generic placeholder for modules registered in code but whose actual

@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { useClanMembership } from '@/features/clan/useClanMembership';
+import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { Spinner } from '@/components/ui';
 
