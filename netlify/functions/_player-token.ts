@@ -1,11 +1,12 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-// Signing secret — must be set to SUPABASE_SERVICE_ROLE_KEY in Netlify env.
-// Never fall back to public values: a leaked secret allows anyone to forge
-// verified player tokens and submit scores with arbitrary account IDs.
-const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Signing secret — prefer the dedicated PLAYER_TOKEN_SECRET variable.
+// Falls back to SUPABASE_SERVICE_ROLE_KEY only for backwards-compatibility
+// with existing deployments; migrate to a dedicated secret as soon as possible
+// so that a leaked signing key cannot be used to bypass RLS.
+const SECRET = process.env.PLAYER_TOKEN_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SECRET) {
-  throw new Error('[_player-token] SUPABASE_SERVICE_ROLE_KEY is not configured');
+  throw new Error('[_player-token] PLAYER_TOKEN_SECRET is not configured');
 }
 
 const TOKEN_TTL_S = 6 * 3600; // 6 h
