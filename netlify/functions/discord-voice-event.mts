@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Context } from '@netlify/functions';
 
 const SYNC_SECRET = process.env.DISCORD_SYNC_SECRET;
@@ -46,9 +47,14 @@ function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
+function secretsMatch(provided: string, expected: string): boolean {
+  const h = (s: string) => createHash('sha256').update(s).digest();
+  return timingSafeEqual(h(provided), h(expected));
+}
+
 async function canRun(req: Request): Promise<boolean> {
   const providedSecret = req.headers.get('x-sync-secret');
-  if (SYNC_SECRET && providedSecret === SYNC_SECRET) return true;
+  if (SYNC_SECRET && providedSecret !== null && secretsMatch(providedSecret, SYNC_SECRET)) return true;
 
   const auth = req.headers.get('authorization');
   if (!auth || !SUPABASE_URL || !SUPABASE_ANON_KEY) return false;

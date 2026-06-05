@@ -118,25 +118,37 @@ export default async (req: Request, _context: Context): Promise<Response> => {
     fields.push({ name: 'Stats', value: statLine.join(' · '), inline: false });
   }
 
-  const discordRes = await fetch(WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      username: 'ATFR Recrutement',
-      embeds: [
-        {
-          title: `Nouvelle candidature — ${app.targetClan}`,
-          color: 0xe8b043,
-          timestamp: new Date().toISOString(),
-          fields,
-          footer: { text: app.accountId ? `WG ID ${app.accountId}` : '—' },
-        },
-      ],
-    }),
+  const webhookBody = JSON.stringify({
+    username: 'ATFR Recrutement',
+    embeds: [
+      {
+        title: `Nouvelle candidature — ${app.targetClan}`,
+        color: 0xe8b043,
+        timestamp: new Date().toISOString(),
+        fields,
+        footer: { text: app.accountId ? `WG ID ${app.accountId}` : '—' },
+      },
+    ],
   });
 
-  if (!discordRes.ok) {
-    console.error('[discord-notify] webhook failed:', discordRes.status, await discordRes.text().catch(() => ''));
+  let discordRes: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
+    try {
+      discordRes = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: webhookBody,
+      });
+      if (discordRes.ok) break;
+    } catch (err) {
+      console.error(`[discord-notify] attempt ${attempt + 1} threw:`, err);
+    }
+  }
+
+  if (!discordRes?.ok) {
+    const detail = discordRes ? await discordRes.text().catch(() => '') : 'network error';
+    console.error('[discord-notify] webhook failed after retries:', discordRes?.status, detail);
     return new Response(
       JSON.stringify({ error: 'Notification failed, please try again.' }),
       {
