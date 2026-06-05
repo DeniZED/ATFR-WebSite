@@ -1,60 +1,15 @@
 import type { Context } from '@netlify/functions';
 
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
+const TOMATO_API_KEY = process.env.TOMATO_API_KEY;
 const CLAN_ID = process.env.CLAN_ID || process.env.VITE_CLAN_ID;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
-const EXP_URL = 'https://static.modxvm.com/wn8-data-exp/json/wn8exp.json';
+const TOMATO_BASE = 'https://api.tomato.gg';
 
-// Wargaming server-app rate limit is 10 req/s. We fan out /tanks/stats/ one
-// request per player, so keep parallel concurrency comfortably below the cap.
-const TANKS_CONCURRENCY = 5;
-// /account/info/ and /clans/info/ accept up to 100 IDs per call. Chunk just
-// in case a clan is ever ≥ 100 members.
+// /account/info/ accepts up to 100 IDs per call.
 const ACCOUNT_INFO_CHUNK = 100;
-
-interface ExpectedValue {
-  IDNum: number;
-  expDamage: number;
-  expSpot: number;
-  expFrag: number;
-  expDef: number;
-  expWinRate: number;
-}
-
-let expCache: Map<number, ExpectedValue> | null = null;
-let expCacheAt = 0;
-
-async function getExpected(): Promise<Map<number, ExpectedValue>> {
-  if (expCache && Date.now() - expCacheAt < 24 * 60 * 60 * 1000) return expCache;
-  const res = await fetch(EXP_URL);
-  if (!res.ok) throw new Error('Failed to fetch WN8 expected values');
-  const json = (await res.json()) as { data: ExpectedValue[] };
-  const map = new Map<number, ExpectedValue>();
-  for (const e of json.data) map.set(e.IDNum, e);
-  expCache = map;
-  expCacheAt = Date.now();
-  return map;
-}
-
-async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
-  if (!APP_ID) throw new Error('WOT_APPLICATION_ID missing');
-  const qs = new URLSearchParams({ application_id: APP_ID, ...params });
-  const res = await fetch(`${WG_BASE}${path}?${qs}`);
-  if (!res.ok) throw new Error(`WG ${path} ${res.status}`);
-  const json = (await res.json()) as {
-    status: string;
-    error?: { message: string; field?: string };
-    data: T;
-  };
-  if (json.status !== 'ok') {
-    const msg = json.error?.message ?? 'unknown';
-    const field = json.error?.field;
-    throw new Error(
-      `WG error ${path}: ${msg}${field ? ` (field=${field})` : ''}`,
-    );
-  }
-  return json.data;
-}
+// tomato bulk-stats also accepts comma-separated IDs; stay under 100 per call.
+const BULK_CHUNK = 100;
 
 interface ClanMember {
   account_id: number;
@@ -68,23 +23,6 @@ interface ClanInfo {
   members: ClanMember[];
   name: string;
   tag: string;
-}
-
-// /tanks/stats/ exposes per-mode stat blocks. `random` = random battles only —
-// the canonical scope for WN8 / tomato.gg.
-interface TankStatBlock {
-  battles: number;
-  wins: number;
-  damage_dealt: number;
-  frags: number;
-  spotted: number;
-  dropped_capture_points: number;
-}
-
-interface TankStatsRow {
-  tank_id: number;
-  random?: TankStatBlock;
-  all?: TankStatBlock;
 }
 
 interface AccountInfo {
@@ -111,60 +49,36 @@ interface AccountInfo {
   };
 }
 
-function computeWn8(
-  tanks: TankStatsRow[],
-  expected: Map<number, ExpectedValue>,
-): number | null {
-  let d = 0;
-  let s = 0;
-  let f = 0;
-  let def = 0;
-  let win = 0;
-  let battles = 0;
-  let expDmg = 0;
-  let expSpot = 0;
-  let expFrag = 0;
-  let expDef = 0;
-  let expWin = 0;
+interface TomatoStatSummary {
+  battles: number;
+  wn8: number;
+  winrate: number;
+  avgTier: number;
+}
 
-  for (const t of tanks) {
-    const exp = expected.get(t.tank_id);
-    // Prefer random-battle stats (matches tomato.gg). Fall back to `all`.
-    const stats = t.random && t.random.battles > 0 ? t.random : t.all;
-    if (!exp || !stats || stats.battles <= 0) continue;
-    battles += stats.battles;
-    d += stats.damage_dealt;
-    s += stats.spotted;
-    f += stats.frags;
-    def += stats.dropped_capture_points;
-    win += stats.wins;
-    expDmg += exp.expDamage * stats.battles;
-    expSpot += exp.expSpot * stats.battles;
-    expFrag += exp.expFrag * stats.battles;
-    expDef += exp.expDef * stats.battles;
-    expWin += exp.expWinRate * stats.battles;
+interface TomatoBulkPlayer {
+  recent: TomatoStatSummary | null;
+  overall: TomatoStatSummary | null;
+}
+
+async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
+  if (!APP_ID) throw new Error('WOT_APPLICATION_ID missing');
+  const qs = new URLSearchParams({ application_id: APP_ID, ...params });
+  const res = await fetch(`${WG_BASE}${path}?${qs}`);
+  if (!res.ok) throw new Error(`WG ${path} ${res.status}`);
+  const json = (await res.json()) as {
+    status: string;
+    error?: { message: string; field?: string };
+    data: T;
+  };
+  if (json.status !== 'ok') {
+    const msg = json.error?.message ?? 'unknown';
+    const field = json.error?.field;
+    throw new Error(
+      `WG error ${path}: ${msg}${field ? ` (field=${field})` : ''}`,
+    );
   }
-
-  if (battles === 0 || expDmg === 0) return null;
-  const rDmg = d / expDmg;
-  const rSpot = expSpot > 0 ? s / expSpot : 0;
-  const rFrag = expFrag > 0 ? f / expFrag : 0;
-  const rDef = expDef > 0 ? def / expDef : 0;
-  const rWin = expWin > 0 ? ((win / battles) * 100) / (expWin / battles) : 0;
-
-  const rDAMAGE = Math.max(0, (rDmg - 0.22) / 0.78);
-  const rSPOT = Math.max(0, Math.min(rDAMAGE + 0.1, (rSpot - 0.38) / 0.62));
-  const rFRAG = Math.max(0, Math.min(rDAMAGE + 0.2, (rFrag - 0.12) / 0.88));
-  const rDEF = Math.max(0, Math.min(rDAMAGE + 0.1, (rDef - 0.1) / 0.9));
-  const rWIN = Math.max(0, (rWin - 0.71) / 0.29);
-
-  return (
-    980 * rDAMAGE +
-    210 * rDAMAGE * rFRAG +
-    155 * rFRAG * rSPOT +
-    75 * rDEF * rFRAG +
-    145 * Math.min(1.8, rWIN)
-  );
+  return json.data;
 }
 
 async function fetchAccountsInfo(
@@ -188,31 +102,25 @@ async function fetchAccountsInfo(
   return out;
 }
 
-async function fetchTanksForMembers(
-  members: ClanMember[],
-): Promise<Map<number, TankStatsRow[]>> {
-  const map = new Map<number, TankStatsRow[]>();
-  for (let i = 0; i < members.length; i += TANKS_CONCURRENCY) {
-    const batch = members.slice(i, i + TANKS_CONCURRENCY);
-    const results = await Promise.allSettled(
-      batch.map((m) =>
-        wg<Record<string, TankStatsRow[]>>('/tanks/stats/', {
-          account_id: String(m.account_id),
-          fields:
-            'tank_id,' +
-            'random.battles,random.wins,random.damage_dealt,random.frags,random.spotted,random.dropped_capture_points,' +
-            'all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
-        }),
-      ),
+async function fetchTomatoBulkStats(
+  ids: number[],
+): Promise<Record<string, TomatoBulkPlayer>> {
+  if (!TOMATO_API_KEY) throw new Error('TOMATO_API_KEY missing');
+  const out: Record<string, TomatoBulkPlayer> = {};
+  for (let i = 0; i < ids.length; i += BULK_CHUNK) {
+    const chunk = ids.slice(i, i + BULK_CHUNK);
+    const res = await fetch(
+      `${TOMATO_BASE}/api/player/bulk-stats/eu?ids=${chunk.join(',')}`,
+      { headers: { 'x-api-key': TOMATO_API_KEY } },
     );
-    results.forEach((r, idx) => {
-      if (r.status === 'fulfilled') {
-        const rows = r.value?.[String(batch[idx].account_id)];
-        if (Array.isArray(rows)) map.set(batch[idx].account_id, rows);
-      }
-    });
+    if (!res.ok) throw new Error(`Tomato bulk-stats ${res.status}`);
+    const json = (await res.json()) as {
+      meta: { status: string };
+      data: Record<string, TomatoBulkPlayer>;
+    };
+    Object.assign(out, json.data);
   }
-  return map;
+  return out;
 }
 
 export interface ClanStatsPayload {
@@ -242,9 +150,33 @@ export interface ClanStatsPayload {
     battles: number;
     globalRating: number;
     lastBattleTime: number;
+    recentWn8: number | null;
+    recentWinRate: number | null;
   }>;
   computedAt: string;
 }
+
+const EMPTY_PAYLOAD = (clan: ClanInfo): ClanStatsPayload => ({
+  clanId: clan.clan_id,
+  name: clan.name,
+  tag: clan.tag,
+  membersCount: clan.members_count ?? 0,
+  sampledMembers: 0,
+  onlineNow: 0,
+  active24h: 0,
+  active7d: 0,
+  avgWinRate: null,
+  avgWn8: null,
+  avgGlobalRating: null,
+  avgDamagePerBattle: null,
+  avgFragsPerBattle: null,
+  avgSpotsPerBattle: null,
+  totalBattles: 0,
+  maxWn8: null,
+  maxWn8Nickname: null,
+  topPlayers: [],
+  computedAt: new Date().toISOString(),
+});
 
 export default async (req: Request, _ctx: Context): Promise<Response> => {
   const url = new URL(req.url);
@@ -273,62 +205,33 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
     );
 
     if (members.length === 0) {
-      return new Response(
-        JSON.stringify({
-          clanId: clan.clan_id,
-          name: clan.name,
-          tag: clan.tag,
-          membersCount: clan.members_count ?? 0,
-          sampledMembers: 0,
-          onlineNow: 0,
-          active24h: 0,
-          active7d: 0,
-          avgWinRate: null,
-          avgWn8: null,
-          avgGlobalRating: null,
-          avgDamagePerBattle: null,
-          avgFragsPerBattle: null,
-          avgSpotsPerBattle: null,
-          totalBattles: 0,
-          maxWn8: null,
-          maxWn8Nickname: null,
-          topPlayers: [],
-          computedAt: new Date().toISOString(),
-        } satisfies ClanStatsPayload),
-        {
-          status: 200,
-          headers: {
-            'content-type': 'application/json',
-            'cache-control': 'public, max-age=300, s-maxage=300',
-          },
+      return new Response(JSON.stringify(EMPTY_PAYLOAD(clan)), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, max-age=300, s-maxage=300',
         },
-      );
+      });
     }
 
-    const [accountMap, tanksMap, expected] = await Promise.all([
+    const memberIds = members.map((m) => m.account_id);
+    const [accountMap, tomatoMap] = await Promise.all([
       fetchAccountsInfo(members),
-      fetchTanksForMembers(members),
-      getExpected(),
+      fetchTomatoBulkStats(memberIds),
     ]);
 
     const now = Math.floor(Date.now() / 1000);
     const DAY = 86400;
-    const ONLINE_WINDOW = 1800; // 30 min — proxy for "currently in-game"
+    const ONLINE_WINDOW = 1800;
 
     let onlineNow = 0;
     let active24h = 0;
     let active7d = 0;
-    let sumWin = 0;
-    let sumWinCount = 0;
-    let sumWn8 = 0;
-    let sumWn8Count = 0;
-    let sumGr = 0;
-    let sumGrCount = 0;
-    let sumDmg = 0;
-    let sumDmgCount = 0;
-    let sumFrags = 0;
-    let sumSpots = 0;
-    let sumFragsSpotsBattles = 0;
+    let sumWn8 = 0; let sumWn8Count = 0;
+    let sumWinRate = 0; let sumWinRateCount = 0;
+    let sumGr = 0; let sumGrCount = 0;
+    let sumDmg = 0; let sumDmgCount = 0;
+    let sumFrags = 0; let sumSpots = 0; let sumFragsSpotsBattles = 0;
     let totalBattles = 0;
     let sampledMembers = 0;
     let maxWn8: number | null = null;
@@ -341,19 +244,18 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       if (!acc) continue;
       sampledMembers++;
 
-      // Prefer random-battle totals (matches tomato / WN8 convention).
+      const tomato = tomatoMap[String(m.account_id)];
+      const wn8 = tomato?.overall?.wn8 ?? null;
+      const winRate = tomato?.overall?.winrate ?? null;
+      const recentWn8 = tomato?.recent?.wn8 ?? null;
+      const recentWinRate = tomato?.recent?.winrate ?? null;
+      const battles = tomato?.overall?.battles ?? 0;
+
+      // Damage/frags/spots come from WG account info (not in tomato bulk-stats).
       const s = acc.statistics.random ?? acc.statistics.all;
-      const battles = s.battles ?? 0;
-      const wr = battles > 0 ? (s.wins / battles) * 100 : null;
-      const dpb = battles > 0 ? s.damage_dealt / battles : null;
+      const wgBattles = s.battles ?? 0;
+      const dpb = wgBattles > 0 ? s.damage_dealt / wgBattles : null;
 
-      const tanks = tanksMap.get(m.account_id) ?? [];
-      const wn8 = computeWn8(tanks, expected);
-
-      if (wr != null) {
-        sumWin += wr;
-        sumWinCount++;
-      }
       if (wn8 != null) {
         sumWn8 += wn8;
         sumWn8Count++;
@@ -361,6 +263,10 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
           maxWn8 = wn8;
           maxWn8Nickname = acc.nickname;
         }
+      }
+      if (winRate != null) {
+        sumWinRate += winRate;
+        sumWinRateCount++;
       }
       if (acc.global_rating) {
         sumGr += acc.global_rating;
@@ -370,18 +276,15 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         sumDmg += dpb;
         sumDmgCount++;
       }
-      if (battles > 0) {
+      if (wgBattles > 0) {
         sumFrags += s.frags ?? 0;
         sumSpots += s.spotted ?? 0;
-        sumFragsSpotsBattles += battles;
+        sumFragsSpotsBattles += wgBattles;
       }
       totalBattles += battles;
 
       const lastBattle = acc.last_battle_time ?? 0;
       const logout = acc.logout_at ?? 0;
-      // "Online" = very recent battle AND the last-known state wasn't a
-      // logout after that battle. Still an approximation: WG doesn't expose
-      // a real online flag.
       if (
         now - lastBattle < ONLINE_WINDOW &&
         (logout === 0 || lastBattle >= logout)
@@ -396,10 +299,12 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         nickname: acc.nickname,
         role: m.role,
         wn8,
-        winRate: wr,
+        winRate,
         battles,
         globalRating: acc.global_rating,
         lastBattleTime: lastBattle,
+        recentWn8,
+        recentWinRate,
       });
     }
 
@@ -417,7 +322,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       onlineNow,
       active24h,
       active7d,
-      avgWinRate: sumWinCount ? sumWin / sumWinCount : null,
+      avgWinRate: sumWinRateCount ? sumWinRate / sumWinRateCount : null,
       avgWn8: sumWn8Count ? sumWn8 / sumWn8Count : null,
       avgGlobalRating: sumGrCount ? sumGr / sumGrCount : null,
       avgDamagePerBattle: sumDmgCount ? sumDmg / sumDmgCount : null,

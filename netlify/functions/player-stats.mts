@@ -1,51 +1,14 @@
 import type { Context } from '@netlify/functions';
 
-// ---------------------------------------------------------------------------
-// WN8 via Wargaming API + XVM expected-values table.
-// Replaces the old tomato.gg passthrough (their /dev API is allowlisted).
-// ---------------------------------------------------------------------------
-
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
+const TOMATO_API_KEY = process.env.TOMATO_API_KEY;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
-const EXP_URL = 'https://static.modxvm.com/wn8-data-exp/json/wn8exp.json';
-
-interface ExpectedValue {
-  IDNum: number;
-  expDamage: number;
-  expSpot: number;
-  expFrag: number;
-  expDef: number;
-  expWinRate: number;
-}
-
-let expCache: Map<number, ExpectedValue> | null = null;
-let expCacheAt = 0;
-
-async function getExpected(): Promise<Map<number, ExpectedValue>> {
-  if (expCache && Date.now() - expCacheAt < 24 * 60 * 60 * 1000) return expCache;
-  const res = await fetch(EXP_URL);
-  if (!res.ok) throw new Error('Failed to fetch WN8 expected values');
-  const json = (await res.json()) as { data: ExpectedValue[] };
-  const map = new Map<number, ExpectedValue>();
-  for (const e of json.data) map.set(e.IDNum, e);
-  expCache = map;
-  expCacheAt = Date.now();
-  return map;
-}
-
-interface TankStatBlock {
-  battles: number;
-  wins: number;
-  damage_dealt: number;
-  frags: number;
-  spotted: number;
-  dropped_capture_points: number;
-}
+const TOMATO_BASE = 'https://api.tomato.gg';
 
 interface TankStats {
   tank_id: number;
-  random?: TankStatBlock;
-  all?: TankStatBlock;
+  random?: { battles: number };
+  all?: { battles: number };
 }
 
 interface TankInfo {
@@ -72,6 +35,18 @@ interface AccountInfo {
   };
 }
 
+interface TomatoStatSummary {
+  battles: number;
+  wn8: number;
+  winrate: number;
+  avgTier: number;
+}
+
+interface TomatoBulkPlayer {
+  recent: TomatoStatSummary | null;
+  overall: TomatoStatSummary | null;
+}
+
 async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   if (!APP_ID) throw new Error('WOT_APPLICATION_ID missing');
   const qs = new URLSearchParams({ application_id: APP_ID, ...params });
@@ -92,63 +67,6 @@ async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   return json.data;
 }
 
-function computeWn8(tanks: TankStats[], expected: Map<number, ExpectedValue>): number | null {
-  let n = 0;
-  let d = 0;
-  let s = 0;
-  let f = 0;
-  let def = 0;
-  let win = 0;
-  let battles = 0;
-
-  let expDmg = 0;
-  let expSpot = 0;
-  let expFrag = 0;
-  let expDef = 0;
-  let expWin = 0;
-
-  for (const t of tanks) {
-    const exp = expected.get(t.tank_id);
-    // Prefer random-battle stats (matches tomato.gg). Fall back to `all`.
-    const stats = t.random && t.random.battles > 0 ? t.random : t.all;
-    if (!exp || !stats || stats.battles <= 0) continue;
-    n++;
-    battles += stats.battles;
-    d += stats.damage_dealt;
-    s += stats.spotted;
-    f += stats.frags;
-    def += stats.dropped_capture_points;
-    win += stats.wins;
-    expDmg += exp.expDamage * stats.battles;
-    expSpot += exp.expSpot * stats.battles;
-    expFrag += exp.expFrag * stats.battles;
-    expDef += exp.expDef * stats.battles;
-    expWin += exp.expWinRate * stats.battles;
-  }
-
-  if (n === 0 || battles === 0 || expDmg === 0) return null;
-
-  const rDmg = d / expDmg;
-  const rSpot = expSpot > 0 ? s / expSpot : 0;
-  const rFrag = expFrag > 0 ? f / expFrag : 0;
-  const rDef = expDef > 0 ? def / expDef : 0;
-  const rWin = expWin > 0 ? (win / battles) * 100 / (expWin / battles) : 0;
-
-  const rDAMAGE = Math.max(0, (rDmg - 0.22) / 0.78);
-  const rSPOT = Math.max(0, Math.min(rDAMAGE + 0.1, (rSpot - 0.38) / 0.62));
-  const rFRAG = Math.max(0, Math.min(rDAMAGE + 0.2, (rFrag - 0.12) / 0.88));
-  const rDEF = Math.max(0, Math.min(rDAMAGE + 0.1, (rDef - 0.1) / 0.9));
-  const rWIN = Math.max(0, (rWin - 0.71) / 0.29);
-
-  return (
-    980 * rDAMAGE +
-    210 * rDAMAGE * rFRAG +
-    155 * rFRAG * rSPOT +
-    75 * rDEF * rFRAG +
-    145 * Math.min(1.8, rWIN)
-  );
-}
-
 // Tank tier lookup (cached forever — tank list doesn't change often).
 let tierCache: Map<number, number> | null = null;
 async function getTierMap(): Promise<Map<number, number>> {
@@ -160,6 +78,24 @@ async function getTierMap(): Promise<Map<number, number>> {
   for (const v of Object.values(data)) map.set(v.tank_id, v.tier);
   tierCache = map;
   return map;
+}
+
+async function fetchTomatoStats(accountId: number): Promise<TomatoBulkPlayer | null> {
+  if (!TOMATO_API_KEY) return null;
+  try {
+    const res = await fetch(
+      `${TOMATO_BASE}/api/player/bulk-stats/eu?ids=${accountId}`,
+      { headers: { 'x-api-key': TOMATO_API_KEY } },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      meta: { status: string };
+      data: Record<string, TomatoBulkPlayer>;
+    };
+    return json.data?.[String(accountId)] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export interface PlayerStatsPayload {
@@ -183,7 +119,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   }
 
   try {
-    const [accountMap, tankStats, expected, tierMap] = await Promise.all([
+    const [accountMap, tankStats, tierMap, tomatoData] = await Promise.all([
       wg<Record<string, AccountInfo>>('/account/info/', {
         account_id: String(accountId),
         fields:
@@ -193,28 +129,29 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       }),
       wg<Record<string, TankStats[]>>('/tanks/stats/', {
         account_id: String(accountId),
-        fields:
-          'tank_id,' +
-          'random.battles,random.wins,random.damage_dealt,random.frags,random.spotted,random.dropped_capture_points,' +
-          'all.battles,all.wins,all.damage_dealt,all.frags,all.spotted,all.dropped_capture_points',
+        fields: 'tank_id,random.battles,all.battles',
       }),
-      getExpected(),
       getTierMap(),
+      fetchTomatoStats(accountId),
     ]);
 
     const account = accountMap?.[String(accountId)];
     const tanks = tankStats?.[String(accountId)] ?? [];
     if (!account) return new Response('Player not found', { status: 404 });
 
-    // Prefer random-battle totals (matches tomato / WN8 convention).
     const s = account.statistics.random ?? account.statistics.all;
     const battles = s.battles ?? 0;
-    const winRate = battles > 0 ? (s.wins / battles) * 100 : null;
     const damagePerBattle = battles > 0 ? s.damage_dealt / battles : null;
-    const wn8 = computeWn8(tanks, expected);
+
+    // Prefer tomato.gg values; fall back to WG computation if tomato has no data.
+    const wn8 = tomatoData?.overall?.wn8 ?? null;
+    const winRate =
+      tomatoData?.overall?.winrate ??
+      (battles > 0 ? (s.wins / battles) * 100 : null);
+
     let tier10Count = 0;
     for (const t of tanks) {
-      const b = (t.random?.battles ?? t.all?.battles ?? 0);
+      const b = t.random?.battles ?? t.all?.battles ?? 0;
       if (tierMap.get(t.tank_id) === 10 && b > 0) tier10Count++;
     }
 

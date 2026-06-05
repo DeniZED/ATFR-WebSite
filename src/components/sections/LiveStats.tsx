@@ -134,7 +134,7 @@ export function LiveStats() {
     <Section
       eyebrow="Le clan en temps réel"
       title="Stats live"
-      description="Données agrégées depuis l'API Wargaming sur l'ensemble des membres du clan. WN8, winrate et dégâts moyens sont calculés sur les random battles."
+      description="Données agrégées depuis tomato.gg sur l'ensemble des membres du clan. WN8 et winrate sont les valeurs officielles tomato.gg ; dégâts, frags et spots proviennent de l'API Wargaming."
     >
       {isError && (
         <div className="mb-6">
