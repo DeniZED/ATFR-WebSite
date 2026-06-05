@@ -30,6 +30,8 @@ export interface ClanStats {
     battles: number;
     globalRating: number;
     lastBattleTime: number;
+    recentWn8: number | null;
+    recentWinRate: number | null;
   }>;
   computedAt: string;
 }
