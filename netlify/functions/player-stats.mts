@@ -36,8 +36,6 @@ const TankStatsSchema = z.record(
   ).nullable(),
 );
 
-type AccountInfo = NonNullable<z.infer<typeof AccountInfoSchema>[string]>;
-
 interface TankInfo {
   tank_id: number;
   tier: number;
