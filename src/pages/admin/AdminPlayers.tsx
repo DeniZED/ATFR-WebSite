@@ -40,6 +40,7 @@ import {
   useHrPlayers,
   useImportMembersToPlayers,
   useRecomputePlayerStatuses,
+  useSnapshotPlayerActivity,
   useSyncAllDiscordMembers,
 } from '@/features/rh/queries';
 import { useClanInfo } from '@/features/clan/queries';
@@ -88,6 +89,7 @@ export default function AdminPlayers() {
   const autoLinkDiscord = useAutoLinkDiscordMembers();
   const syncAllDiscord = useSyncAllDiscordMembers();
   const recomputeStatuses = useRecomputePlayerStatuses();
+  const snapshotActivity = useSnapshotPlayerActivity();
   const createPlayer = useCreatePlayer();
 
   const widgetDiscordMembers = useMemo<DiscordMemberPayload[]>(
@@ -346,6 +348,17 @@ export default function AdminPlayers() {
           >
             {recomputeStatuses.isPending ? 'Recalcul…' : 'Recalculer statuts'}
           </Button>
+          <Button
+            onClick={async () => {
+              try {
+                await snapshotActivity.mutateAsync();
+              } catch { /* surfaced by mutation state */ }
+            }}
+            leadingIcon={<RefreshCcw size={14} />}
+            disabled={snapshotActivity.isPending || roleLoading || !canManageRh}
+          >
+            {snapshotActivity.isPending ? 'Snapshot…' : 'Snapshot WoT'}
+          </Button>
         </div>
       </div>
 
@@ -459,6 +472,18 @@ export default function AdminPlayers() {
       )}
       {recomputeStatuses.isError && (
         <Alert tone="danger">{(recomputeStatuses.error as Error).message}</Alert>
+      )}
+      {snapshotActivity.isSuccess && (
+        <Alert tone={snapshotActivity.data.errors > 0 ? 'warning' : 'success'}>
+          Snapshot WoT : {snapshotActivity.data.snapshots} snapshot(s) enregistré(s) sur{' '}
+          {snapshotActivity.data.players} joueur(s)
+          {snapshotActivity.data.errors > 0
+            ? ` (${snapshotActivity.data.errors} erreur(s)).`
+            : '.'}
+        </Alert>
+      )}
+      {snapshotActivity.isError && (
+        <Alert tone="danger">{(snapshotActivity.error as Error).message}</Alert>
       )}
       {createPlayer.isSuccess && (
         <Alert tone="success">Joueur ajouté au suivi RH.</Alert>

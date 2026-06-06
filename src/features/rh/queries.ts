@@ -568,6 +568,43 @@ export function useRecomputePlayerStatuses() {
   });
 }
 
+export interface SnapshotResult {
+  snapshots: number;
+  errors: number;
+  players: number;
+}
+
+export function useSnapshotPlayerActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<SnapshotResult> => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Session admin introuvable. Reconnecte-toi.');
+
+      const res = await fetch(
+        new URL('/.netlify/functions/snapshot-player-activity-trigger', window.location.origin),
+        { method: 'POST', headers: { authorization: `Bearer ${token}` } },
+      );
+      const payload = (await res.json().catch(() => null)) as
+        | SnapshotResult
+        | { error?: string }
+        | null;
+      if (!res.ok) {
+        throw new Error(
+          (payload && 'error' in payload && payload.error) ||
+            `Snapshot impossible (${res.status}).`,
+        );
+      }
+      return payload as SnapshotResult;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['hr'] });
+      await qc.refetchQueries({ queryKey: ['hr', 'players'], type: 'active' });
+    },
+  });
+}
+
 export function useSyncAllDiscordMembers() {
   const qc = useQueryClient();
   return useMutation({
