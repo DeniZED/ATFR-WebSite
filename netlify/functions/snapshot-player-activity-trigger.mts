@@ -1,7 +1,7 @@
 import type { Context } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ?? '';
@@ -28,16 +28,84 @@ interface SnapshotRow {
 }
 
 function corsHeaders(origin: string): Record<string, string> {
-  const allowed = ALLOWED_ORIGINS
-    ? ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-    : [];
-  const allowOrigin = allowed.length === 0 || allowed.includes(origin) ? origin : '';
+  const allowed = ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+  const allowOrigin =
+    origin && allowed.length > 0 && allowed.includes(origin) ? origin : 'null';
   return {
     'access-control-allow-origin': allowOrigin,
     'access-control-allow-headers': 'content-type, authorization',
     'access-control-allow-methods': 'POST, OPTIONS',
     'content-type': 'application/json',
+    vary: 'origin',
   };
+}
+
+async function isAdmin(authHeader: string): Promise<boolean> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      authorization: authHeader,
+      'content-type': 'application/json',
+    },
+    body: '{}',
+  });
+  if (!res.ok) return false;
+  return (await res.json().catch(() => false)) === true;
+}
+
+async function supabaseGet<T>(path: string, params: Record<string, string> = {}): Promise<T[]> {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error('Supabase not configured');
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}?${qs}`, {
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      accept: 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase GET ${path} failed (${res.status})`);
+  return res.json() as Promise<T[]>;
+}
+
+async function supabaseUpsert(table: string, rows: unknown[]): Promise<void> {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error('Supabase not configured');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      'content-type': 'application/json',
+      prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Supabase upsert ${table} failed (${res.status}): ${detail}`);
+  }
+}
+
+async function supabasePatch(
+  table: string,
+  filter: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error('Supabase not configured');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Supabase PATCH ${table} failed (${res.status}): ${detail}`);
+  }
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -50,49 +118,20 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function handler(req: Request, ctx: Context): Promise<Response> {
+export default async function handler(req: Request, _ctx: Context): Promise<Response> {
   const origin = req.headers.get('origin') ?? '';
   const headers = corsHeaders(origin);
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: 'Supabase service role not configured' }), {
-      status: 503, headers,
-    });
-  }
-
-  // Auth: require admin Supabase JWT
   const authHeader = req.headers.get('authorization') ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) {
+  if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers });
   }
-
-  const anonClient = createClient(SUPABASE_URL, token, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: { user }, error: authError } = await anonClient.auth.getUser();
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401, headers });
-  }
-
-  // Verify admin role
-  const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: roleRow } = await serviceClient
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-  const role = roleRow?.role ?? '';
-  if (!['admin', 'super_admin'].includes(role)) {
+  if (!(await isAdmin(authHeader))) {
     return new Response(JSON.stringify({ error: 'Admin role required' }), { status: 403, headers });
   }
 
@@ -102,39 +141,42 @@ export default async function handler(req: Request, ctx: Context): Promise<Respo
     });
   }
 
-  void ctx; // unused but required by type
-
   const today = isoDate(new Date());
   const yesterday = isoDate(new Date(Date.now() - 86_400_000));
 
-  const { data: players, error: playersError } = await serviceClient
-    .from('players')
-    .select('id, account_id, nickname')
-    .not('account_id', 'is', null)
-    .neq('status', 'former');
-
-  if (playersError) {
-    return new Response(JSON.stringify({ error: playersError.message }), { status: 500, headers });
-  }
-  if (!players || players.length === 0) {
-    return new Response(JSON.stringify({ snapshots: 0, errors: 0 }), { status: 200, headers });
+  let players: Array<{ id: string; account_id: number }>;
+  try {
+    players = await supabaseGet<{ id: string; account_id: number }>(
+      'players',
+      { select: 'id,account_id', 'account_id': 'not.is.null', 'status': 'neq.former' },
+    );
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers });
   }
 
-  const { data: prevSnapshots } = await serviceClient
-    .from('player_activity_snapshots')
-    .select('account_id, battles')
-    .eq('snapshot_date', yesterday);
+  if (players.length === 0) {
+    return new Response(JSON.stringify({ snapshots: 0, errors: 0, players: 0 }), {
+      status: 200, headers,
+    });
+  }
 
-  const prevBattles = new Map<number, number>(
-    (prevSnapshots ?? []).map((s) => [s.account_id as number, s.battles as number]),
-  );
+  let prevSnapshots: Array<{ account_id: number; battles: number }> = [];
+  try {
+    prevSnapshots = await supabaseGet<{ account_id: number; battles: number }>(
+      'player_activity_snapshots',
+      { select: 'account_id,battles', snapshot_date: `eq.${yesterday}` },
+    );
+  } catch {
+    // non-fatal — battles_delta will be null for all
+  }
 
+  const prevBattles = new Map(prevSnapshots.map((s) => [s.account_id, s.battles]));
   const batches = chunk(players, BATCH_SIZE);
   let totalInserted = 0;
   let totalErrors = 0;
 
   for (const batch of batches) {
-    const accountIds = batch.map((p) => p.account_id as number);
+    const accountIds = batch.map((p) => p.account_id);
     const qs = new URLSearchParams({
       application_id: APP_ID,
       account_id: accountIds.join(','),
@@ -166,7 +208,7 @@ export default async function handler(req: Request, ctx: Context): Promise<Respo
       if (!info) continue;
 
       const battles = info.statistics?.all?.battles ?? 0;
-      const prev = prevBattles.get(player.account_id as number) ?? null;
+      const prev = prevBattles.get(player.account_id) ?? null;
       const battlesDelta = prev !== null ? battles - prev : null;
       const lastBattleAt =
         info.last_battle_time > 0
@@ -174,8 +216,8 @@ export default async function handler(req: Request, ctx: Context): Promise<Respo
           : null;
 
       snapshots.push({
-        player_id: player.id as string,
-        account_id: player.account_id as number,
+        player_id: player.id,
+        account_id: player.account_id,
         snapshot_date: today,
         captured_at: new Date().toISOString(),
         last_battle_at: lastBattleAt,
@@ -187,28 +229,30 @@ export default async function handler(req: Request, ctx: Context): Promise<Respo
       });
 
       if (lastBattleAt) {
-        activityUpdates.push({ id: player.id as string, last_battle_at: lastBattleAt });
+        activityUpdates.push({ id: player.id, last_battle_at: lastBattleAt });
       }
     }
 
     if (snapshots.length > 0) {
-      const { error } = await serviceClient
-        .from('player_activity_snapshots')
-        .upsert(snapshots, { onConflict: 'player_id,snapshot_date' });
-      if (error) {
-        console.error('[snapshot-trigger] upsert error:', error.message);
-        totalErrors += snapshots.length;
-      } else {
+      try {
+        await supabaseUpsert('player_activity_snapshots', snapshots);
         totalInserted += snapshots.length;
+      } catch (err) {
+        console.error('[snapshot-trigger] upsert error:', err);
+        totalErrors += snapshots.length;
       }
     }
 
     for (const u of activityUpdates) {
-      await serviceClient
-        .from('players')
-        .update({ last_wot_activity_at: u.last_battle_at })
-        .eq('id', u.id)
-        .or(`last_wot_activity_at.is.null,last_wot_activity_at.lt.${u.last_battle_at}`);
+      try {
+        await supabasePatch(
+          'players',
+          `id=eq.${u.id}&last_wot_activity_at=lt.${u.last_battle_at}`,
+          { last_wot_activity_at: u.last_battle_at },
+        );
+      } catch {
+        // non-fatal
+      }
     }
   }
 
