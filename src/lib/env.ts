@@ -18,6 +18,4 @@ export const env = {
   clanId: import.meta.env.VITE_CLAN_ID || '500191501',
   clanTag: import.meta.env.VITE_CLAN_TAG || 'ATFR',
   siteUrl: import.meta.env.VITE_SITE_URL || 'https://atfr-clan.netlify.app',
-  cloudinaryCloudName: required('VITE_CLOUDINARY_CLOUD_NAME'),
-  cloudinaryUploadPreset: required('VITE_CLOUDINARY_UPLOAD_PRESET'),
 };
