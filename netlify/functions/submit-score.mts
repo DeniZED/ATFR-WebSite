@@ -6,7 +6,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Regex for safe module_slug / submode identifiers.
-const SLUG_RE = /^[a-z0-9_-]{1,64}$/;
+// Submodes can include colons as separators (e.g. daily:2026-06-06:default:5).
+const SLUG_RE = /^[a-z0-9_:.-]{1,128}$/;
 // UUIDv4 pattern for player_anon_id.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
