@@ -1,58 +1,84 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Card, CardBody, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, Select, Spinner } from '@/components/ui';
 import { useClanInfo } from '@/features/clan/queries';
 import { useMembers, useMembersHistory } from '@/features/members/queries';
 import { ROLE_PRIORITY, ROLE_TRANSLATIONS } from '@/lib/constants';
 import { tomatoProfileUrl } from '@/lib/tomato-api';
 import { supabase } from '@/lib/supabase';
-import { formatDateTime } from '@/features/rh/activity';
+import { formatDate, formatDateTime } from '@/features/rh/activity';
 import type { Database } from '@/types/database';
 
+type MemberRow = Database['public']['Tables']['members']['Row'];
 type MemberInsert = Database['public']['Tables']['members']['Insert'];
+type HistoryAction = 'joined' | 'left' | 'role_changed';
+type HistoryFilter = 'all' | HistoryAction;
+
+interface SyncResult {
+  upserted: number;
+  departed: number;
+  rejoined: number;
+}
 
 function useSyncMembers() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      liveIds,
-      liveMembers,
-      activeDbIds,
-    }: {
-      liveIds: Set<number>;
-      liveMembers: MemberInsert[];
-      activeDbIds: Set<number>;
-    }) => {
-      // 1. Batch-upsert all current WoT members
-      if (liveMembers.length > 0) {
-        const { error } = await supabase.from('members').upsert(liveMembers, {
-          onConflict: 'account_id',
-        });
+    mutationFn: async (payload: MemberInsert[]): Promise<SyncResult> => {
+      const liveIds = new Set(payload.map((m) => m.account_id));
+
+      // Fetch current DB state to detect departures and re-joins
+      const { data: dbRows, error: fetchError } = await supabase
+        .from('members')
+        .select('account_id, left_at');
+      if (fetchError) throw fetchError;
+
+      const activeDbIds = new Set(
+        (dbRows ?? []).filter((r) => r.left_at === null).map((r) => r.account_id),
+      );
+      const rejoinedIds = (dbRows ?? [])
+        .filter((r) => r.left_at !== null && liveIds.has(r.account_id))
+        .map((r) => r.account_id);
+      const departedIds = [...activeDbIds].filter((id) => !liveIds.has(id));
+
+      // Single batch upsert — includes left_at: null to handle re-joins in one shot
+      if (payload.length > 0) {
+        const { error } = await supabase
+          .from('members')
+          .upsert(payload, { onConflict: 'account_id' });
         if (error) throw error;
       }
 
-      // 2. Mark departed members (active in DB but absent from WoT roster)
-      const departed = [...activeDbIds].filter((id) => !liveIds.has(id));
-      if (departed.length > 0) {
+      // Mark departures (active in DB but absent from live WoT roster)
+      if (departedIds.length > 0) {
         const { error } = await supabase
           .from('members')
           .update({ left_at: new Date().toISOString() })
-          .in('account_id', departed)
+          .in('account_id', departedIds)
           .is('left_at', null);
         if (error) throw error;
       }
 
-      return { upserted: liveMembers.length, departed: departed.length };
+      return {
+        upserted: payload.length,
+        departed: departedIds.length,
+        rejoined: rejoinedIds.length,
+      };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['members'] }),
   });
 }
 
-const ACTION_LABELS: Record<string, string> = {
+const ACTION_LABELS: Record<HistoryAction, string> = {
   joined: 'Entrée',
   left: 'Sortie',
   role_changed: 'Rôle modifié',
+};
+
+const ACTION_VARIANT: Record<HistoryAction, 'success' | 'danger' | 'outline'> = {
+  joined: 'success',
+  left: 'danger',
+  role_changed: 'outline',
 };
 
 export default function AdminMembers() {
@@ -60,29 +86,27 @@ export default function AdminMembers() {
   const members = useMembers({ activeOnly: false });
   const history = useMembersHistory();
   const sync = useSyncMembers();
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
 
-  const activeDbIds = useMemo(
+  const activeMembers = useMemo(
+    () => (members.data ?? []).filter((m) => m.left_at === null),
+    [members.data],
+  );
+  const formerMembers = useMemo(
     () =>
-      new Set(
-        (members.data ?? [])
-          .filter((m) => m.left_at === null)
-          .map((m) => m.account_id),
-      ),
+      (members.data ?? [])
+        .filter((m) => m.left_at !== null)
+        .sort((a, b) => (b.left_at ?? '').localeCompare(a.left_at ?? '')),
     [members.data],
   );
 
-  async function syncFromWoT() {
-    if (!clan.data) return;
-    const liveMembers: MemberInsert[] = clan.data.members.map((m) => ({
-      account_id: m.account_id,
-      account_name: m.account_name,
-      role: m.role,
-    }));
-    const liveIds = new Set(liveMembers.map((m) => m.account_id as number));
-    await sync.mutateAsync({ liveIds, liveMembers, activeDbIds });
-  }
+  const filteredHistory = useMemo(() => {
+    const rows = history.data ?? [];
+    if (historyFilter === 'all') return rows;
+    return rows.filter((e) => e.action === historyFilter);
+  }, [history.data, historyFilter]);
 
-  const sorted = useMemo(() => {
+  const sortedLive = useMemo(() => {
     if (!clan.data) return [];
     return [...clan.data.members].sort(
       (a, b) =>
@@ -91,16 +115,30 @@ export default function AdminMembers() {
     );
   }, [clan.data]);
 
+  async function syncFromWoT() {
+    if (!clan.data) return;
+    // Pass the real WoT joined_at (Unix seconds → ISO) and left_at: null
+    // so that re-joiners are handled atomically in the upsert
+    const payload: MemberInsert[] = clan.data.members.map((m) => ({
+      account_id: m.account_id,
+      account_name: m.account_name,
+      role: m.role,
+      joined_at: new Date(m.joined_at * 1000).toISOString(),
+      left_at: null,
+    }));
+    await sync.mutateAsync(payload);
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+
+      {/* ── Header ── */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">
-            Roster
-          </p>
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">Roster</p>
           <h1 className="font-display text-3xl text-atfr-bone">Membres</h1>
           <p className="text-sm text-atfr-fog mt-1">
-            Données live depuis l'API WoT · {members.data?.filter((m) => m.left_at === null).length ?? 0} actifs dans Supabase.
+            {activeMembers.length} actif(s) · {formerMembers.length} ancien(s) enregistré(s)
           </p>
         </div>
         <Button
@@ -113,57 +151,111 @@ export default function AdminMembers() {
       </div>
 
       {sync.isSuccess && (
-        <p className="text-sm text-atfr-success">
+        <Alert tone="success">
           Sync terminée : {sync.data.upserted} membre(s) mis à jour
-          {sync.data.departed > 0
-            ? `, ${sync.data.departed} départ(s) enregistré(s).`
-            : '.'}
-        </p>
+          {sync.data.rejoined > 0 ? `, ${sync.data.rejoined} retour(s)` : ''}
+          {sync.data.departed > 0 ? `, ${sync.data.departed} départ(s) enregistré(s)` : ''}.
+        </Alert>
       )}
       {sync.isError && (
-        <p className="text-sm text-atfr-danger">{(sync.error as Error).message}</p>
+        <Alert tone="danger">{(sync.error as Error).message}</Alert>
       )}
 
-      {clan.isLoading ? (
-        <div className="flex justify-center py-10">
-          <Spinner label="Chargement du clan…" />
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((m) => (
-            <Card key={m.account_id}>
-              <CardBody className="flex items-center gap-3 p-4">
-                <div className="h-10 w-10 rounded-lg bg-atfr-gold/10 border border-atfr-gold/30 flex items-center justify-center text-atfr-gold font-display text-sm">
-                  {m.account_name.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <a
-                    href={tomatoProfileUrl(m.account_name)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-atfr-bone hover:text-atfr-gold truncate block"
-                  >
-                    {m.account_name}
-                  </a>
-                  <Badge variant="outline" className="mt-1">
-                    {ROLE_TRANSLATIONS[m.role] ?? m.role_i18n}
-                  </Badge>
-                </div>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <div>
+      {/* ── Roster actuel (live WoT) ── */}
+      <section>
         <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-3">
-          Historique arrivées / départs
+          Membres actuels — {sortedLive.length} joueur(s)
         </p>
+        {clan.isLoading ? (
+          <div className="flex justify-center py-10">
+            <Spinner label="Chargement du clan…" />
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sortedLive.map((m) => (
+              <Card key={m.account_id}>
+                <CardBody className="flex items-center gap-3 p-4">
+                  <div className="h-10 w-10 rounded-lg bg-atfr-gold/10 border border-atfr-gold/30 flex items-center justify-center text-atfr-gold font-display text-sm shrink-0">
+                    {m.account_name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={tomatoProfileUrl(m.account_name)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-atfr-bone hover:text-atfr-gold truncate block"
+                    >
+                      {m.account_name}
+                    </a>
+                    <Badge variant="outline" className="mt-1">
+                      {ROLE_TRANSLATIONS[m.role] ?? m.role_i18n}
+                    </Badge>
+                    <p className="text-[10px] text-atfr-fog mt-1">
+                      Membre depuis le {formatDate(new Date(m.joined_at * 1000).toISOString())}
+                    </p>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Ex-membres ── */}
+      {formerMembers.length > 0 && (
+        <section>
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-3">
+            Anciens membres — {formerMembers.length} joueur(s)
+          </p>
+          <Card>
+            <CardBody className="p-0">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="border-b border-atfr-gold/10 bg-atfr-ink/70 text-xs uppercase tracking-wider text-atfr-fog">
+                    <tr>
+                      <Th>Joueur</Th>
+                      <Th>Rôle</Th>
+                      <Th>Entrée</Th>
+                      <Th>Sortie</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-atfr-gold/10">
+                    {formerMembers.map((m) => (
+                      <FormerMemberRow key={m.account_id} member={m} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardBody>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Historique ── */}
+      <section>
+        <div className="flex items-center justify-between gap-4 mb-3 flex-wrap">
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold">
+            Historique arrivées / départs / rôles
+          </p>
+          <Select
+            value={historyFilter}
+            onChange={(e) => setHistoryFilter(e.target.value as HistoryFilter)}
+            className="min-w-36"
+          >
+            <option value="all">Tous</option>
+            <option value="joined">Entrées</option>
+            <option value="left">Sorties</option>
+            <option value="role_changed">Rôles</option>
+          </Select>
+        </div>
+
         {history.isLoading ? (
           <Spinner label="Chargement…" />
-        ) : (history.data ?? []).length === 0 ? (
+        ) : filteredHistory.length === 0 ? (
           <p className="text-sm text-atfr-fog">
-            Aucun événement enregistré. Lance une sync pour initialiser l'historique.
+            {(history.data ?? []).length === 0
+              ? 'Aucun événement enregistré. Lance une sync pour initialiser.'
+              : 'Aucun événement pour ce filtre.'}
           </p>
         ) : (
           <Card>
@@ -179,33 +271,32 @@ export default function AdminMembers() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-atfr-gold/10">
-                    {(history.data ?? []).map((event) => (
+                    {filteredHistory.map((event) => (
                       <tr key={event.id} className="hover:bg-atfr-graphite/30 transition-colors">
                         <td className="px-4 py-3 text-atfr-fog whitespace-nowrap">
                           {formatDateTime(event.occurred_at)}
                         </td>
-                        <td className="px-4 py-3 text-atfr-bone font-medium">
-                          {event.account_name}
+                        <td className="px-4 py-3 font-medium text-atfr-bone">
+                          <a
+                            href={tomatoProfileUrl(event.account_name)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:text-atfr-gold"
+                          >
+                            {event.account_name}
+                          </a>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge
-                            variant={
-                              event.action === 'joined'
-                                ? 'success'
-                                : event.action === 'left'
-                                  ? 'danger'
-                                  : 'outline'
-                            }
-                          >
-                            {ACTION_LABELS[event.action] ?? event.action}
+                          <Badge variant={ACTION_VARIANT[event.action as HistoryAction]}>
+                            {ACTION_LABELS[event.action as HistoryAction] ?? event.action}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-atfr-fog text-xs">
                           {event.action === 'role_changed'
-                            ? `${ROLE_TRANSLATIONS[event.previous_role ?? ''] ?? event.previous_role ?? '—'} → ${ROLE_TRANSLATIONS[event.new_role ?? ''] ?? event.new_role ?? '—'}`
+                            ? `${roleLabel(event.previous_role)} → ${roleLabel(event.new_role)}`
                             : event.action === 'joined'
-                              ? (ROLE_TRANSLATIONS[event.new_role ?? ''] ?? event.new_role ?? '—')
-                              : (ROLE_TRANSLATIONS[event.previous_role ?? ''] ?? event.previous_role ?? '—')}
+                              ? roleLabel(event.new_role)
+                              : roleLabel(event.previous_role)}
                         </td>
                       </tr>
                     ))}
@@ -215,11 +306,44 @@ export default function AdminMembers() {
             </CardBody>
           </Card>
         )}
-      </div>
+      </section>
     </div>
+  );
+}
+
+function FormerMemberRow({ member }: { member: MemberRow }) {
+  return (
+    <tr className="hover:bg-atfr-graphite/30 transition-colors">
+      <td className="px-4 py-3 font-medium text-atfr-bone">
+        <a
+          href={tomatoProfileUrl(member.account_name)}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:text-atfr-gold"
+        >
+          {member.account_name}
+        </a>
+      </td>
+      <td className="px-4 py-3">
+        <Badge variant="outline">
+          {ROLE_TRANSLATIONS[member.role] ?? member.role}
+        </Badge>
+      </td>
+      <td className="px-4 py-3 text-atfr-fog text-xs whitespace-nowrap">
+        {formatDate(member.joined_at)}
+      </td>
+      <td className="px-4 py-3 text-atfr-fog text-xs whitespace-nowrap">
+        {formatDate(member.left_at ?? '')}
+      </td>
+    </tr>
   );
 }
 
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-4 py-3 text-left font-medium">{children}</th>;
+}
+
+function roleLabel(role: string | null | undefined): string {
+  if (!role) return '—';
+  return ROLE_TRANSLATIONS[role] ?? role;
 }
