@@ -36,5 +36,22 @@ jobs:
           VITE_CLAN_TAG: ATFR
           VITE_SITE_URL: https://example.com
           VITE_CLOUDINARY_CLOUD_NAME: dummy
-          VITE_CLOUDINARY_UPLOAD_PRESET: dummy
         run: npm run build
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npm test
