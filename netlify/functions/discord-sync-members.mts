@@ -112,6 +112,19 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function fetchWithRetry(url: URL | string, init: RequestInit, attempts = 3): Promise<Response> {
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 500 * 2 ** (i - 1)));
+    try {
+      const res = await fetch(url, init);
+      if (res.ok || res.status < 500) return res;
+    } catch (err) {
+      if (i === attempts - 1) throw err;
+    }
+  }
+  throw new Error('fetchWithRetry: unreachable');
+}
+
 async function fetchAllDiscordMembers(
   guildId: string,
 ): Promise<DiscordGuildMember[]> {
@@ -125,7 +138,7 @@ async function fetchAllDiscordMembers(
     url.searchParams.set('limit', '1000');
     url.searchParams.set('after', after);
 
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: { authorization: `Bot ${BOT_TOKEN}` },
     });
     if (!res.ok) {

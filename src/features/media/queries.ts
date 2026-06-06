@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { env } from '@/lib/env';
 import type { Database, MediaKind } from '@/types/database';
 
 type MediaRow = Database['public']['Tables']['media_assets']['Row'];
@@ -44,13 +43,37 @@ async function uploadToCloudinary(
 ): Promise<CloudinaryUploadResult> {
   const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
 
+  // Fetch a server-signed upload credential — keeps CLOUDINARY_API_SECRET off the client.
+  const { data: { session } } = await supabase.auth.getSession();
+  const signRes = await fetch('/.netlify/functions/cloudinary-sign', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(session ? { authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({ folder }),
+  });
+  if (!signRes.ok) {
+    const err = await signRes.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? `Cloudinary sign failed (${signRes.status})`);
+  }
+  const { signature, timestamp, api_key, cloud_name } = await signRes.json() as {
+    signature: string;
+    timestamp: number;
+    api_key: string;
+    cloud_name: string;
+    folder: string;
+  };
+
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', env.cloudinaryUploadPreset);
+  formData.append('api_key', api_key);
+  formData.append('timestamp', String(timestamp));
   formData.append('folder', folder);
+  formData.append('signature', signature);
 
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${env.cloudinaryCloudName}/${resourceType}/upload`,
+    `https://api.cloudinary.com/v1_1/${cloud_name}/${resourceType}/upload`,
     { method: 'POST', body: formData },
   );
 
@@ -65,7 +88,7 @@ async function uploadToCloudinary(
     height?: number;
   };
 
-  const publicUrl = `https://res.cloudinary.com/${env.cloudinaryCloudName}/${resourceType}/upload/f_auto,q_auto/${data.public_id}`;
+  const publicUrl = `https://res.cloudinary.com/${cloud_name}/${resourceType}/upload/f_auto,q_auto/${data.public_id}`;
 
   return {
     publicId: data.public_id,

@@ -1,38 +1,46 @@
 import type { Context } from '@netlify/functions';
+import { z } from 'zod';
 
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const TOMATO_API_KEY = process.env.TOMATO_API_KEY;
 const WG_BASE = 'https://api.worldoftanks.eu/wot';
 const TOMATO_BASE = 'https://api.tomato.gg';
 
-interface TankStats {
-  tank_id: number;
-  random?: { battles: number };
-  all?: { battles: number };
-}
+// Runtime schema — catches silent WG API shape changes before they corrupt stats.
+const StatBlockSchema = z.object({
+  battles: z.number().default(0),
+  wins: z.number().default(0),
+  damage_dealt: z.number().default(0),
+});
+
+const AccountInfoSchema = z.record(
+  z.object({
+    account_id: z.number(),
+    nickname: z.string(),
+    last_battle_time: z.number().default(0),
+    global_rating: z.number().default(0),
+    statistics: z.object({
+      random: StatBlockSchema.optional(),
+      all: StatBlockSchema,
+    }),
+  }).nullable(),
+);
+
+const TankStatsSchema = z.record(
+  z.array(
+    z.object({
+      tank_id: z.number(),
+      random: z.object({ battles: z.number() }).optional(),
+      all: z.object({ battles: z.number() }).optional(),
+    }),
+  ).nullable(),
+);
+
+type AccountInfo = NonNullable<z.infer<typeof AccountInfoSchema>[string]>;
 
 interface TankInfo {
   tank_id: number;
   tier: number;
-}
-
-interface AccountInfo {
-  account_id: number;
-  nickname: string;
-  last_battle_time: number;
-  global_rating: number;
-  statistics: {
-    random?: {
-      battles: number;
-      wins: number;
-      damage_dealt: number;
-    };
-    all: {
-      battles: number;
-      wins: number;
-      damage_dealt: number;
-    };
-  };
 }
 
 interface TomatoStatSummary {
@@ -119,15 +127,15 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
   }
 
   try {
-    const [accountMap, tankStats, tierMap, tomatoData] = await Promise.all([
-      wg<Record<string, AccountInfo>>('/account/info/', {
+    const [rawAccount, rawTanks, tierMap, tomatoData] = await Promise.all([
+      wg<unknown>('/account/info/', {
         account_id: String(accountId),
         fields:
           'account_id,nickname,last_battle_time,global_rating,' +
           'statistics.all.battles,statistics.all.wins,statistics.all.damage_dealt,' +
           'statistics.random.battles,statistics.random.wins,statistics.random.damage_dealt',
       }),
-      wg<Record<string, TankStats[]>>('/tanks/stats/', {
+      wg<unknown>('/tanks/stats/', {
         account_id: String(accountId),
         fields: 'tank_id,random.battles,all.battles',
       }),
@@ -135,8 +143,18 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       fetchTomatoStats(accountId),
     ]);
 
-    const account = accountMap?.[String(accountId)];
-    const tanks = tankStats?.[String(accountId)] ?? [];
+    const accountParsed = AccountInfoSchema.safeParse(rawAccount);
+    if (!accountParsed.success) {
+      console.error('[player-stats] unexpected account/info shape:', accountParsed.error.issues[0]?.message);
+      return new Response(JSON.stringify({ error: 'Stats unavailable' }), {
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    const tanksParsed = TankStatsSchema.safeParse(rawTanks);
+
+    const account = accountParsed.data[String(accountId)];
+    const tanks = (tanksParsed.success ? tanksParsed.data[String(accountId)] : null) ?? [];
     if (!account) return new Response('Player not found', { status: 404 });
 
     const s = account.statistics.random ?? account.statistics.all;
