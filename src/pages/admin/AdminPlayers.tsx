@@ -59,6 +59,7 @@ export default function AdminPlayers() {
   const navigate = useNavigate();
   const { can, isLoading: roleLoading } = useRole();
   const canManageRh = can('members');
+  const [tab, setTab] = useState<'active' | 'archive'>('active');
   const [search, setSearch] = useState('');
   const [clan, setClan] = useState('all');
   const [status, setStatus] = useState<PlayerHrStatus | 'all'>('all');
@@ -141,9 +142,21 @@ export default function AdminPlayers() {
     return [...values].sort((a, b) => a.localeCompare(b));
   }, [players.data]);
 
+  // Split players by tab: archive = former, active = everyone else
+  const allRows = useMemo(() => players.data?.players ?? [], [players.data]);
+  const activePlayers = useMemo(
+    () => allRows.filter((s) => s.player.status !== 'former'),
+    [allRows],
+  );
+  const archivedPlayers = useMemo(
+    () => allRows.filter((s) => s.player.status === 'former'),
+    [allRows],
+  );
+  const tabRows = tab === 'archive' ? archivedPlayers : activePlayers;
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (players.data?.players ?? []).filter((summary) => {
+    return tabRows.filter((summary) => {
       const player = summary.player;
       const link = summary.discordLink;
       const hasDiscordSuggestion =
@@ -198,17 +211,19 @@ export default function AdminPlayers() {
     clan,
     discord,
     ingame,
-    players.data,
+    tabRows,
     search,
     status,
     voice,
     discordNameKeys,
   ]);
 
+  // Stats computed on active players only (former/archived excluded)
   const stats = useMemo(() => {
-    const rows = players.data?.players ?? [];
+    const rows = activePlayers;
     return {
       total: rows.length,
+      archived: archivedPlayers.length,
       active: rows.filter((s) => s.score.value >= 50).length,
       inactive: rows.filter((s) => s.score.value < 25).length,
       watch: rows.filter((s) => s.player.status === 'watch').length,
@@ -221,7 +236,7 @@ export default function AdminPlayers() {
       alerts: rows.reduce((sum, s) => sum + s.alerts.length, 0),
       voiceSeconds: rows.reduce((sum, s) => sum + s.voiceSeconds, 0),
     };
-  }, [players.data, discordNameKeys]);
+  }, [activePlayers, archivedPlayers, discordNameKeys]);
 
   const hasActiveFilter =
     search.trim().length > 0 ||
@@ -372,6 +387,29 @@ export default function AdminPlayers() {
         </Alert>
       ) : (
         <>
+
+      {/* ── Tabs: actifs / archive ── */}
+      <div className="flex gap-1 border-b border-atfr-gold/15 pb-0">
+        {(
+          [
+            { key: 'active', label: `Actifs (${activePlayers.length})` },
+            { key: 'archive', label: `Archive (${archivedPlayers.length})` },
+          ] as const
+        ).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={cn(
+              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              tab === key
+                ? 'border-atfr-gold text-atfr-gold'
+                : 'border-transparent text-atfr-fog hover:text-atfr-bone',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <StatCard
