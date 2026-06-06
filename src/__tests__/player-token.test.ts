@@ -1,7 +1,7 @@
 // process.env.PLAYER_TOKEN_SECRET is injected by vitest.config.ts before this
 // module is loaded, so the module-level initialisation does not throw.
 import { describe, it, expect } from 'vitest';
-import { issuePlayerToken, verifyPlayerToken } from './_player-token';
+import { issuePlayerToken, verifyPlayerToken } from '../../netlify/functions/_player-token';
 
 describe('issuePlayerToken / verifyPlayerToken', () => {
   it('round-trip: issued token is verifiable', () => {
