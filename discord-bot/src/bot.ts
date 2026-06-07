@@ -1,3 +1,6 @@
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { config as loadEnv } from 'dotenv';
 import {
   Client,
   GatewayIntentBits,
@@ -6,6 +9,10 @@ import {
   type GuildMember,
 } from 'discord.js';
 import cron from 'node-cron';
+
+// Charge le .env situé à la racine du projet (dist/bot.js → ../.env)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: join(__dirname, '..', '.env') });
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
