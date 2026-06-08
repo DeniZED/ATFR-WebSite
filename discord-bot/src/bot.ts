@@ -94,6 +94,22 @@ function detectVoiceEvent(
   return null; // mute/deafen/stream — ignore
 }
 
+async function resolveUsername(
+  newState: VoiceState,
+  oldState: VoiceState,
+  userId: string,
+): Promise<string> {
+  const cached = newState.member ?? oldState.member;
+  if (cached) return cached.displayName || cached.user.username;
+
+  try {
+    const member = await newState.guild.members.fetch(userId);
+    return member.displayName || member.user.username;
+  } catch {
+    return userId;
+  }
+}
+
 async function handleVoiceStateUpdate(
   oldState: VoiceState,
   newState: VoiceState,
@@ -114,7 +130,7 @@ async function handleVoiceStateUpdate(
     occurred_at: new Date().toISOString(),
   };
 
-  const username = newState.member?.user.username ?? oldState.member?.user.username ?? userId;
+  const username = await resolveUsername(newState, oldState, userId);
   const channelName = activeState.channel?.name ?? 'none';
   debug(`Voice ${eventType}: ${username} → ${channelName}`);
 
@@ -173,6 +189,16 @@ client.once(Events.ClientReady, (c) => {
 
   startDashboard(client, DASHBOARD_PORT);
   log(`Dashboard disponible sur http://localhost:${DASHBOARD_PORT}`);
+
+  // Recharge les membres déjà en vocal au démarrage (le dashboard ne part pas de zéro)
+  for (const guild of c.guilds.cache.values()) {
+    if (GUILD_ID && guild.id !== GUILD_ID) continue;
+    for (const voiceState of guild.voiceStates.cache.values()) {
+      if (!voiceState.channelId || !voiceState.member) continue;
+      const username = voiceState.member.displayName || voiceState.member.user.username;
+      voiceJoin(voiceState.id, username, voiceState.channel?.name ?? 'inconnu');
+    }
+  }
 
   // Scheduled full sync (configure via SYNC_CRON env var)
   cron.schedule(SYNC_CRON, () => {
