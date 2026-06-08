@@ -126,6 +126,24 @@ pm2 restart atfr-discord-bot
 | `DISCORD_SYNC_SECRET` | ✅ | Secret partagé avec Netlify |
 | `SYNC_CRON` | ❌ | Cron sync membres (défaut : `0 3 * * *`) |
 | `DEBUG` | ❌ | Logs détaillés — `true`/`false` |
+| `DASHBOARD_PORT` | ❌ | Port du tableau de bord local (défaut : `3000`) |
+
+---
+
+## Tableau de bord local
+
+Le bot expose un mini tableau de bord web accessible depuis le navigateur du VPS :
+
+```
+http://localhost:3000
+```
+
+Il affiche en temps réel (rafraîchissement toutes les 3 secondes) :
+- **Statut** : connecté/déconnecté, tag du bot, serveur cible, ping, durée d'activité
+- **Vocal en direct** : qui est actuellement en salon vocal et depuis combien de temps
+- **Logs** : flux des derniers événements (300 lignes max conservées en mémoire)
+
+Pratique pour vérifier d'un coup d'œil que le bot tourne correctement, sans avoir à lancer `pm2 logs`.
 
 ---
 
