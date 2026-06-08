@@ -1,5 +1,8 @@
 import { createServer } from 'node:http';
 import type { Client } from 'discord.js';
+import { getPlayerTotals, getDailyBreakdown } from './voice-history.js';
+
+const HISTORY_DAYS = 30;
 
 // ── État en mémoire ─────────────────────────────────────────────────────────
 
@@ -74,6 +77,18 @@ export function startDashboard(client: Client, port: number): void {
       return;
     }
 
+    if (url === '/api/voice-history/totals') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(getPlayerTotals(HISTORY_DAYS)));
+      return;
+    }
+
+    if (url === '/api/voice-history/daily') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(getDailyBreakdown(HISTORY_DAYS)));
+      return;
+    }
+
     if (url === '/api/logs') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify(logBuffer));
@@ -141,6 +156,18 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     white-space: pre-wrap;
   }
   .empty { color: #6b7280; font-size: 13px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-head h2 { margin: 0; }
+  select {
+    background: #0b0d11;
+    color: #e6e6e6;
+    border: 1px solid #2a2e37;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .hist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 880px) { .hist-grid, .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -153,6 +180,19 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="card">
       <h2>En vocal en ce moment</h2>
       <div id="voice"></div>
+    </div>
+  </div>
+  <div class="hist-grid">
+    <div class="card">
+      <h2>Temps vocal cumulé — 30 derniers jours</h2>
+      <div id="histTotals"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Détail par jour</h2>
+        <select id="histDaySelect"></select>
+      </div>
+      <div id="histDay"></div>
     </div>
   </div>
   <div class="card">
@@ -218,14 +258,83 @@ async function refreshLogs() {
   }
 }
 
+function fmtDateLabel(isoDate) {
+  const d = new Date(isoDate + 'T00:00:00Z');
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'UTC' });
+}
+
+async function refreshHistoryTotals() {
+  try {
+    const res = await fetch('/api/voice-history/totals');
+    const totals = await res.json();
+    if (totals.length === 0) {
+      document.getElementById('histTotals').innerHTML = '<div class="empty">Pas encore de données — laisse tourner le bot quelques jours.</div>';
+      return;
+    }
+    const rows = totals.map((t) =>
+      \`<tr><td>\${t.username}</td><td>\${fmtDuration(t.totalSeconds)}</td><td>\${t.sessionCount}</td></tr>\`
+    ).join('');
+    document.getElementById('histTotals').innerHTML = \`
+      <table><thead><tr><th>Membre</th><th>Temps cumulé</th><th>Sessions</th></tr></thead><tbody>\${rows}</tbody></table>
+    \`;
+  } catch {
+    document.getElementById('histTotals').innerHTML = '<div class="empty">—</div>';
+  }
+}
+
+let historyDays = [];
+
+function renderHistoryDay(date) {
+  const day = historyDays.find((d) => d.date === date);
+  const el = document.getElementById('histDay');
+  if (!day || day.players.length === 0) {
+    el.innerHTML = '<div class="empty">Aucune activité vocale ce jour-là.</div>';
+    return;
+  }
+  const rows = day.players.map((p) =>
+    \`<tr><td>\${p.username}</td><td>\${fmtDuration(p.seconds)}</td></tr>\`
+  ).join('');
+  el.innerHTML = \`
+    <div class="status-row">Total ce jour : \${fmtDuration(day.totalSeconds)}</div>
+    <table><thead><tr><th>Membre</th><th>Temps</th></tr></thead><tbody>\${rows}</tbody></table>
+  \`;
+}
+
+async function loadHistoryDaily() {
+  try {
+    const res = await fetch('/api/voice-history/daily');
+    historyDays = await res.json();
+    const select = document.getElementById('histDaySelect');
+    const previous = select.value;
+    if (historyDays.length === 0) {
+      select.innerHTML = '<option value="">—</option>';
+      document.getElementById('histDay').innerHTML = '<div class="empty">Pas encore de données.</div>';
+      return;
+    }
+    select.innerHTML = historyDays.map((d) => \`<option value="\${d.date}">\${fmtDateLabel(d.date)}</option>\`).join('');
+    const toSelect = historyDays.some((d) => d.date === previous) ? previous : historyDays[0].date;
+    select.value = toSelect;
+    renderHistoryDay(toSelect);
+  } catch {
+    document.getElementById('histDay').innerHTML = '<div class="empty">—</div>';
+  }
+}
+
+document.getElementById('histDaySelect').addEventListener('change', (e) => {
+  renderHistoryDay(e.target.value);
+});
+
 function refreshAll() {
   refreshStatus();
   refreshVoice();
   refreshLogs();
+  refreshHistoryTotals();
 }
 
 refreshAll();
+loadHistoryDaily();
 setInterval(refreshAll, 3000);
+setInterval(loadHistoryDaily, 60_000);
 </script>
 </body>
 </html>`;
