@@ -1,3 +1,6 @@
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { config as loadEnv } from 'dotenv';
 import {
   Client,
   GatewayIntentBits,
@@ -6,6 +9,11 @@ import {
   type GuildMember,
 } from 'discord.js';
 import cron from 'node-cron';
+import { startDashboard, pushLog, voiceJoin, voiceMove, voiceLeave } from './dashboard.js';
+
+// Charge le .env situé à la racine du projet (dist/bot.js → ../.env)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: join(__dirname, '..', '.env') });
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -15,6 +23,7 @@ const SITE_URL = (process.env.SITE_URL ?? '').replace(/\/$/, '');
 const SYNC_SECRET = process.env.DISCORD_SYNC_SECRET;
 const SYNC_CRON = process.env.SYNC_CRON ?? '0 3 * * *';
 const DEBUG = process.env.DEBUG === 'true';
+const DASHBOARD_PORT = Number(process.env.DASHBOARD_PORT ?? '3000');
 
 if (!BOT_TOKEN) throw new Error('DISCORD_BOT_TOKEN is required');
 if (!SITE_URL) throw new Error('SITE_URL is required');
@@ -26,7 +35,18 @@ const SYNC_URL = `${SITE_URL}/.netlify/functions/discord-sync-members`;
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function log(...args: unknown[]): void {
-  console.log(`[${new Date().toISOString()}]`, ...args);
+  const line = `[${new Date().toISOString()}] ${args.map(formatLogArg).join(' ')}`;
+  console.log(line);
+  pushLog(line);
+}
+
+function formatLogArg(arg: unknown): string {
+  if (typeof arg === 'string') return arg;
+  try {
+    return JSON.stringify(arg);
+  } catch {
+    return String(arg);
+  }
 }
 
 function debug(...args: unknown[]): void {
@@ -94,7 +114,14 @@ async function handleVoiceStateUpdate(
     occurred_at: new Date().toISOString(),
   };
 
-  debug(`Voice ${eventType}: ${newState.member?.user.username} → ${activeState.channel?.name ?? 'none'}`);
+  const username = newState.member?.user.username ?? oldState.member?.user.username ?? userId;
+  const channelName = activeState.channel?.name ?? 'none';
+  debug(`Voice ${eventType}: ${username} → ${channelName}`);
+
+  if (eventType === 'join') voiceJoin(userId, username, channelName);
+  else if (eventType === 'move') voiceMove(userId, channelName);
+  else voiceLeave(userId);
+
   await postJson(VOICE_EVENT_URL, payload);
 }
 
@@ -143,6 +170,9 @@ client.once(Events.ClientReady, (c) => {
   log(`Bot connecté : ${c.user.tag}`);
   log(`Serveur cible : ${GUILD_ID ?? '(tous)'}`);
   log(`Cron sync membres : ${SYNC_CRON}`);
+
+  startDashboard(client, DASHBOARD_PORT);
+  log(`Dashboard disponible sur http://localhost:${DASHBOARD_PORT}`);
 
   // Scheduled full sync (configure via SYNC_CRON env var)
   cron.schedule(SYNC_CRON, () => {
