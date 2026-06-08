@@ -142,8 +142,11 @@ Il affiche en temps réel (rafraîchissement toutes les 3 secondes) :
 - **Statut** : connecté/déconnecté, tag du bot, serveur cible, ping, durée d'activité
 - **Vocal en direct** : qui est actuellement en salon vocal et depuis combien de temps
 - **Logs** : flux des derniers événements (300 lignes max conservées en mémoire)
+- **Historique vocal (30 derniers jours)** : temps cumulé par membre + détail par jour, calculé localement à partir des sessions vocales complètes (join → leave). Stocké dans `discord-bot/data/voice-history.json` (ignoré par git, propre au VPS), purgé automatiquement au-delà de 30 jours.
 
-Pratique pour vérifier d'un coup d'œil que le bot tourne correctement, sans avoir à lancer `pm2 logs`.
+Pratique pour vérifier d'un coup d'œil que le bot tourne correctement et consulter l'activité vocale **avant** que la sync quotidienne ne mette le site à jour, sans avoir à lancer `pm2 logs`.
+
+> Cet historique est local au bot — il ne remplace pas les données du site (Supabase reste la source de vérité pour le RH). Il sert de consultation rapide côté VPS.
 
 ---
 

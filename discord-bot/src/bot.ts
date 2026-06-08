@@ -10,6 +10,13 @@ import {
 } from 'discord.js';
 import cron from 'node-cron';
 import { startDashboard, pushLog, voiceJoin, voiceMove, voiceLeave } from './dashboard.js';
+import {
+  startVoiceHistory,
+  flushVoiceHistory,
+  recordJoin,
+  recordMove,
+  recordLeave,
+} from './voice-history.js';
 
 // Charge le .env situé à la racine du projet (dist/bot.js → ../.env)
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -134,9 +141,16 @@ async function handleVoiceStateUpdate(
   const channelName = activeState.channel?.name ?? 'none';
   debug(`Voice ${eventType}: ${username} → ${channelName}`);
 
-  if (eventType === 'join') voiceJoin(userId, username, channelName);
-  else if (eventType === 'move') voiceMove(userId, channelName);
-  else voiceLeave(userId);
+  if (eventType === 'join') {
+    voiceJoin(userId, username, channelName);
+    recordJoin(userId, username, channelName);
+  } else if (eventType === 'move') {
+    voiceMove(userId, channelName);
+    recordMove(userId, username, channelName);
+  } else {
+    voiceLeave(userId);
+    recordLeave(userId);
+  }
 
   await postJson(VOICE_EVENT_URL, payload);
 }
@@ -188,6 +202,7 @@ client.once(Events.ClientReady, (c) => {
   log(`Cron sync membres : ${SYNC_CRON}`);
 
   startDashboard(client, DASHBOARD_PORT);
+  startVoiceHistory();
   log(`Dashboard disponible sur http://localhost:${DASHBOARD_PORT}`);
 
   // Recharge les membres déjà en vocal au démarrage (le dashboard ne part pas de zéro)
@@ -196,7 +211,9 @@ client.once(Events.ClientReady, (c) => {
     for (const voiceState of guild.voiceStates.cache.values()) {
       if (!voiceState.channelId || !voiceState.member) continue;
       const username = voiceState.member.displayName || voiceState.member.user.username;
-      voiceJoin(voiceState.id, username, voiceState.channel?.name ?? 'inconnu');
+      const channelName = voiceState.channel?.name ?? 'inconnu';
+      voiceJoin(voiceState.id, username, channelName);
+      recordJoin(voiceState.id, username, channelName);
     }
   }
 
@@ -230,6 +247,7 @@ client.on(Events.GuildMemberRemove, (member) => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     log(`Arrêt du bot (${signal})`);
+    flushVoiceHistory();
     client.destroy();
     process.exit(0);
   });
