@@ -7,6 +7,7 @@ export interface AdminUser {
   email: string;
   created_at: string;
   role: UserRole | null;
+  module_access: string[];
 }
 
 export function useAdminUsers() {
@@ -31,6 +32,23 @@ export function useAssignRole() {
           { user_id: args.userId, role: args.role },
           { onConflict: 'user_id' },
         );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_users'] });
+      qc.invalidateQueries({ queryKey: ['user_role'] });
+    },
+  });
+}
+
+export function useSetModuleAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { userId: string; moduleAccess: string[] }) => {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ module_access: args.moduleAccess })
+        .eq('user_id', args.userId);
       if (error) throw error;
     },
     onSuccess: () => {

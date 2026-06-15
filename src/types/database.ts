@@ -87,7 +87,9 @@ export function hasRole(current: UserRole | null, min: UserRole): boolean {
   return ROLE_RANK[current] >= ROLE_RANK[min];
 }
 
-export function canManageAdmin(role: UserRole | null, area: 'applications' | 'events' | 'members' | 'content' | 'media' | 'users'): boolean {
+export type AdminArea = 'applications' | 'events' | 'members' | 'content' | 'media' | 'users';
+
+export function canManageAdmin(role: UserRole | null, area: AdminArea): boolean {
   if (!role) return false;
   switch (area) {
     case 'applications':
@@ -103,6 +105,46 @@ export function canManageAdmin(role: UserRole | null, area: 'applications' | 'ev
     default:
       return false;
   }
+}
+
+/**
+ * Liste des pages/modules admin pouvant être activés individuellement par
+ * utilisateur (table `user_roles.module_access`), en plus de ce que donne
+ * déjà leur rôle via `canManageAdmin`. `area` est optionnelle : un module
+ * sans `area` est accessible à tout utilisateur ayant un rôle.
+ */
+export const ADMIN_MODULES: { key: string; label: string; area?: AdminArea }[] = [
+  { key: 'candidatures', label: 'Candidatures', area: 'applications' },
+  { key: 'membres', label: 'Membres', area: 'members' },
+  { key: 'rh', label: 'RH joueurs', area: 'members' },
+  { key: 'evenements', label: 'Événements', area: 'events' },
+  { key: 'contenu', label: 'Contenu', area: 'content' },
+  { key: 'galerie', label: 'Galerie', area: 'media' },
+  { key: 'moments', label: 'Moments forts', area: 'content' },
+  { key: 'palmares', label: 'Palmarès', area: 'content' },
+  { key: 'temoignages', label: 'Témoignages', area: 'content' },
+  { key: 'modules', label: 'Académie (contenu)', area: 'content' },
+  { key: 'academie', label: 'Joueurs Académie', area: 'content' },
+  { key: 'quiz', label: 'Guide pour les bots', area: 'content' },
+  { key: 'geoguesser', label: 'GeoGuesser', area: 'content' },
+  { key: 'pages-clan', label: 'Pages clan', area: 'content' },
+  { key: 'utilisateurs', label: 'Utilisateurs', area: 'users' },
+  { key: 'parametres', label: 'Paramètres' },
+];
+
+export function canAccessModule(
+  role: UserRole | null,
+  moduleAccess: string[],
+  moduleKey: string,
+): boolean {
+  if (!role) return false;
+  // La gestion des utilisateurs/rôles reste strictement réservée aux
+  // super_admins, quels que soient les accès par module accordés.
+  if (moduleKey === 'utilisateurs') return role === 'super_admin';
+  if (moduleAccess.includes(moduleKey)) return true;
+  const mod = ADMIN_MODULES.find((m) => m.key === moduleKey);
+  if (!mod?.area) return true; // module sans zone : accessible à tout rôle
+  return canManageAdmin(role, mod.area);
 }
 
 export interface Database {
@@ -968,18 +1010,21 @@ export interface Database {
         Row: {
           user_id: string;
           role: UserRole;
+          module_access: string[];
           created_at: string;
           created_by: string | null;
         };
         Insert: {
           user_id: string;
           role: UserRole;
+          module_access?: string[];
           created_at?: string;
           created_by?: string | null;
         };
         Update: {
           user_id?: string;
           role?: UserRole;
+          module_access?: string[];
           created_at?: string;
           created_by?: string | null;
         };
