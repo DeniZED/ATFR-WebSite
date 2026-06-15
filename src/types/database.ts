@@ -56,6 +56,11 @@ export const DIFFICULTY_LABELS: Record<QuizDifficulty, string> = {
   expert: 'Expert',
 };
 
+export interface AllowedClan {
+  clan_id: number;
+  clan_tag: string;
+}
+
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super admin',
   admin: 'Admin',
@@ -932,6 +937,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      clan_pages: {
+        Row: {
+          slug: string;
+          title: string;
+          description: string | null;
+          allowed_clans: AllowedClan[];
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          slug: string;
+          title: string;
+          description?: string | null;
+          allowed_clans?: AllowedClan[];
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          description?: string | null;
+          allowed_clans?: AllowedClan[];
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       user_roles: {
         Row: {
           user_id: string;
@@ -1493,3 +1525,6 @@ export type PlayerStaffNoteRow =
   Database['public']['Tables']['player_staff_notes']['Row'];
 export type PlayerStatusHistoryRow =
   Database['public']['Tables']['player_status_history']['Row'];
+
+export type ClanPageRow = Database['public']['Tables']['clan_pages']['Row'];
+export type ClanPageInsert = Database['public']['Tables']['clan_pages']['Insert'];
