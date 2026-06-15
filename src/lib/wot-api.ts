@@ -116,14 +116,14 @@ export async function getPlayerClan(accountId: number): Promise<{
   clan_id: number;
   tag: string;
 } | null> {
-  const data = await wotFetch<Record<string, { clan_id: number | null; clan: { tag: string } | null }>>(
+  const data = await wotFetch<Record<string, { clan: { clan_id: number; tag: string } | null }>>(
     '/clans/accountinfo/',
     {
       account_id: accountId,
-      fields: 'clan_id,clan',
+      fields: 'clan',
     },
   );
   const info = data[String(accountId)];
-  if (!info?.clan_id || !info.clan) return null;
-  return { clan_id: info.clan_id, tag: info.clan.tag };
+  if (!info?.clan) return null;
+  return { clan_id: info.clan.clan_id, tag: info.clan.tag };
 }
