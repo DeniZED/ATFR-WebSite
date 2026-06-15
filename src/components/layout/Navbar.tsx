@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavVisibility } from '@/features/content/useNavVisibility';
+import { useClanAccess } from '@/features/clan/useClanAccess';
 import { WgProfileBubble } from './WgProfileBubble';
 
 const baseLinks = [
@@ -23,6 +24,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { data: vis } = useNavVisibility();
+  const clanAccess = useClanAccess('clan-hub');
 
   const links = baseLinks.filter((l) => {
     if (l.always) return true;
@@ -32,6 +34,11 @@ export function Navbar() {
     if (l.key === 'gallery') return vis.gallery;
     return true;
   });
+
+  // Lien "Clan" visible uniquement pour les joueurs ayant accès au hub.
+  if (clanAccess.status === 'granted') {
+    links.push({ to: '/clan', label: 'Clan', key: undefined } as never);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);

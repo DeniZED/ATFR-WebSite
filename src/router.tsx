@@ -6,10 +6,12 @@ import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireMember } from '@/components/layout/RequireMember';
+import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
+const ClanHub = lazy(() => import('@/pages/clan/ClanHub'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
@@ -44,6 +46,7 @@ const AdminGeoSettings = lazy(() => import('@/pages/admin/AdminGeoSettings'));
 const AdminGeoShots = lazy(() => import('@/pages/admin/AdminGeoShots'));
 const AdminGeoShotEdit = lazy(() => import('@/pages/admin/AdminGeoShotEdit'));
 const AdminGeoShotsBulk = lazy(() => import('@/pages/admin/AdminGeoShotsBulk'));
+const AdminClanPages = lazy(() => import('@/pages/admin/AdminClanPages'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminAcademie = lazy(() => import('@/pages/admin/AdminAcademie'));
@@ -79,6 +82,12 @@ export const router = createBrowserRouter([
             element: <RequireMember />,
             children: [
               { path: '/clan/evenements/CW', element: <ClanCW /> },
+            ],
+          },
+          {
+            element: <RequireClanAccess slug="clan-hub" />,
+            children: [
+              { path: '/clan', element: <ClanHub /> },
             ],
           },
         ],
@@ -126,6 +135,7 @@ export const router = createBrowserRouter([
           { path: 'geoguesser/shots/:id', element: <AdminGeoShotEdit /> },
           { path: 'geoguesser/settings', element: <AdminGeoSettings /> },
           { path: 'academie', element: <AdminAcademie /> },
+          { path: 'pages-clan', element: <AdminClanPages /> },
           { path: 'utilisateurs', element: <AdminUsers /> },
           { path: 'parametres', element: <AdminSettings /> },
           { path: '*', element: <Navigate to="/admin" replace /> },
