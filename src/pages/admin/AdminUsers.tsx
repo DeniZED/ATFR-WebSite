@@ -179,36 +179,44 @@ export default function AdminUsers() {
                           const grantedByRole = mod.area
                             ? canManageAdmin(u.role, mod.area)
                             : true;
-                          const checked =
-                            grantedByRole || u.module_access.includes(mod.key);
+                          const restricted = u.module_restrictions.includes(mod.key);
+                          const granted = u.module_access.includes(mod.key);
+                          const checked = granted || (grantedByRole && !restricted);
 
                           return (
                             <label
                               key={mod.key}
-                              className={`flex items-center gap-2 text-sm ${
-                                grantedByRole
-                                  ? 'text-atfr-fog/60'
-                                  : 'text-atfr-bone cursor-pointer'
-                              }`}
+                              className="flex items-center gap-2 text-sm text-atfr-bone cursor-pointer"
                             >
                               <input
                                 type="checkbox"
                                 className="h-4 w-4 accent-atfr-gold"
                                 checked={checked}
-                                disabled={grantedByRole || setModuleAccess.isPending}
+                                disabled={setModuleAccess.isPending}
                                 onChange={(e) => {
-                                  const next = e.target.checked
-                                    ? [...u.module_access, mod.key]
-                                    : u.module_access.filter((k) => k !== mod.key);
+                                  let nextAccess = u.module_access;
+                                  let nextRestrictions = u.module_restrictions;
+                                  if (e.target.checked) {
+                                    nextRestrictions = nextRestrictions.filter((k) => k !== mod.key);
+                                    if (!grantedByRole) {
+                                      nextAccess = [...nextAccess, mod.key];
+                                    }
+                                  } else {
+                                    nextAccess = nextAccess.filter((k) => k !== mod.key);
+                                    if (grantedByRole) {
+                                      nextRestrictions = [...nextRestrictions, mod.key];
+                                    }
+                                  }
                                   setModuleAccess.mutate({
                                     userId: u.user_id,
-                                    moduleAccess: next,
+                                    moduleAccess: nextAccess,
+                                    moduleRestrictions: nextRestrictions,
                                   });
                                 }}
                               />
                               {mod.label}
                               {grantedByRole && (
-                                <span className="text-[10px] uppercase tracking-wide">
+                                <span className="text-[10px] uppercase tracking-wide text-atfr-fog/60">
                                   (rôle)
                                 </span>
                               )}
