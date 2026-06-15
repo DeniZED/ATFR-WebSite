@@ -7,6 +7,7 @@ import { canAccessModule, canManageAdmin, hasRole } from '@/types/database';
 interface RoleData {
   role: UserRole | null;
   moduleAccess: string[];
+  moduleRestrictions: string[];
 }
 
 export function useRole() {
@@ -18,13 +19,14 @@ export function useRole() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('role, module_access')
+        .select('role, module_access, module_restrictions')
         .eq('user_id', user!.id)
         .maybeSingle();
       if (error) throw error;
       return {
         role: (data?.role as UserRole | undefined) ?? null,
         moduleAccess: data?.module_access ?? [],
+        moduleRestrictions: data?.module_restrictions ?? [],
       };
     },
     staleTime: 60_000,
@@ -32,6 +34,7 @@ export function useRole() {
 
   const role = query.data?.role ?? null;
   const moduleAccess = query.data?.moduleAccess ?? [];
+  const moduleRestrictions = query.data?.moduleRestrictions ?? [];
   // While auth is still resolving OR the role query is in-flight, we're
   // "loading". Components that gate on the role should wait for this flag
   // before deciding to redirect.
@@ -40,6 +43,7 @@ export function useRole() {
   return {
     role,
     moduleAccess,
+    moduleRestrictions,
     isLoading,
     isSuperAdmin: role === 'super_admin',
     isAdmin: hasRole(role, 'admin'),
@@ -48,7 +52,7 @@ export function useRole() {
     can: (area: Parameters<typeof canManageAdmin>[1]) =>
       canManageAdmin(role, area),
     canAccess: (moduleKey: string) =>
-      canAccessModule(role, moduleAccess, moduleKey),
+      canAccessModule(role, moduleAccess, moduleKey, moduleRestrictions),
   };
 }
 

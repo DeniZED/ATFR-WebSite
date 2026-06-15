@@ -136,12 +136,14 @@ export function canAccessModule(
   role: UserRole | null,
   moduleAccess: string[],
   moduleKey: string,
+  moduleRestrictions: string[] = [],
 ): boolean {
   if (!role) return false;
   // La gestion des utilisateurs/rôles reste strictement réservée aux
   // super_admins, quels que soient les accès par module accordés.
   if (moduleKey === 'utilisateurs') return role === 'super_admin';
   if (moduleAccess.includes(moduleKey)) return true;
+  if (moduleRestrictions.includes(moduleKey)) return false;
   const mod = ADMIN_MODULES.find((m) => m.key === moduleKey);
   if (!mod?.area) return true; // module sans zone : accessible à tout rôle
   return canManageAdmin(role, mod.area);
@@ -1011,6 +1013,7 @@ export interface Database {
           user_id: string;
           role: UserRole;
           module_access: string[];
+          module_restrictions: string[];
           created_at: string;
           created_by: string | null;
         };
@@ -1018,6 +1021,7 @@ export interface Database {
           user_id: string;
           role: UserRole;
           module_access?: string[];
+          module_restrictions?: string[];
           created_at?: string;
           created_by?: string | null;
         };
@@ -1025,6 +1029,7 @@ export interface Database {
           user_id?: string;
           role?: UserRole;
           module_access?: string[];
+          module_restrictions?: string[];
           created_at?: string;
           created_by?: string | null;
         };

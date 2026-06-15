@@ -8,6 +8,7 @@ export interface AdminUser {
   created_at: string;
   role: UserRole | null;
   module_access: string[];
+  module_restrictions: string[];
 }
 
 export function useAdminUsers() {
@@ -44,10 +45,17 @@ export function useAssignRole() {
 export function useSetModuleAccess() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { userId: string; moduleAccess: string[] }) => {
+    mutationFn: async (args: {
+      userId: string;
+      moduleAccess: string[];
+      moduleRestrictions: string[];
+    }) => {
       const { error } = await supabase
         .from('user_roles')
-        .update({ module_access: args.moduleAccess })
+        .update({
+          module_access: args.moduleAccess,
+          module_restrictions: args.moduleRestrictions,
+        })
         .eq('user_id', args.userId);
       if (error) throw error;
     },
