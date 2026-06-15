@@ -5,6 +5,7 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
+import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
 import { RequireMember } from '@/components/layout/RequireMember';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
 import { Spinner } from '@/components/ui';
@@ -111,33 +112,87 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <AdminHome /> },
-          { path: 'candidatures', element: <AdminApplications /> },
-          { path: 'membres', element: <AdminMembers /> },
-          { path: 'rh', element: <AdminPlayers /> },
-          { path: 'rh/:id', element: <AdminPlayerDetail /> },
-          { path: 'evenements', element: <AdminEvents /> },
-          { path: 'contenu', element: <AdminContent /> },
-          { path: 'galerie', element: <AdminGallery /> },
-          { path: 'moments', element: <AdminHighlights /> },
-          { path: 'palmares', element: <AdminAchievements /> },
-          { path: 'temoignages', element: <AdminTestimonials /> },
-          { path: 'modules', element: <AdminModules /> },
-          { path: 'quiz', element: <AdminQuizList /> },
-          { path: 'quiz/categories', element: <AdminQuizCategories /> },
-          { path: 'quiz/stats', element: <AdminQuizStats /> },
-          { path: 'quiz/new', element: <AdminQuizEdit /> },
-          { path: 'quiz/:id', element: <AdminQuizEdit /> },
-          { path: 'geoguesser', element: <AdminGeoHome /> },
-          { path: 'geoguesser/maps', element: <AdminGeoMaps /> },
-          { path: 'geoguesser/shots', element: <AdminGeoShots /> },
-          { path: 'geoguesser/shots/bulk', element: <AdminGeoShotsBulk /> },
-          { path: 'geoguesser/shots/new', element: <AdminGeoShotEdit /> },
-          { path: 'geoguesser/shots/:id', element: <AdminGeoShotEdit /> },
-          { path: 'geoguesser/settings', element: <AdminGeoSettings /> },
-          { path: 'academie', element: <AdminAcademie /> },
-          { path: 'pages-clan', element: <AdminClanPages /> },
-          { path: 'utilisateurs', element: <AdminUsers /> },
-          { path: 'parametres', element: <AdminSettings /> },
+          {
+            element: <RequireModuleAccess moduleKey="candidatures" />,
+            children: [{ path: 'candidatures', element: <AdminApplications /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="membres" />,
+            children: [{ path: 'membres', element: <AdminMembers /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="rh" />,
+            children: [
+              { path: 'rh', element: <AdminPlayers /> },
+              { path: 'rh/:id', element: <AdminPlayerDetail /> },
+            ],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="evenements" />,
+            children: [{ path: 'evenements', element: <AdminEvents /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="contenu" />,
+            children: [{ path: 'contenu', element: <AdminContent /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="galerie" />,
+            children: [{ path: 'galerie', element: <AdminGallery /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="moments" />,
+            children: [{ path: 'moments', element: <AdminHighlights /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="palmares" />,
+            children: [{ path: 'palmares', element: <AdminAchievements /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="temoignages" />,
+            children: [{ path: 'temoignages', element: <AdminTestimonials /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="modules" />,
+            children: [{ path: 'modules', element: <AdminModules /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="quiz" />,
+            children: [
+              { path: 'quiz', element: <AdminQuizList /> },
+              { path: 'quiz/categories', element: <AdminQuizCategories /> },
+              { path: 'quiz/stats', element: <AdminQuizStats /> },
+              { path: 'quiz/new', element: <AdminQuizEdit /> },
+              { path: 'quiz/:id', element: <AdminQuizEdit /> },
+            ],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="geoguesser" />,
+            children: [
+              { path: 'geoguesser', element: <AdminGeoHome /> },
+              { path: 'geoguesser/maps', element: <AdminGeoMaps /> },
+              { path: 'geoguesser/shots', element: <AdminGeoShots /> },
+              { path: 'geoguesser/shots/bulk', element: <AdminGeoShotsBulk /> },
+              { path: 'geoguesser/shots/new', element: <AdminGeoShotEdit /> },
+              { path: 'geoguesser/shots/:id', element: <AdminGeoShotEdit /> },
+              { path: 'geoguesser/settings', element: <AdminGeoSettings /> },
+            ],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="academie" />,
+            children: [{ path: 'academie', element: <AdminAcademie /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="pages-clan" />,
+            children: [{ path: 'pages-clan', element: <AdminClanPages /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="utilisateurs" />,
+            children: [{ path: 'utilisateurs', element: <AdminUsers /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="parametres" />,
+            children: [{ path: 'parametres', element: <AdminSettings /> }],
+          },
           { path: '*', element: <Navigate to="/admin" replace /> },
         ],
       },

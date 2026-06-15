@@ -29,40 +29,38 @@ import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
 import { ROLE_LABELS } from '@/types/database';
 
-type Area = 'applications' | 'events' | 'members' | 'content' | 'media' | 'users';
-
 interface NavItem {
   to: string;
   label: string;
   icon: typeof Gauge;
   end?: boolean;
-  area?: Area;
+  moduleKey?: string;
 }
 
 const nav: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: Gauge, end: true },
-  { to: '/admin/candidatures', label: 'Candidatures', icon: FileText, area: 'applications' },
-  { to: '/admin/membres', label: 'Membres', icon: Users, area: 'members' },
-  { to: '/admin/rh', label: 'RH joueurs', icon: UserCog, area: 'members' },
-  { to: '/admin/evenements', label: 'Événements', icon: Calendar, area: 'events' },
-  { to: '/admin/contenu', label: 'Contenu', icon: Type, area: 'content' },
-  { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, area: 'media' },
-  { to: '/admin/moments', label: 'Moments forts', icon: Star, area: 'content' },
-  { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, area: 'content' },
-  { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, area: 'content' },
-  { to: '/admin/modules', label: 'Académie', icon: GraduationCap, area: 'content' },
-  { to: '/admin/academie', label: 'Joueurs Académie', icon: GraduationCap, area: 'content' },
-  { to: '/admin/quiz', label: 'Guide pour les bots', icon: BookOpen, area: 'content' },
-  { to: '/admin/geoguesser', label: 'GeoGuesser', icon: Map, area: 'content' },
-  { to: '/admin/pages-clan', label: 'Pages clan', icon: Lock, area: 'content' },
-  { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, area: 'users' },
-  { to: '/admin/parametres', label: 'Paramètres', icon: Settings },
+  { to: '/admin/candidatures', label: 'Candidatures', icon: FileText, moduleKey: 'candidatures' },
+  { to: '/admin/membres', label: 'Membres', icon: Users, moduleKey: 'membres' },
+  { to: '/admin/rh', label: 'RH joueurs', icon: UserCog, moduleKey: 'rh' },
+  { to: '/admin/evenements', label: 'Événements', icon: Calendar, moduleKey: 'evenements' },
+  { to: '/admin/contenu', label: 'Contenu', icon: Type, moduleKey: 'contenu' },
+  { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, moduleKey: 'galerie' },
+  { to: '/admin/moments', label: 'Moments forts', icon: Star, moduleKey: 'moments' },
+  { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, moduleKey: 'palmares' },
+  { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, moduleKey: 'temoignages' },
+  { to: '/admin/modules', label: 'Académie', icon: GraduationCap, moduleKey: 'modules' },
+  { to: '/admin/academie', label: 'Joueurs Académie', icon: GraduationCap, moduleKey: 'academie' },
+  { to: '/admin/quiz', label: 'Guide pour les bots', icon: BookOpen, moduleKey: 'quiz' },
+  { to: '/admin/geoguesser', label: 'GeoGuesser', icon: Map, moduleKey: 'geoguesser' },
+  { to: '/admin/pages-clan', label: 'Pages clan', icon: Lock, moduleKey: 'pages-clan' },
+  { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, moduleKey: 'utilisateurs' },
+  { to: '/admin/parametres', label: 'Paramètres', icon: Settings, moduleKey: 'parametres' },
 ];
 
 export function AdminLayout() {
   const [open, setOpen] = useState(false);
   const { signOut, user } = useAuth();
-  const { role, can } = useRole();
+  const { role, canAccess } = useRole();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -70,7 +68,7 @@ export function AdminLayout() {
     navigate('/admin/login');
   }
 
-  const visibleNav = nav.filter((item) => !item.area || can(item.area));
+  const visibleNav = nav.filter((item) => !item.moduleKey || canAccess(item.moduleKey));
 
   return (
     <div className="min-h-screen bg-atfr-ink">
