@@ -13,7 +13,6 @@ import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
-const ClanHub = lazy(() => import('@/pages/clan/ClanHub'));
 const ClanHubHome = lazy(() => import('@/pages/clan-hub/ClanHubHome'));
 const ClanHubChars = lazy(() => import('@/pages/clan-hub/ClanHubChars'));
 const ClanHubRoles = lazy(() => import('@/pages/clan-hub/ClanHubRoles'));
@@ -97,7 +96,7 @@ export const router = createBrowserRouter([
           {
             element: <RequireClanAccess slug="clan-hub" />,
             children: [
-              { path: '/clan', element: <ClanHub /> },
+              { path: '/clan', element: <Navigate to="/clan-hub" replace /> },
               {
                 element: <ClanHubLayout />,
                 children: [

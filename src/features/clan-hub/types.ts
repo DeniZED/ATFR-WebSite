@@ -32,6 +32,7 @@ export interface TankEntry {
   ammo_setup?: string;
   do_list: string[];
   dont_list: string[];
+  image_url?: string;
   tags: string[];
   validated_by: string;
   updated_at: string;
