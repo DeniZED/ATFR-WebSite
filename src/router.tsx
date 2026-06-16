@@ -13,7 +13,6 @@ import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
-const ClanHub = lazy(() => import('@/pages/clan/ClanHub'));
 const ClanHubHome = lazy(() => import('@/pages/clan-hub/ClanHubHome'));
 const ClanHubChars = lazy(() => import('@/pages/clan-hub/ClanHubChars'));
 const ClanHubRoles = lazy(() => import('@/pages/clan-hub/ClanHubRoles'));
