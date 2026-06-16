@@ -99,11 +99,11 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {user && (
             <Link
               to="/admin"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/25 px-2.5 py-1.5 text-xs text-atfr-gold/70 hover:text-atfr-gold hover:border-atfr-gold/50 transition-colors"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-lg border border-atfr-gold/25 px-2.5 py-1.5 text-xs text-atfr-gold/70 hover:text-atfr-gold hover:border-atfr-gold/50 transition-colors"
               title="Administration"
             >
               <Shield size={12} />
@@ -111,17 +111,16 @@ export function Navbar() {
             </Link>
           )}
           <WgProfileBubble />
+          <button
+            className="lg:hidden h-10 w-10 inline-flex items-center justify-center text-atfr-bone"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
-
-        <button
-          className="lg:hidden h-10 w-10 inline-flex items-center justify-center text-atfr-bone"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-        >
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
       </div>
 
       <AnimatePresence>

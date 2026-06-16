@@ -139,21 +139,19 @@ export function AcademyNavbar() {
           )}
         </nav>
 
-        {/* Droite : profil WG */}
-        <div className="hidden lg:flex items-center gap-2">
+        {/* Droite : profil WG (toujours visible) + burger mobile */}
+        <div className="flex items-center gap-2">
           <WgProfileBubble />
+          <button
+            className="lg:hidden h-10 w-10 inline-flex items-center justify-center text-atfr-bone"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="academy-mobile-nav"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
-
-        {/* Burger mobile */}
-        <button
-          className="lg:hidden h-10 w-10 inline-flex items-center justify-center text-atfr-bone"
-          onClick={() => setMobileOpen((o) => !o)}
-          aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={mobileOpen}
-          aria-controls="academy-mobile-nav"
-        >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
       </div>
 
       {/* Menu mobile */}
