@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MAPS, MAP_FILTERS } from '@/data/clan-hub/maps';
+import type { GameMode } from '@/features/clan-hub/types';
 import { FilterBar } from '@/components/clan-hub/FilterBar';
 import { PriorityBadge } from '@/components/clan-hub/PriorityBadge';
 import { ModeBadge } from '@/components/clan-hub/ModeBadge';
@@ -104,7 +105,7 @@ export default function ClanHubMaps() {
 
   const filtered = MAPS.filter((m) => {
     if (filter === 'all') return true;
-    return m.modes.includes(filter as any) || m.map_type === filter || m.tags.includes(filter);
+    return m.modes.includes(filter as GameMode) || m.map_type === filter || m.tags.includes(filter);
   });
 
   return (
