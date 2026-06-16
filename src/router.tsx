@@ -8,11 +8,20 @@ import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
 import { RequireMember } from '@/components/layout/RequireMember';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
+import { ClanHubLayout } from '@/components/clan-hub/ClanHubLayout';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
 const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
 const ClanHub = lazy(() => import('@/pages/clan/ClanHub'));
+const ClanHubHome = lazy(() => import('@/pages/clan-hub/ClanHubHome'));
+const ClanHubChars = lazy(() => import('@/pages/clan-hub/ClanHubChars'));
+const ClanHubRoles = lazy(() => import('@/pages/clan-hub/ClanHubRoles'));
+const ClanHubStrategies = lazy(() => import('@/pages/clan-hub/ClanHubStrategies'));
+const ClanHubMaps = lazy(() => import('@/pages/clan-hub/ClanHubMaps'));
+const ClanHubDoctrine = lazy(() => import('@/pages/clan-hub/ClanHubDoctrine'));
+const ClanHubCW = lazy(() => import('@/pages/clan-hub/ClanHubCW'));
+const ClanHubLiens = lazy(() => import('@/pages/clan-hub/ClanHubLiens'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
@@ -89,6 +98,19 @@ export const router = createBrowserRouter([
             element: <RequireClanAccess slug="clan-hub" />,
             children: [
               { path: '/clan', element: <ClanHub /> },
+              {
+                element: <ClanHubLayout />,
+                children: [
+                  { path: '/clan-hub', element: <ClanHubHome /> },
+                  { path: '/clan-hub/chars', element: <ClanHubChars /> },
+                  { path: '/clan-hub/roles', element: <ClanHubRoles /> },
+                  { path: '/clan-hub/strategies', element: <ClanHubStrategies /> },
+                  { path: '/clan-hub/maps', element: <ClanHubMaps /> },
+                  { path: '/clan-hub/doctrine', element: <ClanHubDoctrine /> },
+                  { path: '/clan-hub/cw', element: <ClanHubCW /> },
+                  { path: '/clan-hub/liens', element: <ClanHubLiens /> },
+                ],
+              },
             ],
           },
         ],
