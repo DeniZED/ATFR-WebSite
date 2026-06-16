@@ -1,0 +1,100 @@
+import type { MapEntry } from '@/features/clan-hub/types';
+
+export const MAPS: MapEntry[] = [
+  {
+    slug: 'prokhorovka',
+    name: 'Prokhorovka',
+    modes: ['cw', 'bastion', 'offensive'],
+    priority: 'prioritaire',
+    map_type: 'vision',
+    spawn_a: [
+      { name: 'Colline centrale', role: 'MT/LT — prise de vision', notes: 'Position clé pour contrôler la moitié de la carte' },
+      { name: 'Flanc train', role: 'TD sniper / couverture', notes: 'Couvre les rushes sur les voies ferrées' },
+    ],
+    spawn_b: [
+      { name: 'Contre-colline', role: 'MT/HT — pression', notes: 'Répond à l\'occupation de la colline ennemie' },
+      { name: 'Flanc droite', role: 'LT/MT — flanquer et reset', notes: 'Possibilité de reset rapide depuis ce flanc' },
+    ],
+    recommended_roles: ['Light actif', 'Medium flex', 'TD sniper'],
+    recommended_tanks: ['EBR 105', 'CS-63', 'Strv 103B', 'Object 277'],
+    strat_simple: 'Prendre la colline avec 2-3 chars et tenir. TDs couvrent les voies depuis les buissons. LT spot les mouvements ennemis.',
+    strat_advanced: 'Sacrifice scout en début de game + rush train T2 avec les mediums pour couper le retour ennemi pendant que les heavies poussent la colline.',
+    common_mistakes: [
+      'Partir seul sur la colline avant 30 secondes.',
+      'Ignorer le flanc train en mid-game.',
+      'Ne pas spotter les positions TD ennemis avant d\'avancer.',
+    ],
+    caller_notes: 'Préparer deux compos : vitesse pour colline, sniper pour train. EBR est essentiel sur cette carte.',
+    map_image_url: undefined,
+    tags: ['vision', 'colline', 'train', 'sniper'],
+    validated_by: 'Staff ATFR',
+    updated_at: 'Juin 2026',
+  },
+  {
+    slug: 'himmelsdorf',
+    name: 'Himmelsdorf',
+    modes: ['bastion', 'cw'],
+    priority: 'utile',
+    map_type: 'urbaine',
+    spawn_a: [
+      { name: 'Colline', role: 'HT hulldown — position dominante', notes: 'Contrôle la majorité de la carte depuis le dessus' },
+      { name: 'Rue principale', role: 'HT push — siège urbain', notes: 'Ligne directe mais dangereuse' },
+    ],
+    spawn_b: [
+      { name: 'Contre-colline', role: 'HT — répondre à la colline ennemie' },
+      { name: 'Flanc gauche', role: 'MT — flanquer via les ruelles' },
+    ],
+    recommended_roles: ['Heavy push', 'Heavy hulldown', 'TD assault'],
+    recommended_tanks: ['Super Conqueror', '60TP', 'T110E3'],
+    strat_simple: 'Prendre la colline avec les HT les plus rapides. TDs tiennent la rue. MTs flanquent par les ruelles.',
+    strat_advanced: 'Double push : colline + rue simultanément pour saturer la défense ennemie.',
+    common_mistakes: [
+      'Aller dans la rue sans couverture colline.',
+      'Ignorer les ruelles — les mediums ennemis peuvent flanquer.',
+    ],
+    caller_notes: 'Colline = priorité absolue. Qui tient la colline tient la carte.',
+    map_image_url: undefined,
+    tags: ['urbain', 'colline', 'couloir', 'hulldown'],
+    validated_by: 'Staff ATFR',
+    updated_at: 'Juin 2026',
+  },
+  {
+    slug: 'mines',
+    name: 'Mines',
+    modes: ['bastion', 'cw'],
+    priority: 'utile',
+    map_type: 'push',
+    spawn_a: [
+      { name: 'Île centrale', role: 'HT/MT — contrôle central', notes: 'Prendre l\'île = avantage massif' },
+      { name: 'Flanc gauche', role: 'TD / support' },
+    ],
+    spawn_b: [
+      { name: 'Colline', role: 'HT hulldown — domine l\'île' },
+      { name: 'Flanc droit', role: 'MT — flanquer depuis la plage' },
+    ],
+    recommended_roles: ['Heavy hulldown', 'Medium flex', 'Light actif'],
+    recommended_tanks: ['Super Conqueror', 'Object 277', 'EBR 105'],
+    strat_simple: 'Race vers l\'île ou la colline selon le spawn. L\'équipe qui contrôle le centre gagne.',
+    strat_advanced: 'Feinte île + rush colline avec les chars les plus rapides pendant que l\'ennemi va vers l\'île.',
+    common_mistakes: [
+      'Hésiter sur l\'île — il faut décider vite.',
+      'Négliger la colline quand l\'ennemi l\'a.',
+    ],
+    caller_notes: 'Décision en 10 secondes : île ou colline ? Les deux en même temps est risqué.',
+    map_image_url: undefined,
+    tags: ['île', 'central', 'race', 'push'],
+    validated_by: 'Staff ATFR',
+    updated_at: 'Juin 2026',
+  },
+];
+
+export const MAP_FILTERS = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'cw', label: 'CW' },
+  { id: 'bastion', label: 'Bastion' },
+  { id: 'offensive', label: 'Offensive' },
+  { id: 'vision', label: 'Vision' },
+  { id: 'urbaine', label: 'Urbaine' },
+  { id: 'push', label: 'Push' },
+  { id: 'hulldown', label: 'Hulldown' },
+] as const;
