@@ -33,3 +33,26 @@ export interface GuildClanConfig {
   scan_interval_minutes: number;
   notify_leaves_only: boolean;
 }
+
+export interface PlayerRecentStats {
+  battles: number | null;
+  winRate: number | null;
+  wn8: number | null;
+  avgTier: number | null;
+}
+
+export interface PlayerStats {
+  accountId: number;
+  nickname: string;
+  winRate: number | null;
+  battles: number;
+  damagePerBattle: number | null;
+  wn8: number | null;
+  avgTier: number | null;
+  tier10Count: number;
+  globalRating: number;
+  lastBattleTime: number;
+  recent: PlayerRecentStats | null;
+  recruitmentScore: number | null;
+  recruitmentThresholds: { minWn8: number; minBattles: number };
+}

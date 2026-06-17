@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { env } from '@/lib/env';
 import { searchPlayer } from '@/lib/wot-api';
-import { getPlayerExtendedStats, type PlayerExtendedStats } from '@/lib/tomato-api';
+import {
+  getPlayerExtendedStats,
+  getPlayerExtendedStatsBatch,
+  type PlayerExtendedStats,
+} from '@/lib/tomato-api';
 
 export interface ClanStats {
   clanId: number | null;
@@ -64,5 +68,21 @@ export function usePlayerLookup(nickname: string, enabled: boolean) {
       return { player, stats };
     },
     staleTime: 60_000,
+  });
+}
+
+/** Stats en masse (WN8/score recrutement) pour une liste de mouvements de clan. */
+export function useMovementsStatsBatch(
+  movements: Array<{ account_id: number; account_name: string }>,
+) {
+  const accountIds = [...new Set(movements.map((m) => m.account_id))].sort();
+  return useQuery({
+    queryKey: ['stats', 'movements-batch', accountIds],
+    enabled: accountIds.length > 0,
+    queryFn: async (): Promise<Map<number, PlayerExtendedStats>> => {
+      const nicknameByAccountId = new Map(movements.map((m) => [m.account_id, m.account_name]));
+      return getPlayerExtendedStatsBatch(accountIds, nicknameByAccountId);
+    },
+    staleTime: 5 * 60_000,
   });
 }

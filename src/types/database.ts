@@ -26,6 +26,12 @@ export type StaffNoteType =
   | 'behavior'
   | 'other';
 export type ClanMovementContactStatus = 'new' | 'contacted' | 'linked' | 'ignored';
+
+export interface ClanMovementStatusEntry {
+  status: ClanMovementContactStatus;
+  changed_at: string;
+  changed_by: string | null;
+}
 export type PlayerAlertSeverity = 'info' | 'warning' | 'danger';
 export type PlayerAlertKind =
   | 'inactive'
@@ -669,6 +675,7 @@ export interface Database {
           event: 'join' | 'leave';
           contact_status: ClanMovementContactStatus;
           linked_player_id: string | null;
+          status_history: ClanMovementStatusEntry[];
           occurred_at: string;
           created_at: string;
         };
@@ -683,6 +690,7 @@ export interface Database {
           event: 'join' | 'leave';
           contact_status?: ClanMovementContactStatus;
           linked_player_id?: string | null;
+          status_history?: ClanMovementStatusEntry[];
           occurred_at?: string;
           created_at?: string;
         };
@@ -697,8 +705,45 @@ export interface Database {
           event?: 'join' | 'leave';
           contact_status?: ClanMovementContactStatus;
           linked_player_id?: string | null;
+          status_history?: ClanMovementStatusEntry[];
           occurred_at?: string;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      recruitment_settings: {
+        Row: {
+          id: boolean;
+          min_wn8: number;
+          min_battles: number;
+          weight_wn8: number;
+          weight_winrate: number;
+          weight_battles: number;
+          weight_tier10: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: boolean;
+          min_wn8?: number;
+          min_battles?: number;
+          weight_wn8?: number;
+          weight_winrate?: number;
+          weight_battles?: number;
+          weight_tier10?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: boolean;
+          min_wn8?: number;
+          min_battles?: number;
+          weight_wn8?: number;
+          weight_winrate?: number;
+          weight_battles?: number;
+          weight_tier10?: number;
+          updated_at?: string;
+          updated_by?: string | null;
         };
         Relationships: [];
       };
@@ -1739,3 +1784,5 @@ export type ClanRosterMemberRow =
   Database['public']['Tables']['clan_roster_members']['Row'];
 export type ClanMemberMovementRow =
   Database['public']['Tables']['clan_member_movements']['Row'];
+export type RecruitmentSettingsRow =
+  Database['public']['Tables']['recruitment_settings']['Row'];

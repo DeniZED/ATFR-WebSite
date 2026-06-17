@@ -1,6 +1,12 @@
 import { callSite } from './net.js';
 import { endpoints, config } from './config.js';
-import type { ClanRosterMember, ClanMovement, GuildClanConfig, TrackedClanEntry } from './clan/types.js';
+import type {
+  ClanRosterMember,
+  ClanMovement,
+  GuildClanConfig,
+  TrackedClanEntry,
+  PlayerStats,
+} from './clan/types.js';
 
 export interface VoiceEventPayload {
   discord_user_id: string;
@@ -166,4 +172,11 @@ export async function getRecentMovements(
   if (clanId !== undefined) url.searchParams.set('clan_id', String(clanId));
   const res = await callSite<{ movements: ClanMovementRecord[] }>(url.toString(), { method: 'GET' });
   return res?.movements ?? [];
+}
+
+/** Stats joueur (WN8 tomato.gg + score de recrutement), pour les embeds de mouvement. */
+export async function getPlayerStats(accountId: number): Promise<PlayerStats | null> {
+  const url = new URL(endpoints.playerStats);
+  url.searchParams.set('account_id', String(accountId));
+  return callSite<PlayerStats>(url.toString(), { method: 'GET' });
 }
