@@ -1,4 +1,5 @@
 import type { Context } from '@netlify/functions';
+import { z } from 'zod';
 
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const TOMATO_API_KEY = process.env.TOMATO_API_KEY;
@@ -49,17 +50,33 @@ interface AccountInfo {
   };
 }
 
-interface TomatoStatSummary {
-  battles: number;
-  wn8: number;
-  winrate: number;
-  avgTier: number;
-}
+// Champs optionnels/nullable : tomato.gg a introduit WNX en 2025 en plus du
+// WN8 (pas en remplacement), donc on valide la forme réelle de la réponse au
+// lieu de la supposer figée — voir netlify/functions/player-stats.mts.
+const TomatoStatSummarySchema = z
+  .object({
+    battles: z.number().nullable().optional(),
+    wn8: z.number().nullable().optional(),
+    wnx: z.number().nullable().optional(),
+    winrate: z.number().nullable().optional(),
+    avgTier: z.number().nullable().optional(),
+  })
+  .passthrough();
 
-interface TomatoBulkPlayer {
-  recent: TomatoStatSummary | null;
-  overall: TomatoStatSummary | null;
-}
+const TomatoBulkPlayerSchema = z
+  .object({
+    recent: TomatoStatSummarySchema.nullable().optional(),
+    overall: TomatoStatSummarySchema.nullable().optional(),
+  })
+  .passthrough();
+
+const TomatoBulkResponseSchema = z
+  .object({
+    data: z.record(TomatoBulkPlayerSchema).optional(),
+  })
+  .passthrough();
+
+type TomatoBulkPlayer = z.infer<typeof TomatoBulkPlayerSchema>;
 
 async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   if (!APP_ID) throw new Error('WOT_APPLICATION_ID missing');
@@ -114,11 +131,13 @@ async function fetchTomatoBulkStats(
       { headers: { 'x-api-key': TOMATO_API_KEY } },
     );
     if (!res.ok) throw new Error(`Tomato bulk-stats ${res.status}`);
-    const json = (await res.json()) as {
-      meta: { status: string };
-      data: Record<string, TomatoBulkPlayer>;
-    };
-    Object.assign(out, json.data);
+    const json = await res.json();
+    const parsed = TomatoBulkResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.error('[clan-stats] unexpected tomato.gg bulk-stats shape:', parsed.error.issues[0]?.message);
+      continue;
+    }
+    Object.assign(out, parsed.data.data ?? {});
   }
   return out;
 }
@@ -146,6 +165,7 @@ export interface ClanStatsPayload {
     nickname: string;
     role: string;
     wn8: number | null;
+    wnx: number | null;
     winRate: number | null;
     battles: number;
     globalRating: number;
@@ -246,6 +266,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
 
       const tomato = tomatoMap[String(m.account_id)];
       const wn8 = tomato?.overall?.wn8 ?? null;
+      const wnx = tomato?.overall?.wnx ?? null;
       const winRate = tomato?.overall?.winrate ?? null;
       const recentWn8 = tomato?.recent?.wn8 ?? null;
       const recentWinRate = tomato?.recent?.winrate ?? null;
@@ -299,6 +320,7 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         nickname: acc.nickname,
         role: m.role,
         wn8,
+        wnx,
         winRate,
         battles,
         globalRating: acc.global_rating,

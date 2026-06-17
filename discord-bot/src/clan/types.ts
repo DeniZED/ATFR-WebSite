@@ -38,6 +38,7 @@ export interface PlayerRecentStats {
   battles: number | null;
   winRate: number | null;
   wn8: number | null;
+  wnx: number | null;
   avgTier: number | null;
 }
 
@@ -48,6 +49,7 @@ export interface PlayerStats {
   battles: number;
   damagePerBattle: number | null;
   wn8: number | null;
+  wnx: number | null;
   avgTier: number | null;
   tier10Count: number;
   globalRating: number;

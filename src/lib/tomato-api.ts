@@ -7,6 +7,7 @@ export interface PlayerRecentStats {
   battles: number | null;
   winRate: number | null;
   wn8: number | null;
+  wnx: number | null;
   avgTier: number | null;
 }
 
@@ -14,6 +15,7 @@ export interface PlayerExtendedStats {
   accountId: number;
   nickname: string;
   wn8: number | null;
+  wnx: number | null;
   winRate: number | null;
   battles: number;
   damagePerBattle: number | null;

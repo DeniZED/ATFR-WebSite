@@ -44,17 +44,35 @@ interface TankInfo {
   tier: number;
 }
 
-interface TomatoStatSummary {
-  battles: number;
-  wn8: number;
-  winrate: number;
-  avgTier: number;
-}
+// Tous les champs sont optionnels/nullable : tomato.gg a introduit WNX en
+// 2025 en plus du WN8 (pas en remplacement, selon leur propre annonce), donc
+// on valide la forme réelle de la réponse au lieu de la supposer figée — un
+// champ renommé ou retiré doit se voir dans les logs, pas disparaître en
+// silence derrière un wn8 toujours nul.
+const TomatoStatSummarySchema = z
+  .object({
+    battles: z.number().nullable().optional(),
+    wn8: z.number().nullable().optional(),
+    wnx: z.number().nullable().optional(),
+    winrate: z.number().nullable().optional(),
+    avgTier: z.number().nullable().optional(),
+  })
+  .passthrough();
 
-interface TomatoBulkPlayer {
-  recent: TomatoStatSummary | null;
-  overall: TomatoStatSummary | null;
-}
+const TomatoBulkPlayerSchema = z
+  .object({
+    recent: TomatoStatSummarySchema.nullable().optional(),
+    overall: TomatoStatSummarySchema.nullable().optional(),
+  })
+  .passthrough();
+
+const TomatoBulkResponseSchema = z
+  .object({
+    data: z.record(TomatoBulkPlayerSchema).optional(),
+  })
+  .passthrough();
+
+type TomatoBulkPlayer = z.infer<typeof TomatoBulkPlayerSchema>;
 
 interface RecruitmentSettings {
   min_wn8: number;
@@ -114,13 +132,33 @@ async function fetchTomatoStats(accountIds: number[]): Promise<Record<string, To
       `${TOMATO_BASE}/api/player/bulk-stats/eu?ids=${accountIds.join(',')}`,
       { headers: { 'x-api-key': TOMATO_API_KEY } },
     );
-    if (!res.ok) return {};
-    const json = (await res.json()) as {
-      meta: { status: string };
-      data: Record<string, TomatoBulkPlayer>;
-    };
-    return json.data ?? {};
-  } catch {
+    if (!res.ok) {
+      console.error(`[player-stats] tomato.gg bulk-stats HTTP ${res.status}`);
+      return {};
+    }
+    const json = await res.json();
+    const parsed = TomatoBulkResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.error('[player-stats] unexpected tomato.gg bulk-stats shape:', parsed.error.issues[0]?.message);
+      return {};
+    }
+    const data = parsed.data.data ?? {};
+    // Filet de sécurité : si tomato.gg renomme/retire wn8 ET wnx alors qu'il
+    // renvoie bien des données (battles > 0), on le veut dans les logs plutôt
+    // que de laisser le recrutement tourner silencieusement sans WN8.
+    const players = Object.values(data);
+    const withBattles = players.filter((p) => (p.overall?.battles ?? 0) > 0);
+    const allMissingScore = withBattles.length > 0 && withBattles.every(
+      (p) => p.overall?.wn8 == null && p.overall?.wnx == null,
+    );
+    if (allMissingScore) {
+      console.error(
+        `[player-stats] tomato.gg returned ${withBattles.length} player(s) with battles but no wn8/wnx — possible API field rename`,
+      );
+    }
+    return data;
+  } catch (err) {
+    console.error('[player-stats] tomato.gg bulk-stats fetch failed:', err);
     return {};
   }
 }
@@ -189,6 +227,7 @@ export interface PlayerStatsPayload {
   battles: number;
   damagePerBattle: number | null;
   wn8: number | null;
+  wnx: number | null;
   avgTier: number | null;
   tier10Count: number;
   globalRating: number;
@@ -197,6 +236,7 @@ export interface PlayerStatsPayload {
     battles: number | null;
     winRate: number | null;
     wn8: number | null;
+    wnx: number | null;
     avgTier: number | null;
   } | null;
   recruitmentScore: number | null;
@@ -242,6 +282,7 @@ async function buildPayloads(accountIds: number[]): Promise<Map<number, PlayerSt
     const tomatoPlayer = tomatoData[String(accountId)];
     // Préfère les valeurs tomato.gg ; retombe sur le calcul WG si tomato n'a pas de données.
     const wn8 = tomatoPlayer?.overall?.wn8 ?? null;
+    const wnx = tomatoPlayer?.overall?.wnx ?? null;
     const winRate =
       tomatoPlayer?.overall?.winrate ?? (battles > 0 ? (s.wins / battles) * 100 : null);
     const avgTier = tomatoPlayer?.overall?.avgTier ?? null;
@@ -261,6 +302,7 @@ async function buildPayloads(accountIds: number[]): Promise<Map<number, PlayerSt
       battles,
       damagePerBattle,
       wn8,
+      wnx,
       avgTier,
       tier10Count,
       globalRating: account.global_rating,
@@ -270,6 +312,7 @@ async function buildPayloads(accountIds: number[]): Promise<Map<number, PlayerSt
             battles: tomatoPlayer.recent.battles ?? null,
             winRate: tomatoPlayer.recent.winrate ?? null,
             wn8: tomatoPlayer.recent.wn8 ?? null,
+            wnx: tomatoPlayer.recent.wnx ?? null,
             avgTier: tomatoPlayer.recent.avgTier ?? null,
           }
         : null,
