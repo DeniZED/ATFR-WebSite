@@ -1,14 +1,13 @@
-// Fallback-friendly player stats accessor.
-//
-// The old tomato.gg dev API is now allowlisted and blocks third parties with
-// a 403. We now compute WN8 ourselves in a Netlify Function using the
-// Wargaming API plus the XVM expected-values table. See
-// `netlify/functions/player-stats.mts`.
+// Player stats accessor — WN8/winrate/avgTier come from tomato.gg's
+// bulk-stats API, fetched server-side in `netlify/functions/player-stats.mts`
+// (battles/damage/tier10 count come from the Wargaming API). Never computed
+// client-side.
 
 export interface PlayerRecentStats {
   battles: number | null;
   winRate: number | null;
   wn8: number | null;
+  wnx: number | null;
   avgTier: number | null;
 }
 
@@ -16,6 +15,7 @@ export interface PlayerExtendedStats {
   accountId: number;
   nickname: string;
   wn8: number | null;
+  wnx: number | null;
   winRate: number | null;
   battles: number;
   damagePerBattle: number | null;

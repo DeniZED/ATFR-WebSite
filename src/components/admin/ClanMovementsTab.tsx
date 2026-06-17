@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, Card, CardBody, Input, Select, Spinner } from '@/components/ui';
 import { PlayerLookupCard } from '@/components/recruitment/PlayerLookupCard';
@@ -8,6 +8,7 @@ import {
   useUpdateMovementContactStatus,
 } from '@/features/clanMovements/queries';
 import { useMovementsStatsBatch, usePlayerLookup } from '@/features/stats/queries';
+import { useRecruitmentSettings } from '@/features/recruitment/settings';
 import { wn8Color, type PlayerExtendedStats } from '@/lib/tomato-api';
 import type { ClanMemberMovementRow, ClanMovementContactStatus } from '@/types/database';
 
@@ -35,6 +36,7 @@ export function ClanMovementsTab({
 }) {
   const navigate = useNavigate();
   const movements = useClanMovements();
+  const recruitmentSettings = useRecruitmentSettings();
   const updateContact = useUpdateMovementContactStatus();
   const createProspect = useCreateProspectFromMovement();
   const [eventFilter, setEventFilter] = useState<EventFilter>('leave');
@@ -42,7 +44,17 @@ export function ClanMovementsTab({
   const [clanFilter, setClanFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [minWn8, setMinWn8] = useState('');
+  const [minWn8Touched, setMinWn8Touched] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Pré-remplit le filtre avec le seuil configuré dans Réglages admin (source
+  // unique partagée avec le score de recrutement et les embeds Discord), sauf
+  // si l'utilisateur a déjà modifié le champ.
+  useEffect(() => {
+    if (minWn8Touched) return;
+    const configured = recruitmentSettings.data?.min_wn8;
+    if (configured) setMinWn8(String(configured));
+  }, [recruitmentSettings.data, minWn8Touched]);
 
   const clanOptions = useMemo(() => {
     const values = new Set<string>();
@@ -138,8 +150,17 @@ export function ClanMovementsTab({
               label="WN8 minimum"
               placeholder="Ex. 1250"
               value={minWn8}
-              onChange={(e) => setMinWn8(e.target.value)}
-              hint={statsBatch.isFetching ? 'Chargement des stats…' : undefined}
+              onChange={(e) => {
+                setMinWn8Touched(true);
+                setMinWn8(e.target.value);
+              }}
+              hint={
+                statsBatch.isFetching
+                  ? 'Chargement des stats…'
+                  : !minWn8Touched && recruitmentSettings.data?.min_wn8
+                    ? 'Valeur par défaut depuis Réglages admin'
+                    : undefined
+              }
             />
           </div>
           {minWn8Value != null && baseFiltered.length > STATS_BATCH_LIMIT && (
