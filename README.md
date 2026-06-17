@@ -17,9 +17,12 @@ React 18 · Vite · TypeScript · Tailwind · Supabase · Netlify.
 | -------------- | --------------------------------------------------------- |
 | Framework      | React 18 + Vite                                           |
 | Langage        | TypeScript strict                                         |
+| Routing        | react-router-dom                                          |
+| État global    | Zustand                                                    |
 | UI             | Tailwind CSS, lucide-react, framer-motion, CVA            |
 | Formulaires    | react-hook-form + zod                                     |
 | Data-fetching  | TanStack Query                                            |
+| Dates          | date-fns                                                   |
 | Auth + DB      | Supabase (Postgres + Row Level Security)                  |
 | Stats joueurs  | API Wargaming WoT EU + wrapper tomato.gg (WN8, winrate)   |
 | Médias         | Cloudinary (uploads signés)                                |
@@ -104,11 +107,14 @@ Sinon, exécutez les fichiers **dans l'ordre numérique** depuis le SQL Editor. 
 |-------|-------|
 | `0001`–`0006` | Init (tables cœur, RLS, CMS, rôles, modules) |
 | `0007`–`0008` | Quiz + scores de modules |
-| `0009`–`0018`, `0025`–`0026` | Geoguesser (cartes, défi du jour, profil joueur) |
+| `0009`–`0014`, `0018`, `0025`–`0026` | Geoguesser (cartes, défi du jour, modes, profil joueur) |
+| `0016`–`0017` | CMS (galerie, sections d'accueil) |
 | `0019`–`0022`, `0028`–`0030` | RH (suivi joueurs, matching Discord, audit, historique départs) |
 | `0023`–`0024`, `0027` | RLS quiz/scores |
 | `0031`–`0034` | Contrôle d'accès par module (RLS, restrictions) |
 | `0035`–`0037` | Suivi des clans WoT (mouvements, recrutement, scoring) |
+
+> `0015` n'existe pas (numéro jamais attribué, sans incidence — la séquence reprend à `0016`).
 
 ### 3. Créer un compte admin
 
@@ -174,18 +180,19 @@ src/
 │   ├── sections/            # Hero, LiveStats, About, Activities, TopPlayers, JoinCta
 │   ├── admin/                # ClanMovementsTab, etc.
 │   └── recruitment/           # AvailabilityPicker, PlayerLookupCard
-├── features/                # 1 dossier par domaine : applications, clan, clan-hub,
+├── features/                # 1 dossier par domaine : academy, applications, clan, clan-hub,
 │                             # clanMovements, content, discord, events, geoguesser,
 │                             # identity, leaderboard, media, members, modules, quiz,
 │                             # recruitment, rh, roles, stats
 ├── pages/
-│   ├── Home / Members / Events / Gallery / Recruitment / Modules / NotFound
+│   ├── Home / Members / Events / Gallery / Recruitment / Modules / ModuleStub /
+│   │   AuthWgCallback (retour OAuth Wargaming) / NotFound
 │   ├── clan-hub/             # ClanHubHome, Chars, Roles, Strategies, Maps, Doctrine, CW, Liens
 │   └── admin/                 # Login, AdminHome, AdminApplications, AdminPlayers(+Detail),
 │                               # AdminMembers, AdminEvents, AdminContent, AdminGallery,
 │                               # AdminHighlights, AdminAchievements, AdminTestimonials,
-│                               # AdminModules, AdminQuiz*, AdminGeo*, AdminClanPages,
-│                               # AdminUsers, AdminSettings
+│                               # AdminModules, AdminAcademie, AdminQuiz*, AdminGeo*,
+│                               # AdminClanPages, AdminUsers, AdminSettings
 ├── lib/                      # cn, env, supabase, wot-api, tomato-api, discord, constants
 ├── hooks/                     # useAuth (Supabase)
 ├── types/                      # database.ts (typage Supabase)
