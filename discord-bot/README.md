@@ -11,8 +11,15 @@ Bot Discord pour le suivi RH (vocal, arrivées/départs membres, sync automatiqu
 | Membre change de salon vocal | POST `discord-voice-event` (move) |
 | Nouveau membre rejoint le serveur | Déclenche une sync membres (debounce 10 s) |
 | Membre quitte le serveur | Déclenche une sync membres (debounce 10 s) |
-| Scan périodique des clans suivis | Diff de roster via l'API WG, notification Discord + historique Supabase |
+| Scan périodique des clans suivis | Diff de roster via l'API WG, notification Discord (carte de profil enrichie) + historique Supabase |
 | Cron quotidien (03:00 UTC) | Sync complète Discord → Supabase + scan de clans (filet de sécurité) |
+
+Chaque scan (planifié, manuel via `/clan scan` ou via le bouton "Scanner maintenant" du dashboard) logue désormais une ligne par clan vérifié — y compris quand rien n'a changé — plus un résumé `[SCAN] Démarrage/Terminé`, pour pouvoir confirmer d'un coup d'œil que le scan a bien tourné.
+
+### Embeds de mouvement de clan
+
+Les notifications Discord d'entrée/sortie sont construites comme une carte de profil joueur (stats tomato.gg + WG) :
+**score de recrutement** (/100, calculé par `player-stats.mts` côté site à partir des seuils/pondérations configurés dans **Admin → Réglages → "Recrutement — score & filtres"**), WN8 et winrate (global + 30 derniers jours), nombre de batailles, tier moyen, dégâts moyens, nombre de chars Tier X, et lien direct vers le profil Tomato.gg. Le même score alimente le filtre WN8 et la colonne "Score" de l'onglet **Mouvements** côté site (Admin → Staff → RH).
 
 ## Commandes admin (`Gérer le serveur` requis)
 
@@ -210,7 +217,8 @@ discord-bot/src/
     types.ts                    ── types partagés du suivi de clans
     wgClient.ts                  ── client API Wargaming (roster de clan, résolution tag→ID)
     bulkAdd.ts                    ── ajout en masse partagé (commande Discord + dashboard)
-    scanner.ts                   ── orchestration d'un scan (diff + notif)
+    scanner.ts                   ── orchestration d'un scan (diff + notif), logue chaque clan vérifié
+    wn8.ts                        ── seuils/couleurs WN8 partagés par les embeds Discord
   notifications/
     clanEmbeds.ts                ── construction des embeds de mouvement
   commands/
