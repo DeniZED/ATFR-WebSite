@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '..', 'data');
+const DATA_DIR = join(__dirname, '..', '..', 'data');
 const HISTORY_FILE = join(DATA_DIR, 'voice-history.json');
 
 const RETENTION_DAYS = 30;
@@ -165,4 +165,46 @@ export function getDailyBreakdown(days: number): DayVoiceBreakdown[] {
         .sort((a, b) => b.seconds - a.seconds),
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export interface TodayVoiceStats {
+  date: string;
+  totalSeconds: number;
+  activeNow: number;
+  players: Array<{ userId: string; username: string; seconds: number; stillConnected: boolean }>;
+}
+
+/** Stats du jour courant, incluant les sessions encore ouvertes (en cours). */
+export function getTodayStats(): TodayVoiceStats {
+  const today = new Date().toISOString().slice(0, 10);
+  const now = Date.now();
+  const players = new Map<string, { username: string; seconds: number; stillConnected: boolean }>();
+
+  for (const s of sessions) {
+    if (new Date(s.leftAt).toISOString().slice(0, 10) !== today) continue;
+    const current = players.get(s.userId) ?? { username: s.username, seconds: 0, stillConnected: false };
+    current.seconds += s.durationSeconds;
+    current.username = s.username;
+    players.set(s.userId, current);
+  }
+
+  for (const [userId, session] of open) {
+    if (new Date(now).toISOString().slice(0, 10) !== today) continue;
+    const current = players.get(userId) ?? { username: session.username, seconds: 0, stillConnected: false };
+    current.seconds += Math.max(0, Math.round((now - session.joinedAt) / 1000));
+    current.username = session.username;
+    current.stillConnected = true;
+    players.set(userId, current);
+  }
+
+  const list = [...players.entries()]
+    .map(([userId, p]) => ({ userId, username: p.username, seconds: p.seconds, stillConnected: p.stillConnected }))
+    .sort((a, b) => b.seconds - a.seconds);
+
+  return {
+    date: today,
+    totalSeconds: list.reduce((sum, p) => sum + p.seconds, 0),
+    activeNow: open.size,
+    players: list,
+  };
 }

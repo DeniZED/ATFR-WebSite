@@ -61,6 +61,12 @@ export interface AllowedClan {
   clan_tag: string;
 }
 
+export interface TrackedClanEntry {
+  clan_id: number;
+  clan_tag: string | null;
+  clan_name: string | null;
+}
+
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super admin',
   admin: 'Admin',
@@ -587,6 +593,102 @@ export interface Database {
           last_seen_at?: string;
           source?: string;
           meta?: Record<string, unknown>;
+        };
+        Relationships: [];
+      };
+      discord_bot_guild_configs: {
+        Row: {
+          guild_id: string;
+          clan_notify_channel_id: string | null;
+          tracked_clans: TrackedClanEntry[];
+          scan_interval_minutes: number;
+          created_at: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          guild_id: string;
+          clan_notify_channel_id?: string | null;
+          tracked_clans?: TrackedClanEntry[];
+          scan_interval_minutes?: number;
+          created_at?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          guild_id?: string;
+          clan_notify_channel_id?: string | null;
+          tracked_clans?: TrackedClanEntry[];
+          scan_interval_minutes?: number;
+          created_at?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      clan_roster_members: {
+        Row: {
+          clan_id: number;
+          account_id: number;
+          account_name: string;
+          role: string | null;
+          first_seen_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          clan_id: number;
+          account_id: number;
+          account_name: string;
+          role?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          clan_id?: number;
+          account_id?: number;
+          account_name?: string;
+          role?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+        };
+        Relationships: [];
+      };
+      clan_member_movements: {
+        Row: {
+          id: string;
+          guild_id: string | null;
+          clan_id: number;
+          clan_tag: string | null;
+          account_id: number;
+          account_name: string;
+          role: string | null;
+          event: 'join' | 'leave';
+          occurred_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          guild_id?: string | null;
+          clan_id: number;
+          clan_tag?: string | null;
+          account_id: number;
+          account_name: string;
+          role?: string | null;
+          event: 'join' | 'leave';
+          occurred_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          guild_id?: string | null;
+          clan_id?: number;
+          clan_tag?: string | null;
+          account_id?: number;
+          account_name?: string;
+          role?: string | null;
+          event?: 'join' | 'leave';
+          occurred_at?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -1554,6 +1656,47 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      upsert_discord_bot_guild_config: {
+        Args: {
+          p_guild_id: string;
+          p_clan_notify_channel_id?: string | null;
+          p_tracked_clans?: TrackedClanEntry[] | null;
+          p_scan_interval_minutes?: number | null;
+          p_updated_by?: string | null;
+        };
+        Returns: Database['public']['Tables']['discord_bot_guild_configs']['Row'];
+      };
+      add_tracked_clan: {
+        Args: {
+          p_guild_id: string;
+          p_clan_id: number;
+          p_clan_tag?: string | null;
+          p_clan_name?: string | null;
+          p_updated_by?: string | null;
+        };
+        Returns: Database['public']['Tables']['discord_bot_guild_configs']['Row'];
+      };
+      remove_tracked_clan: {
+        Args: {
+          p_guild_id: string;
+          p_clan_id: number;
+          p_updated_by?: string | null;
+        };
+        Returns: Database['public']['Tables']['discord_bot_guild_configs']['Row'];
+      };
+      sync_clan_roster: {
+        Args: {
+          p_guild_id: string;
+          p_clan_id: number;
+          p_clan_tag?: string | null;
+          p_members: Array<{ account_id: number; account_name: string; role?: string | null }>;
+        };
+        Returns: {
+          bootstrap: boolean;
+          joins: Array<{ account_id: number; account_name: string; role: string | null }>;
+          leaves: Array<{ account_id: number; account_name: string; role: string | null }>;
+        };
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
@@ -1578,3 +1721,10 @@ export type PlayerStatusHistoryRow =
 
 export type ClanPageRow = Database['public']['Tables']['clan_pages']['Row'];
 export type ClanPageInsert = Database['public']['Tables']['clan_pages']['Insert'];
+
+export type DiscordBotGuildConfigRow =
+  Database['public']['Tables']['discord_bot_guild_configs']['Row'];
+export type ClanRosterMemberRow =
+  Database['public']['Tables']['clan_roster_members']['Row'];
+export type ClanMemberMovementRow =
+  Database['public']['Tables']['clan_member_movements']['Row'];
