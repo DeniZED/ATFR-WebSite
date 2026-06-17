@@ -3,6 +3,7 @@ import {
   addTrackedClan as addTrackedClanRemote,
   removeTrackedClan as removeTrackedClanRemote,
   setNotifyChannel as setNotifyChannelRemote,
+  setScanInterval as setScanIntervalRemote,
 } from './supabaseSync.js';
 import type { GuildClanConfig } from './clan/types.js';
 
@@ -49,6 +50,16 @@ export async function setNotifyChannel(
   updatedBy: string | null,
 ): Promise<GuildClanConfig | null> {
   const result = await setNotifyChannelRemote(guildId, channelId, updatedBy);
+  if (result) cache.set(guildId, { config: result, fetchedAt: Date.now() });
+  return result;
+}
+
+export async function setScanInterval(
+  guildId: string,
+  minutes: number,
+  updatedBy: string | null,
+): Promise<GuildClanConfig | null> {
+  const result = await setScanIntervalRemote(guildId, minutes, updatedBy);
   if (result) cache.set(guildId, { config: result, fetchedAt: Date.now() });
   return result;
 }

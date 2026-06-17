@@ -119,6 +119,17 @@ export async function setNotifyChannel(
   return res ? normalizeConfig(guildId, res.config) : null;
 }
 
+export async function setScanInterval(
+  guildId: string,
+  minutes: number,
+  updatedBy: string | null,
+): Promise<GuildClanConfig | null> {
+  const res = await callSite<{ config: RawGuildConfig }>(endpoints.clanConfig, {
+    body: { guild_id: guildId, action: 'set_interval', scan_interval_minutes: minutes, updated_by: updatedBy },
+  });
+  return res ? normalizeConfig(guildId, res.config) : null;
+}
+
 export interface ClanMovementRecord {
   id: string;
   guild_id: string;

@@ -1,7 +1,7 @@
 import { Events, type Client, type VoiceState } from 'discord.js';
 import { config } from '../config.js';
 import { debug, log } from '../logger.js';
-import { voiceJoin, voiceMove, voiceLeave } from '../dashboard.js';
+import { voiceJoin, voiceMove, voiceLeave } from '../dashboard/index.js';
 import { recordJoin, recordMove, recordLeave } from './history.js';
 import { sendVoiceEvent } from '../supabaseSync.js';
 

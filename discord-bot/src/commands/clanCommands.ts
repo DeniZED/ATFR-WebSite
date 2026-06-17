@@ -13,7 +13,8 @@ import {
   refreshGuildConfig,
 } from '../guildConfig.js';
 import { getRecentMovements } from '../supabaseSync.js';
-import { fetchClanRoster } from '../clan/wgClient.js';
+import { resolveClanInput } from '../clan/wgClient.js';
+import { bulkAddTrackedClans } from '../clan/bulkAdd.js';
 import { runGuildScan } from '../scheduler.js';
 import { error as logError } from '../logger.js';
 
@@ -25,13 +26,28 @@ export const clanCommandDefinition = new SlashCommandBuilder()
     sub
       .setName('add')
       .setDescription('Ajoute un clan à la liste suivie')
-      .addIntegerOption((opt) => opt.setName('clan_id').setDescription('ID du clan WoT').setRequired(true)),
+      .addStringOption((opt) =>
+        opt.setName('clan').setDescription('Tag ou ID du clan WoT').setRequired(true),
+      ),
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName('bulk-add')
+      .setDescription('Ajoute plusieurs clans en une seule fois')
+      .addStringOption((opt) =>
+        opt
+          .setName('clans')
+          .setDescription('Tags ou IDs séparés par des virgules, espaces ou retours à la ligne')
+          .setRequired(true),
+      ),
   )
   .addSubcommand((sub) =>
     sub
       .setName('remove')
       .setDescription('Retire un clan de la liste suivie')
-      .addIntegerOption((opt) => opt.setName('clan_id').setDescription('ID du clan WoT').setRequired(true)),
+      .addStringOption((opt) =>
+        opt.setName('clan').setDescription('Tag ou ID du clan WoT').setRequired(true),
+      ),
   )
   .addSubcommand((sub) => sub.setName('list').setDescription('Liste les clans suivis'))
   .addSubcommand((sub) =>
@@ -69,26 +85,62 @@ export async function handleClanCommand(interaction: ChatInputCommandInteraction
 
   try {
     if (sub === 'add') {
-      const clanId = interaction.options.getInteger('clan_id', true);
-      const roster = await fetchClanRoster(clanId).catch(() => null);
-      const cfg = await addTrackedClan(guildId, clanId, roster?.tag ?? null, roster?.name ?? null, interaction.user.id);
+      const input = interaction.options.getString('clan', true);
+      const resolved = await resolveClanInput(input).catch(() => null);
+      if (!resolved) {
+        await interaction.editReply(`Clan introuvable pour "${input}". Vérifie le tag ou l'ID.`);
+        return;
+      }
+      const cfg = await addTrackedClan(guildId, resolved.clanId, resolved.tag, resolved.name, interaction.user.id);
       if (!cfg) {
         await interaction.editReply("Échec de l'ajout du clan. Réessaie plus tard.");
         return;
       }
-      const label = roster?.tag ? `[${roster.tag}] ${roster.name}` : `#${clanId}`;
+      const label = resolved.tag ? `[${resolved.tag}] ${resolved.name}` : `#${resolved.clanId}`;
       await interaction.editReply(`Clan ${label} ajouté au suivi (${cfg.tracked_clans.length} clan(s) suivi(s)).`);
       return;
     }
 
+    if (sub === 'bulk-add') {
+      const raw = interaction.options.getString('clans', true);
+      const entries = raw.split(/[\s,;]+/).filter(Boolean);
+      if (entries.length === 0) {
+        await interaction.editReply('Aucun clan à ajouter.');
+        return;
+      }
+      const results = await bulkAddTrackedClans(guildId, entries, interaction.user.id);
+      const added = results.filter((r) => r.status === 'added');
+      const already = results.filter((r) => r.status === 'already_tracked');
+      const notFound = results.filter((r) => r.status === 'not_found');
+      const errors = results.filter((r) => r.status === 'error');
+
+      const lines = [`**Ajout en masse terminé** (${entries.length} entrée(s) traitée(s))`];
+      lines.push(`✅ Ajoutés : ${added.length}`);
+      if (already.length > 0) lines.push(`↪️ Déjà suivis : ${already.length}`);
+      if (notFound.length > 0) lines.push(`❓ Introuvables : ${notFound.map((r) => r.input).join(', ')}`);
+      if (errors.length > 0) lines.push(`⚠️ Erreurs : ${errors.map((r) => r.input).join(', ')}`);
+
+      await interaction.editReply(lines.join('\n').slice(0, 2000));
+      return;
+    }
+
     if (sub === 'remove') {
-      const clanId = interaction.options.getInteger('clan_id', true);
-      const cfg = await removeTrackedClan(guildId, clanId, interaction.user.id);
+      const input = interaction.options.getString('clan', true);
+      const cfg0 = await getGuildConfig(guildId);
+      const match = cfg0.tracked_clans.find(
+        (c) => c.clan_tag?.toLowerCase() === input.toLowerCase() || String(c.clan_id) === input,
+      );
+      if (!match) {
+        await interaction.editReply(`Clan "${input}" introuvable dans la liste suivie.`);
+        return;
+      }
+      const cfg = await removeTrackedClan(guildId, match.clan_id, interaction.user.id);
       if (!cfg) {
         await interaction.editReply('Échec du retrait du clan. Réessaie plus tard.');
         return;
       }
-      await interaction.editReply(`Clan #${clanId} retiré du suivi (${cfg.tracked_clans.length} clan(s) suivi(s)).`);
+      const label = match.clan_tag ? `[${match.clan_tag}]` : `#${match.clan_id}`;
+      await interaction.editReply(`Clan ${label} retiré du suivi (${cfg.tracked_clans.length} clan(s) suivi(s)).`);
       return;
     }
 

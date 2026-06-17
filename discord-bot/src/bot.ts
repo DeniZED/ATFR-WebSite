@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, Events } from 'discord.js';
 import { config } from './config.js';
 import { log, error as logError } from './logger.js';
-import { startDashboard } from './dashboard.js';
+import { startDashboard } from './dashboard/index.js';
 import { startVoiceHistory, flushVoiceHistory } from './voice/history.js';
 import { registerVoiceTracking, primeOpenVoiceSessions } from './voice/tracker.js';
 import { registerMemberSyncTriggers } from './memberSync.js';
