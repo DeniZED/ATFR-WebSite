@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import type { Client } from 'discord.js';
-import { getPlayerTotals, getDailyBreakdown } from './voice-history.js';
+import { getPlayerTotals, getDailyBreakdown } from './voice/history.js';
 
 const HISTORY_DAYS = 30;
 
