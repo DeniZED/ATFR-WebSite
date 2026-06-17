@@ -83,88 +83,127 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   .clan-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
   .tag { display: inline-block; background: #2a2e37; border-radius: 4px; padding: 1px 6px; font-size: 12px; margin-right: 4px; }
   @media (max-width: 880px) { .hist-grid, .grid, .clan-grid { grid-template-columns: 1fr; } }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #2a2e37; }
+  .tab-btn {
+    background: transparent;
+    color: #9aa0ad;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-btn:hover { background: transparent; color: #e6e6e6; }
+  .tab-btn.active { color: #e6e6e6; border-bottom-color: #2f6fed; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .scroll-list { max-height: 360px; overflow-y: auto; }
 </style>
 </head>
 <body>
   <h1>ATFR Discord Bot — Tableau de bord</h1>
-  <div class="grid">
-    <div class="card">
-      <h2>Statut</h2>
-      <div id="status"></div>
-    </div>
-    <div class="card">
-      <h2>En vocal en ce moment</h2>
-      <div id="voice"></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="status">Statut &amp; vocal</button>
+    <button class="tab-btn" data-tab="history">Historique vocal</button>
+    <button class="tab-btn" data-tab="clans">Suivi des clans</button>
+    <button class="tab-btn" data-tab="logs">Logs</button>
+  </div>
+
+  <div id="tab-status" class="tab-content active">
+    <div class="grid">
+      <div class="card">
+        <h2>Statut</h2>
+        <div id="status"></div>
+      </div>
+      <div class="card">
+        <h2>En vocal en ce moment</h2>
+        <div id="voice" class="scroll-list"></div>
+      </div>
     </div>
   </div>
-  <div class="hist-grid">
-    <div class="card">
-      <h2>Temps vocal cumulé — 30 derniers jours</h2>
-      <div id="histTotals"></div>
+
+  <div id="tab-history" class="tab-content">
+    <div class="hist-grid">
+      <div class="card">
+        <h2>Temps vocal cumulé — 30 derniers jours</h2>
+        <div id="histTotals" class="scroll-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Détail par jour</h2>
+          <select id="histDaySelect"></select>
+        </div>
+        <div id="histDay" class="scroll-list"></div>
+      </div>
     </div>
-    <div class="card">
+  </div>
+
+  <div id="tab-clans" class="tab-content">
+    <h2 class="section-title">Suivi des clans World of Tanks</h2>
+    <div class="clan-grid">
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="row">
+          <label>Salon de notification</label>
+          <select id="clanChannelSelect"></select>
+          <button id="clanChannelSave">Enregistrer</button>
+        </div>
+        <div class="row">
+          <label>Intervalle de scan (min)</label>
+          <input type="number" id="clanIntervalInput" min="5" max="1440" style="width: 80px" />
+          <button id="clanIntervalSave">Enregistrer</button>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="clanNotifyLeavesOnly" /> Notifier Discord uniquement pour les sorties</label>
+        </div>
+        <div class="row">
+          <button id="clanScanNow">Scanner maintenant</button>
+        </div>
+        <div id="clanConfigMsg" class="msg"></div>
+      </div>
+      <div class="card">
+        <h2>Ajouter un clan</h2>
+        <div class="row">
+          <input type="text" id="clanAddInput" placeholder="Tag ou ID (ex: ATFR ou 500000123)" style="flex:1" />
+          <button id="clanAddSubmit">Ajouter</button>
+        </div>
+        <div id="clanAddMsg" class="msg"></div>
+        <h2 style="margin-top:16px">Ajout en masse</h2>
+        <textarea id="clanBulkInput" placeholder="Tags ou IDs séparés par des virgules, espaces ou retours à la ligne"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="clanBulkSubmit">Ajouter la liste</button>
+        </div>
+        <div id="clanBulkResult"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
       <div class="card-head">
-        <h2>Détail par jour</h2>
-        <select id="histDaySelect"></select>
+        <h2>Clans suivis</h2>
       </div>
-      <div id="histDay"></div>
+      <div id="clanList" class="scroll-list"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Derniers mouvements</h2>
+      <div id="clanMovements" class="scroll-list"></div>
     </div>
   </div>
 
-  <h2 class="section-title">Suivi des clans World of Tanks</h2>
-  <div class="clan-grid">
+  <div id="tab-logs" class="tab-content">
     <div class="card">
-      <h2>Configuration</h2>
-      <div class="row">
-        <label>Salon de notification</label>
-        <select id="clanChannelSelect"></select>
-        <button id="clanChannelSave">Enregistrer</button>
-      </div>
-      <div class="row">
-        <label>Intervalle de scan (min)</label>
-        <input type="number" id="clanIntervalInput" min="5" max="1440" style="width: 80px" />
-        <button id="clanIntervalSave">Enregistrer</button>
-      </div>
-      <div class="row">
-        <label><input type="checkbox" id="clanNotifyLeavesOnly" /> Notifier Discord uniquement pour les sorties</label>
-      </div>
-      <div class="row">
-        <button id="clanScanNow">Scanner maintenant</button>
-      </div>
-      <div id="clanConfigMsg" class="msg"></div>
+      <h2>Logs en direct</h2>
+      <div id="logs"></div>
     </div>
-    <div class="card">
-      <h2>Ajouter un clan</h2>
-      <div class="row">
-        <input type="text" id="clanAddInput" placeholder="Tag ou ID (ex: ATFR ou 500000123)" style="flex:1" />
-        <button id="clanAddSubmit">Ajouter</button>
-      </div>
-      <div id="clanAddMsg" class="msg"></div>
-      <h2 style="margin-top:16px">Ajout en masse</h2>
-      <textarea id="clanBulkInput" placeholder="Tags ou IDs séparés par des virgules, espaces ou retours à la ligne"></textarea>
-      <div class="row" style="margin-top:8px">
-        <button id="clanBulkSubmit">Ajouter la liste</button>
-      </div>
-      <div id="clanBulkResult"></div>
-    </div>
-  </div>
-  <div class="card" style="margin-top:16px">
-    <div class="card-head">
-      <h2>Clans suivis</h2>
-    </div>
-    <div id="clanList"></div>
-  </div>
-  <div class="card" style="margin-top:16px">
-    <h2>Derniers mouvements</h2>
-    <div id="clanMovements"></div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h2>Logs en direct</h2>
-    <div id="logs"></div>
   </div>
 
 <script>
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
 function fmtDuration(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);

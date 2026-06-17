@@ -5,6 +5,13 @@
 // Wargaming API plus the XVM expected-values table. See
 // `netlify/functions/player-stats.mts`.
 
+export interface PlayerRecentStats {
+  battles: number | null;
+  winRate: number | null;
+  wn8: number | null;
+  avgTier: number | null;
+}
+
 export interface PlayerExtendedStats {
   accountId: number;
   nickname: string;
@@ -12,9 +19,13 @@ export interface PlayerExtendedStats {
   winRate: number | null;
   battles: number;
   damagePerBattle: number | null;
+  avgTier: number | null;
   tier10Count: number;
   globalRating: number;
   lastBattleTime: number;
+  recent: PlayerRecentStats | null;
+  recruitmentScore: number | null;
+  recruitmentThresholds: { minWn8: number; minBattles: number };
   profileUrl: string;
 }
 
@@ -35,6 +46,29 @@ export async function getPlayerExtendedStats(
     return { ...data, profileUrl: tomatoProfileUrl(nickname) };
   } catch {
     return null;
+  }
+}
+
+/** Récupère les stats de plusieurs joueurs en un seul appel (filtre Mouvements). */
+export async function getPlayerExtendedStatsBatch(
+  accountIds: number[],
+  nicknameByAccountId: Map<number, string>,
+): Promise<Map<number, PlayerExtendedStats>> {
+  const result = new Map<number, PlayerExtendedStats>();
+  if (accountIds.length === 0) return result;
+  try {
+    const res = await fetch(
+      `/.netlify/functions/player-stats?account_ids=${accountIds.join(',')}`,
+    );
+    if (!res.ok) return result;
+    const data = (await res.json()) as { players: Omit<PlayerExtendedStats, 'profileUrl'>[] };
+    for (const player of data.players) {
+      const nickname = nicknameByAccountId.get(player.accountId) ?? player.nickname;
+      result.set(player.accountId, { ...player, profileUrl: tomatoProfileUrl(nickname) });
+    }
+    return result;
+  } catch {
+    return result;
   }
 }
 

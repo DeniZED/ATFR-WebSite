@@ -7,7 +7,8 @@ import {
   useCreateProspectFromMovement,
   useUpdateMovementContactStatus,
 } from '@/features/clanMovements/queries';
-import { usePlayerLookup } from '@/features/stats/queries';
+import { useMovementsStatsBatch, usePlayerLookup } from '@/features/stats/queries';
+import { wn8Color, type PlayerExtendedStats } from '@/lib/tomato-api';
 import type { ClanMemberMovementRow, ClanMovementContactStatus } from '@/types/database';
 
 type EventFilter = 'all' | 'join' | 'leave';
@@ -40,6 +41,7 @@ export function ClanMovementsTab({
   const [contactFilter, setContactFilter] = useState<ContactFilter>('all');
   const [clanFilter, setClanFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [minWn8, setMinWn8] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const clanOptions = useMemo(() => {
@@ -50,7 +52,7 @@ export function ClanMovementsTab({
     return [...values].sort((a, b) => a.localeCompare(b));
   }, [movements.data]);
 
-  const filtered = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (movements.data ?? []).filter((movement) => {
       const matchesEvent = eventFilter === 'all' || movement.event === eventFilter;
@@ -62,6 +64,21 @@ export function ClanMovementsTab({
       return matchesEvent && matchesContact && matchesClan && matchesSearch;
     });
   }, [movements.data, eventFilter, contactFilter, clanFilter, search]);
+
+  // Stats WN8/score chargées en masse pour les 50 premiers résultats — au-delà,
+  // le filtre WN8 ne s'applique pas (évite de spammer l'API tomato.gg/WG).
+  const STATS_BATCH_LIMIT = 50;
+  const statsTargets = useMemo(() => baseFiltered.slice(0, STATS_BATCH_LIMIT), [baseFiltered]);
+  const statsBatch = useMovementsStatsBatch(statsTargets);
+  const minWn8Value = minWn8.trim() ? Number(minWn8) : null;
+
+  const filtered = useMemo(() => {
+    if (minWn8Value == null || !Number.isFinite(minWn8Value)) return baseFiltered;
+    return baseFiltered.filter((movement) => {
+      const stats = statsBatch.data?.get(movement.account_id);
+      return stats?.wn8 != null && stats.wn8 >= minWn8Value;
+    });
+  }, [baseFiltered, minWn8Value, statsBatch.data]);
 
   async function handleAddProspect(movement: ClanMemberMovementRow) {
     try {
@@ -116,7 +133,21 @@ export function ClanMovementsTab({
                 </option>
               ))}
             </Select>
+            <Input
+              type="number"
+              label="WN8 minimum"
+              placeholder="Ex. 1250"
+              value={minWn8}
+              onChange={(e) => setMinWn8(e.target.value)}
+              hint={statsBatch.isFetching ? 'Chargement des stats…' : undefined}
+            />
           </div>
+          {minWn8Value != null && baseFiltered.length > STATS_BATCH_LIMIT && (
+            <Alert tone="warning">
+              Le filtre WN8 ne s'applique qu'aux {STATS_BATCH_LIMIT} premiers résultats
+              ({baseFiltered.length} au total) — affinez les autres filtres pour réduire la liste.
+            </Alert>
+          )}
         </CardBody>
       </Card>
 
@@ -150,6 +181,7 @@ export function ClanMovementsTab({
                     <th className="px-4 py-3 text-left font-medium">Clan</th>
                     <th className="px-4 py-3 text-left font-medium">Mouvement</th>
                     <th className="px-4 py-3 text-left font-medium">Date</th>
+                    <th className="px-4 py-3 text-left font-medium">Score</th>
                     <th className="px-4 py-3 text-left font-medium">Suivi</th>
                     <th className="px-4 py-3 text-left font-medium">Action</th>
                   </tr>
@@ -159,6 +191,7 @@ export function ClanMovementsTab({
                     <MovementRow
                       key={movement.id}
                       movement={movement}
+                      stats={statsBatch.data?.get(movement.account_id) ?? null}
                       linkedPlayerNickname={
                         movement.linked_player_id
                           ? playerNicknamesById.get(movement.linked_player_id) ?? null
@@ -187,6 +220,7 @@ export function ClanMovementsTab({
 
 function MovementRow({
   movement,
+  stats,
   linkedPlayerNickname,
   expanded,
   onToggleExpand,
@@ -195,6 +229,7 @@ function MovementRow({
   addingProspect,
 }: {
   movement: ClanMemberMovementRow;
+  stats: PlayerExtendedStats | null;
   linkedPlayerNickname: string | null;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -221,6 +256,15 @@ function MovementRow({
         </td>
         <td className="px-4 py-4 text-atfr-fog">
           {new Date(movement.occurred_at).toLocaleString('fr-FR')}
+        </td>
+        <td className="px-4 py-4">
+          {stats?.recruitmentScore != null ? (
+            <span className={`font-display text-lg ${wn8Color(stats.wn8)}`}>
+              {stats.recruitmentScore}
+            </span>
+          ) : (
+            <span className="text-atfr-fog">—</span>
+          )}
         </td>
         <td className="px-4 py-4">
           <Select
@@ -255,7 +299,7 @@ function MovementRow({
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="px-4 py-4 bg-atfr-ink/40">
+          <td colSpan={7} className="px-4 py-4 bg-atfr-ink/40">
             <PlayerLookupCard loading={lookup.isLoading} data={lookup.data} error={lookup.error} />
           </td>
         </tr>

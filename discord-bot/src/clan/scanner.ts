@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js';
 import { log, warn, error as logError } from '../logger.js';
 import { fetchClanRoster } from './wgClient.js';
-import { syncClanRoster } from '../supabaseSync.js';
+import { syncClanRoster, getPlayerStats } from '../supabaseSync.js';
 import { getGuildConfig } from '../guildConfig.js';
 import { buildClanMovementEmbed } from '../notifications/clanEmbeds.js';
 import type { ClanMovement, TrackedClanEntry } from './types.js';
@@ -61,6 +61,10 @@ async function scanClanForGuild(
 
   const notifiable = notifyLeavesOnly ? result.leaves : movements;
   for (const movement of notifiable) {
+    const stats = await getPlayerStats(movement.account_id).catch((err: unknown) => {
+      warn(`Stats indisponibles pour le joueur ${movement.account_id}: ${String(err)}`);
+      return null;
+    });
     const embed = buildClanMovementEmbed({
       clanTag: roster.tag ?? clan.clan_tag,
       clanName: roster.name ?? clan.clan_name,
@@ -69,6 +73,7 @@ async function scanClanForGuild(
       role: movement.role,
       event: movement.event,
       occurredAt: new Date(),
+      stats,
     });
     await channel.send({ embeds: [embed] }).catch((err: unknown) =>
       logError("Échec de l'envoi de la notification de mouvement de clan:", err),

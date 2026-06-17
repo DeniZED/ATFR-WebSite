@@ -50,4 +50,5 @@ export const endpoints = {
   clanSync: `${config.site.url}/.netlify/functions/discord-clan-sync`,
   clanConfig: `${config.site.url}/.netlify/functions/discord-clan-config`,
   clanMovements: `${config.site.url}/.netlify/functions/discord-clan-movements`,
+  playerStats: `${config.site.url}/.netlify/functions/player-stats`,
 };
