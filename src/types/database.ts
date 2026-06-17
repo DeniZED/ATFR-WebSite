@@ -25,6 +25,7 @@ export type StaffNoteType =
   | 'absence'
   | 'behavior'
   | 'other';
+export type ClanMovementContactStatus = 'new' | 'contacted' | 'linked' | 'ignored';
 export type PlayerAlertSeverity = 'info' | 'warning' | 'danger';
 export type PlayerAlertKind =
   | 'inactive'
@@ -602,6 +603,7 @@ export interface Database {
           clan_notify_channel_id: string | null;
           tracked_clans: TrackedClanEntry[];
           scan_interval_minutes: number;
+          notify_leaves_only: boolean;
           created_at: string;
           updated_at: string;
           updated_by: string | null;
@@ -611,6 +613,7 @@ export interface Database {
           clan_notify_channel_id?: string | null;
           tracked_clans?: TrackedClanEntry[];
           scan_interval_minutes?: number;
+          notify_leaves_only?: boolean;
           created_at?: string;
           updated_at?: string;
           updated_by?: string | null;
@@ -620,6 +623,7 @@ export interface Database {
           clan_notify_channel_id?: string | null;
           tracked_clans?: TrackedClanEntry[];
           scan_interval_minutes?: number;
+          notify_leaves_only?: boolean;
           created_at?: string;
           updated_at?: string;
           updated_by?: string | null;
@@ -663,6 +667,8 @@ export interface Database {
           account_name: string;
           role: string | null;
           event: 'join' | 'leave';
+          contact_status: ClanMovementContactStatus;
+          linked_player_id: string | null;
           occurred_at: string;
           created_at: string;
         };
@@ -675,6 +681,8 @@ export interface Database {
           account_name: string;
           role?: string | null;
           event: 'join' | 'leave';
+          contact_status?: ClanMovementContactStatus;
+          linked_player_id?: string | null;
           occurred_at?: string;
           created_at?: string;
         };
@@ -687,6 +695,8 @@ export interface Database {
           account_name?: string;
           role?: string | null;
           event?: 'join' | 'leave';
+          contact_status?: ClanMovementContactStatus;
+          linked_player_id?: string | null;
           occurred_at?: string;
           created_at?: string;
         };
@@ -1663,6 +1673,7 @@ export interface Database {
           p_tracked_clans?: TrackedClanEntry[] | null;
           p_scan_interval_minutes?: number | null;
           p_updated_by?: string | null;
+          p_notify_leaves_only?: boolean | null;
         };
         Returns: Database['public']['Tables']['discord_bot_guild_configs']['Row'];
       };

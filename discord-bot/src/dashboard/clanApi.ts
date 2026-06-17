@@ -8,6 +8,7 @@ import {
   removeTrackedClan,
   setNotifyChannel,
   setScanInterval,
+  setNotifyLeavesOnly,
 } from '../guildConfig.js';
 import { getRecentMovements } from '../supabaseSync.js';
 import { resolveClanInput } from '../clan/wgClient.js';
@@ -93,6 +94,14 @@ export async function handleClanApi(
         return true;
       }
       const cfg = await setScanInterval(guildId, minutes, 'dashboard');
+      sendJson(res, { config: cfg });
+      return true;
+    }
+
+    if (url === '/api/clan/notify-leaves-only' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const enabled = body.enabled === true;
+      const cfg = await setNotifyLeavesOnly(guildId, enabled, 'dashboard');
       sendJson(res, { config: cfg });
       return true;
     }

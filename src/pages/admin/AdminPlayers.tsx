@@ -49,6 +49,7 @@ import { useContent } from '@/hooks/useContent';
 import { useRole } from '@/hooks/useRole';
 import type { DiscordMemberPayload, PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
+import { ClanMovementsTab } from '@/components/admin/ClanMovementsTab';
 
 type PeriodPreset = '7' | '14' | '30' | '90' | 'custom';
 type PresenceFilter = 'all' | 'present' | 'missing';
@@ -59,7 +60,7 @@ export default function AdminPlayers() {
   const navigate = useNavigate();
   const { can, isLoading: roleLoading } = useRole();
   const canManageRh = can('members');
-  const [tab, setTab] = useState<'active' | 'archive'>('active');
+  const [tab, setTab] = useState<'active' | 'archive' | 'movements'>('active');
   const [search, setSearch] = useState('');
   const [clan, setClan] = useState('all');
   const [status, setStatus] = useState<PlayerHrStatus | 'all'>('all');
@@ -153,6 +154,11 @@ export default function AdminPlayers() {
     [allRows],
   );
   const tabRows = tab === 'archive' ? archivedPlayers : activePlayers;
+
+  const playerNicknamesById = useMemo(
+    () => new Map(allRows.map((s) => [s.player.id, s.player.nickname])),
+    [allRows],
+  );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -388,12 +394,13 @@ export default function AdminPlayers() {
       ) : (
         <>
 
-      {/* ── Tabs: actifs / archive ── */}
+      {/* ── Tabs: actifs / archive / mouvements ── */}
       <div className="flex gap-1 border-b border-atfr-gold/15 pb-0">
         {(
           [
             { key: 'active', label: `Actifs (${activePlayers.length})` },
             { key: 'archive', label: `Archive (${archivedPlayers.length})` },
+            { key: 'movements', label: 'Mouvements' },
           ] as const
         ).map(({ key, label }) => (
           <button
@@ -411,6 +418,10 @@ export default function AdminPlayers() {
         ))}
       </div>
 
+      {tab === 'movements' ? (
+        <ClanMovementsTab playerNicknamesById={playerNicknamesById} />
+      ) : (
+      <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <StatCard
           label="Joueurs suivis"
@@ -690,6 +701,8 @@ export default function AdminPlayers() {
         <EmptyState hasSearch={search.length > 0} hasFilter={hasActiveFilter} />
       ) : (
         <PlayerTable players={filtered} discordNameKeys={discordNameKeys} />
+      )}
+      </>
       )}
         </>
       )}

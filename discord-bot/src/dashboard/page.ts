@@ -126,6 +126,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         <button id="clanIntervalSave">Enregistrer</button>
       </div>
       <div class="row">
+        <label><input type="checkbox" id="clanNotifyLeavesOnly" /> Notifier Discord uniquement pour les sorties</label>
+      </div>
+      <div class="row">
         <button id="clanScanNow">Scanner maintenant</button>
       </div>
       <div id="clanConfigMsg" class="msg"></div>
@@ -344,6 +347,7 @@ function renderClanConfig(data) {
     .map((c) => \`<option value="\${c.id}">#\${c.name}</option>\`).join('');
   select.value = cfg.clan_notify_channel_id ?? '';
   document.getElementById('clanIntervalInput').value = cfg.scan_interval_minutes;
+  document.getElementById('clanNotifyLeavesOnly').checked = Boolean(cfg.notify_leaves_only);
   renderClanList(cfg);
 }
 
@@ -400,6 +404,18 @@ document.getElementById('clanIntervalSave').addEventListener('click', async () =
     setMsg('clanConfigMsg', 'Intervalle de scan mis à jour.', true);
     renderClanConfig({ config: data.config, channels: clanChannels });
   } catch (err) {
+    setMsg('clanConfigMsg', err.message, false);
+  }
+});
+
+document.getElementById('clanNotifyLeavesOnly').addEventListener('change', async (e) => {
+  const enabled = e.target.checked;
+  try {
+    const data = await postJson('/api/clan/notify-leaves-only', { enabled });
+    setMsg('clanConfigMsg', enabled ? 'Notifications limitées aux sorties.' : 'Notifications entrées + sorties.', true);
+    renderClanConfig({ config: data.config, channels: clanChannels });
+  } catch (err) {
+    e.target.checked = !enabled;
     setMsg('clanConfigMsg', err.message, false);
   }
 });

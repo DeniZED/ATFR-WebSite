@@ -59,6 +59,7 @@ interface RawGuildConfig {
   clan_notify_channel_id: string | null;
   tracked_clans: TrackedClanEntry[] | null;
   scan_interval_minutes: number | null;
+  notify_leaves_only: boolean | null;
 }
 
 function normalizeConfig(guildId: string, raw: RawGuildConfig | null): GuildClanConfig {
@@ -67,6 +68,7 @@ function normalizeConfig(guildId: string, raw: RawGuildConfig | null): GuildClan
     clan_notify_channel_id: raw?.clan_notify_channel_id ?? null,
     tracked_clans: raw?.tracked_clans ?? [],
     scan_interval_minutes: raw?.scan_interval_minutes ?? config.clanTracker.defaultScanIntervalMinutes,
+    notify_leaves_only: raw?.notify_leaves_only ?? false,
   };
 }
 
@@ -126,6 +128,17 @@ export async function setScanInterval(
 ): Promise<GuildClanConfig | null> {
   const res = await callSite<{ config: RawGuildConfig }>(endpoints.clanConfig, {
     body: { guild_id: guildId, action: 'set_interval', scan_interval_minutes: minutes, updated_by: updatedBy },
+  });
+  return res ? normalizeConfig(guildId, res.config) : null;
+}
+
+export async function setNotifyLeavesOnly(
+  guildId: string,
+  enabled: boolean,
+  updatedBy: string | null,
+): Promise<GuildClanConfig | null> {
+  const res = await callSite<{ config: RawGuildConfig }>(endpoints.clanConfig, {
+    body: { guild_id: guildId, action: 'set_notify_leaves_only', notify_leaves_only: enabled, updated_by: updatedBy },
   });
   return res ? normalizeConfig(guildId, res.config) : null;
 }
