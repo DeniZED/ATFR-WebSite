@@ -169,7 +169,7 @@ Il affiche en temps réel (rafraîchissement toutes les 3 secondes) :
 - **Logs** : flux des derniers événements (300 lignes max conservées en mémoire)
 - **Historique vocal (30 derniers jours)** : temps cumulé par membre + détail par jour, calculé localement à partir des sessions vocales complètes (join → leave). Stocké dans `discord-bot/data/voice-history.json` (ignoré par git, propre au VPS), purgé automatiquement au-delà de 30 jours.
 - **Suivi des clans** : section complète de gestion, sans avoir besoin de Discord :
-  - Configuration : salon de notification (liste déroulante des salons textuels du serveur), intervalle de scan (5–1440 min), bouton "Scanner maintenant"
+  - Configuration : salon de notification (liste déroulante des salons textuels du serveur), intervalle de scan (5–1440 min), case "Notifier Discord uniquement pour les sorties" (réduit le bruit avec 100+ clans suivis, sans affecter l'historique Supabase qui enregistre toujours entrées et sorties), bouton "Scanner maintenant"
   - Liste des clans suivis avec retrait en un clic
   - Ajout d'un clan unique (tag ou clan_id, résolu via l'API Wargaming)
   - **Ajout en masse** : colle une liste de tags/IDs (séparés par espace, virgule ou retour à la ligne) et le dashboard les résout et les ajoute un par un, avec un résumé (ajoutés / déjà suivis / introuvables / erreurs)

@@ -12,7 +12,7 @@ export async function scanAllClansForGuild(client: Client, guildId: string): Pro
 
   for (const clan of cfg.tracked_clans) {
     try {
-      await scanClanForGuild(client, guildId, clan, cfg.clan_notify_channel_id);
+      await scanClanForGuild(client, guildId, clan, cfg.clan_notify_channel_id, cfg.notify_leaves_only);
     } catch (err) {
       logError(`Clan scan failed (guild=${guildId}, clan=${clan.clan_id}):`, err);
     }
@@ -24,6 +24,7 @@ async function scanClanForGuild(
   guildId: string,
   clan: TrackedClanEntry,
   notifyChannelId: string | null,
+  notifyLeavesOnly: boolean,
 ): Promise<void> {
   const roster = await fetchClanRoster(clan.clan_id);
   if (!roster) {
@@ -58,7 +59,8 @@ async function scanClanForGuild(
     return;
   }
 
-  for (const movement of movements) {
+  const notifiable = notifyLeavesOnly ? result.leaves : movements;
+  for (const movement of notifiable) {
     const embed = buildClanMovementEmbed({
       clanTag: roster.tag ?? clan.clan_tag,
       clanName: roster.name ?? clan.clan_name,

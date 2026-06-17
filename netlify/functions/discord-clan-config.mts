@@ -10,7 +10,7 @@ if (!process.env.ALLOWED_ORIGINS) {
   console.warn('[discord-clan-config] ALLOWED_ORIGINS is not set — all cross-origin requests will be rejected.');
 }
 
-type ConfigAction = 'add_clan' | 'remove_clan' | 'set_channel' | 'set_interval';
+type ConfigAction = 'add_clan' | 'remove_clan' | 'set_channel' | 'set_interval' | 'set_notify_leaves_only';
 
 interface ConfigRequestPayload {
   guild_id?: string;
@@ -20,6 +20,7 @@ interface ConfigRequestPayload {
   clan_name?: string | null;
   channel_id?: string | null;
   scan_interval_minutes?: number;
+  notify_leaves_only?: boolean;
   updated_by?: string | null;
 }
 
@@ -119,7 +120,8 @@ function isValidAction(action: unknown): action is ConfigAction {
     action === 'add_clan' ||
     action === 'remove_clan' ||
     action === 'set_channel' ||
-    action === 'set_interval'
+    action === 'set_interval' ||
+    action === 'set_notify_leaves_only'
   );
 }
 
@@ -195,6 +197,18 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
         p_tracked_clans: null,
         p_scan_interval_minutes: payload.scan_interval_minutes,
         p_updated_by: payload.updated_by ?? null,
+      });
+    } else if (payload.action === 'set_notify_leaves_only') {
+      if (typeof payload.notify_leaves_only !== 'boolean') {
+        return json({ error: 'notify_leaves_only is required' }, 400, origin);
+      }
+      result = await rpc('upsert_discord_bot_guild_config', {
+        p_guild_id: payload.guild_id,
+        p_clan_notify_channel_id: null,
+        p_tracked_clans: null,
+        p_scan_interval_minutes: null,
+        p_updated_by: payload.updated_by ?? null,
+        p_notify_leaves_only: payload.notify_leaves_only,
       });
     } else {
       result = await rpc('upsert_discord_bot_guild_config', {

@@ -31,4 +31,5 @@ export interface GuildClanConfig {
   clan_notify_channel_id: string | null;
   tracked_clans: TrackedClanEntry[];
   scan_interval_minutes: number;
+  notify_leaves_only: boolean;
 }
