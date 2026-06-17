@@ -10,7 +10,7 @@ if (!process.env.ALLOWED_ORIGINS) {
   console.warn('[discord-clan-config] ALLOWED_ORIGINS is not set — all cross-origin requests will be rejected.');
 }
 
-type ConfigAction = 'add_clan' | 'remove_clan' | 'set_channel';
+type ConfigAction = 'add_clan' | 'remove_clan' | 'set_channel' | 'set_interval';
 
 interface ConfigRequestPayload {
   guild_id?: string;
@@ -19,6 +19,7 @@ interface ConfigRequestPayload {
   clan_tag?: string | null;
   clan_name?: string | null;
   channel_id?: string | null;
+  scan_interval_minutes?: number;
   updated_by?: string | null;
 }
 
@@ -114,7 +115,12 @@ async function getConfig(guildId: string): Promise<unknown> {
 }
 
 function isValidAction(action: unknown): action is ConfigAction {
-  return action === 'add_clan' || action === 'remove_clan' || action === 'set_channel';
+  return (
+    action === 'add_clan' ||
+    action === 'remove_clan' ||
+    action === 'set_channel' ||
+    action === 'set_interval'
+  );
 }
 
 export default async (req: Request, _ctx: Context): Promise<Response> => {
@@ -177,6 +183,17 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
       result = await rpc('remove_tracked_clan', {
         p_guild_id: payload.guild_id,
         p_clan_id: payload.clan_id,
+        p_updated_by: payload.updated_by ?? null,
+      });
+    } else if (payload.action === 'set_interval') {
+      if (typeof payload.scan_interval_minutes !== 'number' || !Number.isFinite(payload.scan_interval_minutes)) {
+        return json({ error: 'scan_interval_minutes is required' }, 400, origin);
+      }
+      result = await rpc('upsert_discord_bot_guild_config', {
+        p_guild_id: payload.guild_id,
+        p_clan_notify_channel_id: null,
+        p_tracked_clans: null,
+        p_scan_interval_minutes: payload.scan_interval_minutes,
         p_updated_by: payload.updated_by ?? null,
       });
     } else {

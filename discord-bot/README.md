@@ -18,8 +18,9 @@ Bot Discord pour le suivi RH (vocal, arrivées/départs membres, sync automatiqu
 
 | Commande | Description |
 |----------|--------------|
-| `/clan add <clan_id>` | Ajoute un clan WoT à la liste suivie |
-| `/clan remove <clan_id>` | Retire un clan de la liste suivie |
+| `/clan add <clan>` | Ajoute un clan WoT à la liste suivie (tag ou clan_id) |
+| `/clan bulk-add <clans>` | Ajoute plusieurs clans en une fois (tags/IDs séparés par espace, virgule ou retour à la ligne) |
+| `/clan remove <clan>` | Retire un clan de la liste suivie (tag ou clan_id) |
 | `/clan list` | Liste les clans actuellement suivis |
 | `/clan channel <salon>` | Définit le salon de notification des mouvements |
 | `/clan scan` | Force un scan immédiat de tous les clans suivis |
@@ -141,12 +142,16 @@ pm2 restart atfr-discord-bot
 | `SYNC_CRON` | ❌ | Cron sync membres + scan clans quotidien (défaut : `0 3 * * *`) |
 | `DEBUG` | ❌ | Logs détaillés — `true`/`false` |
 | `DASHBOARD_PORT` | ❌ | Port du tableau de bord local (défaut : `3000`) |
+| `DASHBOARD_USERNAME` | ❌ | Identifiant pour l'authentification HTTP Basic du dashboard (voir ci-dessous) |
+| `DASHBOARD_PASSWORD` | ❌ | Mot de passe pour l'authentification HTTP Basic du dashboard |
 | `WOT_APPLICATION_ID` | ✅* | ID d'application Wargaming (requis pour le suivi de clans) |
 | `WG_API_BASE` | ❌ | Base de l'API WG (défaut : `https://api.worldoftanks.eu/wot`) |
 | `CLAN_SCAN_INTERVAL_MINUTES` | ❌ | Intervalle par défaut entre deux scans par serveur (défaut : `15`) |
-| `DEFAULT_TRACKED_CLAN_IDS` | ❌ | Liste de `clan_id` (séparés par des virgules) chargée au premier démarrage |
+| `DEFAULT_TRACKED_CLAN_IDS` | ❌ | Liste de `clan_id` numériques (séparés par des virgules) chargée au premier démarrage |
 
 \* requis uniquement pour utiliser le suivi de clans ; sans cette variable, le scan est simplement ignoré et le reste du bot fonctionne normalement.
+
+> `DEFAULT_TRACKED_CLAN_IDS` n'accepte que des `clan_id` numériques (chargés directement, sans appel API). Pour ajouter des clans par **tag**, utilise plutôt `/clan bulk-add` ou la section "Ajout en masse" du dashboard — les tags sont résolus via l'API Wargaming.
 
 ---
 
@@ -163,10 +168,20 @@ Il affiche en temps réel (rafraîchissement toutes les 3 secondes) :
 - **Vocal en direct** : qui est actuellement en salon vocal et depuis combien de temps
 - **Logs** : flux des derniers événements (300 lignes max conservées en mémoire)
 - **Historique vocal (30 derniers jours)** : temps cumulé par membre + détail par jour, calculé localement à partir des sessions vocales complètes (join → leave). Stocké dans `discord-bot/data/voice-history.json` (ignoré par git, propre au VPS), purgé automatiquement au-delà de 30 jours.
+- **Suivi des clans** : section complète de gestion, sans avoir besoin de Discord :
+  - Configuration : salon de notification (liste déroulante des salons textuels du serveur), intervalle de scan (5–1440 min), bouton "Scanner maintenant"
+  - Liste des clans suivis avec retrait en un clic
+  - Ajout d'un clan unique (tag ou clan_id, résolu via l'API Wargaming)
+  - **Ajout en masse** : colle une liste de tags/IDs (séparés par espace, virgule ou retour à la ligne) et le dashboard les résout et les ajoute un par un, avec un résumé (ajoutés / déjà suivis / introuvables / erreurs)
+  - Derniers mouvements enregistrés (entrées/sorties, 25 plus récents)
 
-Pratique pour vérifier d'un coup d'œil que le bot tourne correctement et consulter l'activité vocale **avant** que la sync quotidienne ne mette le site à jour, sans avoir à lancer `pm2 logs`.
+Pratique pour vérifier d'un coup d'œil que le bot tourne correctement, consulter l'activité vocale et gérer le suivi de clans **avant** que la sync quotidienne ne mette le site à jour, sans avoir à lancer `pm2 logs` ni à passer par Discord.
 
-> Cet historique est local au bot — il ne remplace pas les données du site (Supabase reste la source de vérité pour le RH). Il sert de consultation rapide côté VPS.
+> Cet historique est local au bot — il ne remplace pas les données du site (Supabase reste la source de vérité pour le RH et l'historique des mouvements de clan). Il sert de consultation et de gestion rapide côté VPS.
+
+### Sécuriser le dashboard
+
+Par défaut, le dashboard est **ouvert** (aucune authentification), comme avant. Maintenant qu'il permet aussi de modifier la configuration (salon, intervalle, clans suivis), il est recommandé de définir `DASHBOARD_USERNAME` et `DASHBOARD_PASSWORD` dans `.env` si le port est exposé au-delà de `localhost` (ex : tunnel SSH, reverse proxy). Si l'une des deux variables est absente, le dashboard reste inchangé (pas d'authentification) et un avertissement est loggé au démarrage.
 
 ---
 
@@ -182,19 +197,25 @@ discord-bot/src/
   guildConfig.ts               ── cache de config par serveur (+ mutations)
   memberSync.ts                ── déclenche la sync membres (debounce)
   scheduler.ts                  ── tâches planifiées (cron quotidien, scan clans)
-  dashboard.ts                 ── mini tableau de bord HTTP local (VPS)
+  dashboard/
+    index.ts                    ── serveur HTTP local (VPS), assemble routes + auth
+    state.ts                     ── état en mémoire (logs, sessions vocales actives)
+    auth.ts                       ── authentification HTTP Basic optionnelle
+    clanApi.ts                    ── routes /api/clan/* (config, add, bulk-add, remove, scan, movements)
+    page.ts                       ── page HTML du dashboard (vanilla JS, polling)
   voice/
     tracker.ts                 ── détection des événements vocaux Discord
     history.ts                  ── historique vocal local (data/voice-history.json)
   clan/
     types.ts                    ── types partagés du suivi de clans
-    wgClient.ts                  ── client API Wargaming (roster de clan)
+    wgClient.ts                  ── client API Wargaming (roster de clan, résolution tag→ID)
+    bulkAdd.ts                    ── ajout en masse partagé (commande Discord + dashboard)
     scanner.ts                   ── orchestration d'un scan (diff + notif)
   notifications/
     clanEmbeds.ts                ── construction des embeds de mouvement
   commands/
     registry.ts                  ── enregistrement des commandes slash
-    clanCommands.ts               ── /clan add|remove|list|channel|scan|movements
+    clanCommands.ts               ── /clan add|bulk-add|remove|list|channel|scan|movements
     voiceCommands.ts              ── /voice stats
     handleInteraction.ts          ── dispatch des interactions Discord
 ```
@@ -228,9 +249,14 @@ scheduler.ts (intervalle par serveur + cron quotidien)
         │                                       └─ sync_clan_roster() : diff atomique + historique (Supabase)
         └─► notifications/clanEmbeds.ts ──► envoi des embeds dans le salon configuré
 
-commands/clanCommands.ts (/clan add|remove|channel)
-  └─► guildConfig.ts ──► Netlify /discord-clan-config (GET/POST)
+commands/clanCommands.ts (/clan add|bulk-add|remove|channel)
+  ├─► clan/wgClient.ts (resolveClanInput) ──► API Wargaming (/clans/info/ ou /clans/list/)
+  ├─► clan/bulkAdd.ts (bulkAddTrackedClans, partagé avec le dashboard)
+  └─► guildConfig.ts ──► Netlify /discord-clan-config (GET/POST, action set_interval incluse)
 
 commands/clanCommands.ts (/clan movements)
   └─► supabaseSync.getRecentMovements() ──► Netlify /discord-clan-movements (GET)
+
+dashboard/clanApi.ts (/api/clan/config|channel|interval|add|bulk-add|remove|scan|movements)
+  └─► mêmes modules que les commandes Discord (guildConfig.ts, clan/bulkAdd.ts, scheduler.runGuildScan)
 ```

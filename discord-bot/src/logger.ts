@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import { pushLog } from './dashboard.js';
+import { pushLog } from './dashboard/index.js';
 
 function formatArg(arg: unknown): string {
   if (typeof arg === 'string') return arg;

@@ -37,6 +37,37 @@ async function wg<T>(path: string, params: Record<string, string>): Promise<T> {
   return body.data;
 }
 
+export interface ResolvedClan {
+  clanId: number;
+  tag: string | null;
+  name: string | null;
+}
+
+/** Résout un tag de clan WoT vers son clan_id via l'API WG (recherche + correspondance exacte). */
+export async function searchClanByTag(tag: string): Promise<ResolvedClan | null> {
+  const cleaned = tag.trim();
+  if (cleaned.length < 2) return null;
+  const results = await wg<Array<{ clan_id: number; tag: string; name: string }> | null>('/clans/list/', {
+    search: cleaned,
+    limit: '20',
+    fields: 'clan_id,tag,name',
+  });
+  if (!results) return null;
+  const exact = results.find((c) => c.tag.toLowerCase() === cleaned.toLowerCase());
+  if (!exact) return null;
+  return { clanId: exact.clan_id, tag: exact.tag, name: exact.name };
+}
+
+/** Accepte un clan_id numérique ou un tag, et retourne le clan résolu. */
+export async function resolveClanInput(input: string): Promise<ResolvedClan | null> {
+  const trimmed = input.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const roster = await fetchClanRoster(Number(trimmed));
+    return roster ? { clanId: roster.clanId, tag: roster.tag, name: roster.name } : null;
+  }
+  return searchClanByTag(trimmed);
+}
+
 export async function fetchClanRoster(clanId: number): Promise<ClanRoster | null> {
   const clanMap = await wg<Record<string, WgClanInfo | null>>('/clans/info/', {
     clan_id: String(clanId),

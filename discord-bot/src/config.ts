@@ -25,6 +25,9 @@ export const config = {
     syncCron: process.env.SYNC_CRON ?? '0 3 * * *',
     debug: process.env.DEBUG === 'true',
     dashboardPort: Number(process.env.DASHBOARD_PORT ?? '3000'),
+    // Si les deux sont définis, le dashboard local exige une authentification HTTP Basic.
+    dashboardUsername: process.env.DASHBOARD_USERNAME || null,
+    dashboardPassword: process.env.DASHBOARD_PASSWORD || null,
   },
   clanTracker: {
     // Sans clé WG, le module de suivi de clans reste désactivé (le bot
