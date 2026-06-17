@@ -18,7 +18,6 @@ React 18 · Vite · TypeScript · Tailwind · Supabase · Netlify.
 | Framework      | React 18 + Vite                                           |
 | Langage        | TypeScript strict                                         |
 | Routing        | react-router-dom                                          |
-| État global    | Zustand                                                    |
 | UI             | Tailwind CSS, lucide-react, framer-motion, CVA            |
 | Formulaires    | react-hook-form + zod                                     |
 | Data-fetching  | TanStack Query                                            |
