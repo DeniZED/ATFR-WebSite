@@ -26,6 +26,7 @@ export function startDashboard(client: Client, port: number): void {
       }
 
       const url = req.url ?? '/';
+      res.setHeader('Cache-Control', 'no-store');
 
       if (url === '/' || url === '/index.html') {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });

@@ -8,8 +8,12 @@ import type { ClanMovement, TrackedClanEntry } from './types.js';
 
 export async function scanAllClansForGuild(client: Client, guildId: string): Promise<void> {
   const cfg = await getGuildConfig(guildId);
-  if (cfg.tracked_clans.length === 0) return;
+  if (cfg.tracked_clans.length === 0) {
+    log(`[SCAN] guild=${guildId} : aucun clan suivi, scan ignoré`);
+    return;
+  }
 
+  log(`[SCAN] Démarrage (guild=${guildId}, ${cfg.tracked_clans.length} clan(s) suivi(s))`);
   for (const clan of cfg.tracked_clans) {
     try {
       await scanClanForGuild(client, guildId, clan, cfg.clan_notify_channel_id, cfg.notify_leaves_only);
@@ -17,6 +21,7 @@ export async function scanAllClansForGuild(client: Client, guildId: string): Pro
       logError(`Clan scan failed (guild=${guildId}, clan=${clan.clan_id}):`, err);
     }
   }
+  log(`[SCAN] Terminé (guild=${guildId})`);
 }
 
 async function scanClanForGuild(
@@ -48,7 +53,10 @@ async function scanClanForGuild(
   }
 
   const movements: ClanMovement[] = [...result.joins, ...result.leaves];
-  if (movements.length === 0) return;
+  if (movements.length === 0) {
+    log(`Clan ${clanLabel} scanné : aucun mouvement (${roster.members.length} membre(s))`);
+    return;
+  }
 
   log(`Clan ${clanLabel} : ${result.joins.length} entrée(s), ${result.leaves.length} sortie(s)`);
 
