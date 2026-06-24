@@ -74,7 +74,7 @@ export default async function handler(): Promise<void> {
   });
 
   const today = isoDate(new Date());
-  const yesterday = isoDate(new Date(Date.now() - 86_400_000));
+  const lookbackFrom = isoDate(new Date(Date.now() - 30 * 86_400_000));
 
   // Load all tracked players with a WoT account (non-former preferred but include all)
   const { data: players, error: playersError } = await supabase
@@ -92,15 +92,23 @@ export default async function handler(): Promise<void> {
     return;
   }
 
-  // Load yesterday's battles count to compute battles_delta
+  // Load each account's most recent snapshot before today (not strictly
+  // "yesterday") to compute battles_delta: a missed cron run shouldn't
+  // permanently null out the delta, it should just span the gap.
   const { data: prevSnapshots } = await supabase
     .from('player_activity_snapshots')
-    .select('account_id, battles')
-    .eq('snapshot_date', yesterday);
+    .select('account_id, battles, snapshot_date')
+    .gte('snapshot_date', lookbackFrom)
+    .lt('snapshot_date', today)
+    .order('snapshot_date', { ascending: false });
 
-  const prevBattles = new Map<number, number>(
-    (prevSnapshots ?? []).map((s) => [s.account_id as number, s.battles as number]),
-  );
+  const prevBattles = new Map<number, number>();
+  for (const s of prevSnapshots ?? []) {
+    const accountId = s.account_id as number;
+    if (!prevBattles.has(accountId)) {
+      prevBattles.set(accountId, s.battles as number);
+    }
+  }
 
   const batches = chunk(players, BATCH_SIZE);
   let totalInserted = 0;

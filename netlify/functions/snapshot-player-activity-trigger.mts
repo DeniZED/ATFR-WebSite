@@ -142,7 +142,7 @@ export default async function handler(req: Request, _ctx: Context): Promise<Resp
   }
 
   const today = isoDate(new Date());
-  const yesterday = isoDate(new Date(Date.now() - 86_400_000));
+  const lookbackFrom = isoDate(new Date(Date.now() - 30 * 86_400_000));
 
   let players: Array<{ id: string; account_id: number }>;
   try {
@@ -160,17 +160,29 @@ export default async function handler(req: Request, _ctx: Context): Promise<Resp
     });
   }
 
-  let prevSnapshots: Array<{ account_id: number; battles: number }> = [];
+  // Most recent snapshot before today for each account (not strictly
+  // "yesterday") — a missed run shouldn't permanently null out the delta.
+  let prevSnapshots: Array<{ account_id: number; battles: number; snapshot_date: string }> = [];
   try {
-    prevSnapshots = await supabaseGet<{ account_id: number; battles: number }>(
-      'player_activity_snapshots',
-      { select: 'account_id,battles', snapshot_date: `eq.${yesterday}` },
-    );
+    prevSnapshots = await supabaseGet<{
+      account_id: number;
+      battles: number;
+      snapshot_date: string;
+    }>('player_activity_snapshots', {
+      select: 'account_id,battles,snapshot_date',
+      and: `(snapshot_date.gte.${lookbackFrom},snapshot_date.lt.${today})`,
+      order: 'snapshot_date.desc',
+    });
   } catch {
     // non-fatal — battles_delta will be null for all
   }
 
-  const prevBattles = new Map(prevSnapshots.map((s) => [s.account_id, s.battles]));
+  const prevBattles = new Map<number, number>();
+  for (const s of prevSnapshots) {
+    if (!prevBattles.has(s.account_id)) {
+      prevBattles.set(s.account_id, s.battles);
+    }
+  }
   const batches = chunk(players, BATCH_SIZE);
   let totalInserted = 0;
   let totalErrors = 0;
