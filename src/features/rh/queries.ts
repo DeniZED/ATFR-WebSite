@@ -119,7 +119,7 @@ export function useHrPlayers(
         playersResult,
         linksResult,
         snapshotsResult,
-        voiceResult,
+        voiceSessions,
         notesResult,
         settingsResult,
       ] = await Promise.all([
@@ -130,11 +130,7 @@ export function useHrPlayers(
           .select('*')
           .gte('snapshot_date', isoDate(period.previousFrom))
           .lte('snapshot_date', isoDate(period.to)),
-        supabase
-          .from('discord_voice_sessions')
-          .select('*')
-          .gte('joined_at', period.previousFrom.toISOString())
-          .lte('joined_at', period.to.toISOString()),
+        fetchAllVoiceSessions({ from: period.previousFrom, to: period.to }),
         supabase
           .from('player_staff_notes')
           .select('*')
@@ -146,7 +142,6 @@ export function useHrPlayers(
       throwIfError(playersResult.error);
       throwIfError(linksResult.error);
       throwIfError(snapshotsResult.error);
-      throwIfError(voiceResult.error);
       throwIfError(notesResult.error);
       if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
         throw settingsResult.error;
@@ -156,7 +151,6 @@ export function useHrPlayers(
       const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
       const snapshots =
         (snapshotsResult.data ?? []) as PlayerActivitySnapshotRow[];
-      const voiceSessions = (voiceResult.data ?? []) as DiscordVoiceSessionRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
       const settings =
         (settingsResult.data ?? []) as PlayerTrackingSettingsRow[];
@@ -217,21 +211,35 @@ export function useHrPlayerDetail(
     ],
     enabled: !!playerId && (options.enabled ?? true),
     queryFn: async (): Promise<HrPlayerDetailData> => {
-      const [
-        playerResult,
-        linksResult,
-        snapshotsResult,
-        voiceResult,
-        notesResult,
-        historyResult,
-        alertsResult,
-        settingsResult,
-      ] = await Promise.all([
+      const [playerResult, linksResult, settingsResult] = await Promise.all([
         supabase.from('players').select('*').eq('id', playerId!).single(),
         supabase
           .from('player_discord_links')
           .select('*')
           .eq('player_id', playerId!),
+        supabase
+          .from('player_tracking_settings')
+          .select('*')
+          .eq('player_id', playerId!)
+          .maybeSingle(),
+      ]);
+
+      throwIfError(playerResult.error);
+      throwIfError(linksResult.error);
+      if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
+        throw settingsResult.error;
+      }
+
+      const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
+      const primaryLink = links.find((candidate) => candidate.is_primary) ?? links[0] ?? null;
+
+      const [
+        snapshotsResult,
+        voiceSessions,
+        notesResult,
+        historyResult,
+        alertsResult,
+      ] = await Promise.all([
         supabase
           .from('player_activity_snapshots')
           .select('*')
@@ -239,12 +247,12 @@ export function useHrPlayerDetail(
           .gte('snapshot_date', isoDate(period.previousFrom))
           .lte('snapshot_date', isoDate(period.to))
           .order('snapshot_date', { ascending: false }),
-        supabase
-          .from('discord_voice_sessions')
-          .select('*')
-          .gte('joined_at', period.previousFrom.toISOString())
-          .lte('joined_at', period.to.toISOString())
-          .order('joined_at', { ascending: false }),
+        fetchAllVoiceSessions({
+          from: period.previousFrom,
+          to: period.to,
+          playerId: playerId!,
+          discordUserId: primaryLink?.discord_user_id ?? null,
+        }),
         supabase
           .from('player_staff_notes')
           .select('*')
@@ -261,23 +269,12 @@ export function useHrPlayerDetail(
           .eq('player_id', playerId!)
           .is('resolved_at', null)
           .order('detected_at', { ascending: false }),
-        supabase
-          .from('player_tracking_settings')
-          .select('*')
-          .eq('player_id', playerId!)
-          .maybeSingle(),
       ]);
 
-      throwIfError(playerResult.error);
-      throwIfError(linksResult.error);
       throwIfError(snapshotsResult.error);
-      throwIfError(voiceResult.error);
       throwIfError(notesResult.error);
       throwIfError(historyResult.error);
       throwIfError(alertsResult.error);
-      if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
-        throw settingsResult.error;
-      }
 
       const player = playerResult.data as PlayerRow;
       const memberHistoryResult = player.account_id
@@ -288,10 +285,8 @@ export function useHrPlayerDetail(
             .order('occurred_at', { ascending: false })
         : { data: [], error: null };
       throwIfError(memberHistoryResult.error);
-      const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
       const snapshots =
         (snapshotsResult.data ?? []) as PlayerActivitySnapshotRow[];
-      const voiceSessions = (voiceResult.data ?? []) as DiscordVoiceSessionRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
       const trackingSettings =
         (settingsResult.data ?? null) as PlayerTrackingSettingsRow | null;
@@ -736,6 +731,50 @@ function isBetweenDateTime(value: string, from: Date, to: Date): boolean {
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+const VOICE_SESSIONS_PAGE_SIZE = 1000;
+
+// PostgREST caps unranged selects at ~1000 rows by default: on a wide period,
+// fetching every player's sessions in one shot can silently drop the most
+// recent rows and undercount voice hours. Page through with .range() instead.
+async function fetchAllVoiceSessions(filters: {
+  from: Date;
+  to: Date;
+  playerId?: string;
+  discordUserId?: string | null;
+}): Promise<DiscordVoiceSessionRow[]> {
+  const rows: DiscordVoiceSessionRow[] = [];
+  let offset = 0;
+
+  for (;;) {
+    let query = supabase
+      .from('discord_voice_sessions')
+      .select('*')
+      .gte('joined_at', filters.from.toISOString())
+      .lte('joined_at', filters.to.toISOString())
+      .order('id', { ascending: true })
+      .range(offset, offset + VOICE_SESSIONS_PAGE_SIZE - 1);
+
+    if (filters.playerId && filters.discordUserId) {
+      query = query.or(
+        `player_id.eq.${filters.playerId},discord_user_id.eq.${filters.discordUserId}`,
+      );
+    } else if (filters.playerId) {
+      query = query.eq('player_id', filters.playerId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    const page = (data ?? []) as DiscordVoiceSessionRow[];
+    rows.push(...page);
+    if (page.length < VOICE_SESSIONS_PAGE_SIZE) break;
+    offset += VOICE_SESSIONS_PAGE_SIZE;
+  }
+
+  return rows.sort(
+    (a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime(),
+  );
 }
 
 function throwIfError(error: { message: string } | null) {
