@@ -108,7 +108,7 @@ Sinon, exécutez les fichiers **dans l'ordre numérique** depuis le SQL Editor. 
 | `0007`–`0008` | Quiz + scores de modules |
 | `0009`–`0014`, `0018`, `0025`–`0026` | Geoguesser (cartes, défi du jour, modes, profil joueur) |
 | `0016`–`0017` | CMS (galerie, sections d'accueil) |
-| `0019`–`0022`, `0028`–`0030` | RH (suivi joueurs, matching Discord, audit, historique départs) |
+| `0019`–`0022`, `0028`–`0030`, `0038` | RH (suivi joueurs, matching Discord, audit, historique départs, plafond durée session vocale) |
 | `0023`–`0024`, `0027` | RLS quiz/scores |
 | `0031`–`0034` | Contrôle d'accès par module (RLS, restrictions) |
 | `0035`–`0037` | Suivi des clans WoT (mouvements, recrutement, scoring) |

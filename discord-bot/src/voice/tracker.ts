@@ -72,16 +72,34 @@ export function registerVoiceTracking(client: Client): void {
   });
 }
 
-/** Recharge les membres déjà en vocal au démarrage (le dashboard ne part pas de zéro). */
+/**
+ * Recharge les membres déjà en vocal au démarrage (le dashboard ne part pas de zéro).
+ *
+ * Envoie aussi un événement à Supabase pour chaque membre encore connecté :
+ * si une session y était restée ouverte avant un redémarrage/crash du bot
+ * (aucun "leave" reçu), elle est close maintenant plutôt que d'attendre le
+ * prochain mouvement vocal de ce membre — qui peut survenir des heures ou
+ * des jours plus tard et gonfler artificiellement la durée enregistrée.
+ */
 export function primeOpenVoiceSessions(client: Client): void {
   for (const guild of client.guilds.cache.values()) {
     if (config.discord.guildId && guild.id !== config.discord.guildId) continue;
     for (const voiceState of guild.voiceStates.cache.values()) {
       if (!voiceState.channelId || !voiceState.member) continue;
+      const userId = voiceState.id;
       const username = voiceState.member.displayName || voiceState.member.user.username;
       const channelName = voiceState.channel?.name ?? 'inconnu';
-      voiceJoin(voiceState.id, username, channelName);
-      recordJoin(voiceState.id, username, channelName);
+      voiceJoin(userId, username, channelName);
+      recordJoin(userId, username, channelName);
+
+      sendVoiceEvent({
+        discord_user_id: userId,
+        guild_id: guild.id,
+        channel_id: voiceState.channelId,
+        channel_name: channelName,
+        event: 'move',
+        occurred_at: new Date().toISOString(),
+      }).catch((err) => log('[ERROR] primeOpenVoiceSessions sendVoiceEvent failed:', err));
     }
   }
 }
