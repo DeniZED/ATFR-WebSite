@@ -464,6 +464,9 @@ export interface Database {
           last_battle_at: string | null;
           battles: number | null;
           battles_delta: number | null;
+          random_battles: number | null;
+          rating_battles: number | null;
+          rating_battles_delta: number | null;
           active_day: boolean;
           source: string;
           meta: Record<string, unknown>;
@@ -479,6 +482,9 @@ export interface Database {
           last_battle_at?: string | null;
           battles?: number | null;
           battles_delta?: number | null;
+          random_battles?: number | null;
+          rating_battles?: number | null;
+          rating_battles_delta?: number | null;
           active_day?: boolean;
           source?: string;
           meta?: Record<string, unknown>;
@@ -494,6 +500,9 @@ export interface Database {
           last_battle_at?: string | null;
           battles?: number | null;
           battles_delta?: number | null;
+          random_battles?: number | null;
+          rating_battles?: number | null;
+          rating_battles_delta?: number | null;
           active_day?: boolean;
           source?: string;
           meta?: Record<string, unknown>;

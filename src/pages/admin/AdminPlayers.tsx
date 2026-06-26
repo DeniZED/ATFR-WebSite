@@ -1,6 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Clock3,
   Link2,
   RefreshCcw,
@@ -55,6 +58,29 @@ type PeriodPreset = '7' | '14' | '30' | '90' | 'custom';
 type PresenceFilter = 'all' | 'present' | 'missing';
 type DiscordFilter = 'all' | 'linked' | 'unlinked' | 'suggested';
 type AlertFilter = 'all' | 'with' | 'none';
+type SortKey =
+  | 'nickname'
+  | 'clan'
+  | 'status'
+  | 'ingame'
+  | 'battles'
+  | 'voice'
+  | 'days'
+  | 'score'
+  | 'alerts';
+type SortDir = 'asc' | 'desc';
+
+const SORT_ACCESSORS: Record<SortKey, (s: PlayerActivitySummary) => string | number> = {
+  nickname: (s) => s.player.nickname.toLowerCase(),
+  clan: (s) => s.player.current_clan_tag ?? '',
+  status: (s) => s.player.status,
+  ingame: (s) => (s.latestWotActivityAt ? new Date(s.latestWotActivityAt).getTime() : -1),
+  battles: (s) => s.battleDelta ?? -1,
+  voice: (s) => s.voiceSeconds,
+  days: (s) => s.activeDays,
+  score: (s) => s.score.value,
+  alerts: (s) => s.alerts.length,
+};
 
 export default function AdminPlayers() {
   const navigate = useNavigate();
@@ -69,6 +95,8 @@ export default function AdminPlayers() {
   const [ingame, setIngame] = useState<PresenceFilter>('all');
   const [discord, setDiscord] = useState<DiscordFilter>('all');
   const [alerts, setAlerts] = useState<AlertFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('score');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('30');
   const [customFrom, setCustomFrom] = useState(
     new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10),
@@ -223,6 +251,28 @@ export default function AdminPlayers() {
     voice,
     discordNameKeys,
   ]);
+
+  const sorted = useMemo(() => {
+    const accessor = SORT_ACCESSORS[sortKey];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const va = accessor(a);
+      const vb = accessor(b);
+      if (typeof va === 'string' || typeof vb === 'string') {
+        return dir * String(va).localeCompare(String(vb));
+      }
+      return dir * ((va as number) - (vb as number));
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  }
 
   // Stats computed on active players only (former/archived excluded)
   const stats = useMemo(() => {
@@ -700,7 +750,13 @@ export default function AdminPlayers() {
       ) : filtered.length === 0 ? (
         <EmptyState hasSearch={search.length > 0} hasFilter={hasActiveFilter} />
       ) : (
-        <PlayerTable players={filtered} discordNameKeys={discordNameKeys} />
+        <PlayerTable
+          players={sorted}
+          discordNameKeys={discordNameKeys}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={toggleSort}
+        />
       )}
       </>
       )}
@@ -713,9 +769,15 @@ export default function AdminPlayers() {
 function PlayerTable({
   players,
   discordNameKeys,
+  sortKey,
+  sortDir,
+  onSort,
 }: {
   players: PlayerActivitySummary[];
   discordNameKeys: Set<string>;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
 }) {
   return (
     <Card>
@@ -724,14 +786,16 @@ function PlayerTable({
           <table className="min-w-full text-sm">
             <thead className="border-b border-atfr-gold/10 bg-atfr-ink/70 text-xs uppercase tracking-wider text-atfr-fog">
               <tr>
-                <Th>Joueur</Th>
-                <Th>Clan</Th>
+                <SortTh label="Joueur" col="nickname" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Clan" col="clan" active={sortKey} dir={sortDir} onSort={onSort} />
                 <Th>Discord</Th>
-                <Th>Statut</Th>
-                <Th>In-game</Th>
-                <Th>Vocal</Th>
-                <Th>Jours</Th>
-                <Th>Score</Th>
+                <SortTh label="Statut" col="status" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="In-game" col="ingame" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Batailles" col="battles" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Vocal" col="voice" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Jours" col="days" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Score" col="score" active={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="Alertes" col="alerts" active={sortKey} dir={sortDir} onSort={onSort} />
                 <Th>Commentaire</Th>
                 <Th>Action</Th>
               </tr>
@@ -813,23 +877,15 @@ function PlayerRow({
         <Badge variant={STATUS_BADGE[player.status]}>
           {STATUS_LABELS[player.status]}
         </Badge>
-        {alertSeverity && (
-          <Badge
-            variant={alertSeverity}
-            className="mt-1"
-            title={summary.alerts.map((alert) => alert.title).join('\n')}
-          >
-            {summary.alerts.length} alerte(s)
-          </Badge>
-        )}
       </Td>
       <Td>
         <p className="text-atfr-bone">{formatDateTime(summary.latestWotActivityAt)}</p>
-        <p className="text-xs text-atfr-fog">
-          {summary.battleDelta == null
-            ? 'Batailles —'
-            : `${summary.battleDelta} bataille(s)`}
+      </Td>
+      <Td>
+        <p className="text-atfr-bone">
+          {summary.battleDelta == null ? '—' : summary.battleDelta}
         </p>
+        <p className="text-xs text-atfr-fog">bataille(s)</p>
       </Td>
       <Td>
         <p className="text-atfr-bone">{formatDuration(summary.voiceSeconds)}</p>
@@ -865,6 +921,18 @@ function PlayerRow({
             />
           </div>
         </div>
+      </Td>
+      <Td>
+        {alertSeverity ? (
+          <Badge
+            variant={alertSeverity}
+            title={summary.alerts.map((alert) => alert.title).join('\n')}
+          >
+            {summary.alerts.length}
+          </Badge>
+        ) : (
+          <span className="text-atfr-fog">—</span>
+        )}
       </Td>
       <Td>
         <p className="max-w-64 truncate text-atfr-fog">
@@ -909,6 +977,45 @@ function EmptyState({
 
 function Th({ children }: { children: ReactNode }) {
   return <th className="px-4 py-3 text-left font-medium">{children}</th>;
+}
+
+function SortTh({
+  label,
+  col,
+  active,
+  dir,
+  onSort,
+}: {
+  label: string;
+  col: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+}) {
+  const isActive = active === col;
+  return (
+    <th className="px-4 py-3 text-left font-medium">
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={cn(
+          'inline-flex items-center gap-1 transition-colors hover:text-atfr-gold',
+          isActive && 'text-atfr-gold',
+        )}
+      >
+        {label}
+        {isActive ? (
+          dir === 'asc' ? (
+            <ArrowUp size={12} />
+          ) : (
+            <ArrowDown size={12} />
+          )
+        ) : (
+          <ArrowUpDown size={12} className="opacity-40" />
+        )}
+      </button>
+    </th>
+  );
 }
 
 function Td({ children }: { children: ReactNode }) {
