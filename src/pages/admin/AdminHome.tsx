@@ -17,6 +17,8 @@ import { useHrPlayers } from '@/features/rh/queries';
 import { useRole } from '@/hooks/useRole';
 import { HrTrendChart } from '@/components/admin/HrTrendChart';
 import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
+import { HrStatusBreakdown } from '@/components/admin/HrStatusBreakdown';
+import { useClanMovements } from '@/features/clanMovements/queries';
 
 export default function AdminHome() {
   const pending = useApplications('pending');
@@ -27,6 +29,7 @@ export default function AdminHome() {
   const canReadRh = can('members');
   const hrPeriod = useMemo(() => makeRollingPeriod(30), []);
   const hr = useHrPlayers(hrPeriod, { enabled: canReadRh });
+  const movements = useClanMovements({ limit: 500, enabled: canReadRh });
   const hrAlerts =
     hr.data?.players.reduce((sum, player) => sum + player.alerts.length, 0) ?? 0;
 
@@ -80,7 +83,12 @@ export default function AdminHome() {
 
       {canReadRh && !hr.isError && hr.data && (
         <>
-          <HrTrendChart players={hr.data.players} period={hr.data.period} />
+          <HrTrendChart
+            players={hr.data.players}
+            period={hr.data.period}
+            movements={movements.data}
+          />
+          <HrStatusBreakdown players={hr.data.players} />
           <HrTopPerformers players={hr.data.players} />
         </>
       )}
