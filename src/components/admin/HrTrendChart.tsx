@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import {
   Area,
-  AreaChart,
   Bar,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
   ResponsiveContainer,
@@ -54,8 +54,8 @@ export function HrTrendChart({
             Joueurs actifs / jour, batailles, vocal, recrutements
           </p>
         </div>
-        <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <defs>
               <linearGradient id="hrActiveGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#E8B043" stopOpacity={0.35} />
@@ -72,11 +72,29 @@ export function HrTrendChart({
               interval="preserveStartEnd"
             />
             <YAxis
+              yAxisId="left"
               stroke="#9CA0AA"
               tick={{ fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={32}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="#C0392B"
+              tick={{ fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              width={28}
+              allowDecimals={false}
+              label={{
+                value: 'Recrues',
+                angle: -90,
+                position: 'insideRight',
+                fill: '#C0392B',
+                fontSize: 11,
+              }}
             />
             <Tooltip
               contentStyle={{
@@ -88,7 +106,16 @@ export function HrTrendChart({
               labelStyle={{ color: '#ECECEC' }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar
+              yAxisId="right"
+              dataKey="recruits"
+              name="Recrutements"
+              fill="#C0392B"
+              barSize={14}
+              radius={[3, 3, 0, 0]}
+            />
             <Area
+              yAxisId="left"
               type="monotone"
               dataKey="activePlayers"
               name="Joueurs actifs"
@@ -97,6 +124,7 @@ export function HrTrendChart({
               strokeWidth={2}
             />
             <Line
+              yAxisId="left"
               type="monotone"
               dataKey="battles"
               name="Batailles"
@@ -105,6 +133,7 @@ export function HrTrendChart({
               dot={false}
             />
             <Line
+              yAxisId="left"
               type="monotone"
               dataKey="voiceMinutes"
               name="Vocal (min)"
@@ -112,8 +141,7 @@ export function HrTrendChart({
               strokeWidth={1.5}
               dot={false}
             />
-            <Bar dataKey="recruits" name="Recrutements" fill="#C0392B" barSize={6} />
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </CardBody>
     </Card>
