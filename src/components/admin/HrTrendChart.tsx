@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import {
   Area,
   AreaChart,
+  Bar,
   CartesianGrid,
+  Legend,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -11,6 +13,7 @@ import {
 } from 'recharts';
 import type { PlayerActivitySummary } from '@/features/rh/activity';
 import type { ActivityPeriod } from '@/features/rh/activity';
+import type { ClanMemberMovementRow } from '@/types/database';
 import { Card, CardBody } from '@/components/ui';
 
 interface DayPoint {
@@ -19,16 +22,22 @@ interface DayPoint {
   activePlayers: number;
   battles: number;
   voiceMinutes: number;
+  recruits: number;
 }
 
 export function HrTrendChart({
   players,
   period,
+  movements = [],
 }: {
   players: PlayerActivitySummary[];
   period: ActivityPeriod;
+  movements?: ClanMemberMovementRow[];
 }) {
-  const data = useMemo(() => buildDailySeries(players, period), [players, period]);
+  const data = useMemo(
+    () => buildDailySeries(players, period, movements),
+    [players, period, movements],
+  );
 
   if (data.length === 0) {
     return null;
@@ -42,7 +51,7 @@ export function HrTrendChart({
             Tendance d'activité ({period.days} jours)
           </h3>
           <p className="text-xs text-atfr-fog">
-            Joueurs actifs / jour, batailles, vocal
+            Joueurs actifs / jour, batailles, vocal, recrutements
           </p>
         </div>
         <ResponsiveContainer width="100%" height={260}>
@@ -78,6 +87,7 @@ export function HrTrendChart({
               }}
               labelStyle={{ color: '#ECECEC' }}
             />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
             <Area
               type="monotone"
               dataKey="activePlayers"
@@ -102,6 +112,7 @@ export function HrTrendChart({
               strokeWidth={1.5}
               dot={false}
             />
+            <Bar dataKey="recruits" name="Recrutements" fill="#C0392B" barSize={6} />
           </AreaChart>
         </ResponsiveContainer>
       </CardBody>
@@ -112,6 +123,7 @@ export function HrTrendChart({
 function buildDailySeries(
   players: PlayerActivitySummary[],
   period: ActivityPeriod,
+  movements: ClanMemberMovementRow[],
 ): DayPoint[] {
   const buckets = new Map<string, DayPoint>();
   const cursor = new Date(period.from);
@@ -125,6 +137,7 @@ function buildDailySeries(
       activePlayers: 0,
       battles: 0,
       voiceMinutes: 0,
+      recruits: 0,
     });
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -144,6 +157,14 @@ function buildDailySeries(
       if (!bucket) continue;
       bucket.voiceMinutes += Math.round((session.duration_seconds ?? 0) / 60);
     }
+  }
+
+  for (const movement of movements) {
+    if (movement.event !== 'join') continue;
+    const key = (movement.occurred_at ?? '').slice(0, 10);
+    const bucket = buckets.get(key);
+    if (!bucket) continue;
+    bucket.recruits += 1;
   }
 
   return [...buckets.values()];
