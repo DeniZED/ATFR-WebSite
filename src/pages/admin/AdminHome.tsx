@@ -15,6 +15,8 @@ import { useClanStats } from '@/features/stats/queries';
 import { makeRollingPeriod } from '@/features/rh/activity';
 import { useHrPlayers } from '@/features/rh/queries';
 import { useRole } from '@/hooks/useRole';
+import { HrTrendChart } from '@/components/admin/HrTrendChart';
+import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
 
 export default function AdminHome() {
   const pending = useApplications('pending');
@@ -75,6 +77,13 @@ export default function AdminHome() {
           icon={<Trophy size={20} />}
         />
       </div>
+
+      {canReadRh && !hr.isError && hr.data && (
+        <>
+          <HrTrendChart players={hr.data.players} period={hr.data.period} />
+          <HrTopPerformers players={hr.data.players} />
+        </>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ interface WgAccountInfo {
   account_id: number;
   nickname: string;
   last_battle_time: number;
-  statistics: { all: { battles: number } };
+  statistics: { all: { battles: number }; rating?: { battles: number } };
 }
 
 interface SnapshotRow {
@@ -22,6 +22,9 @@ interface SnapshotRow {
   last_battle_at: string | null;
   battles: number;
   battles_delta: number | null;
+  random_battles: number;
+  rating_battles: number;
+  rating_battles_delta: number | null;
   active_day: boolean;
   source: string;
   meta: Record<string, unknown>;
@@ -34,7 +37,8 @@ async function wgAccountInfo(
   const qs = new URLSearchParams({
     application_id: APP_ID,
     account_id: accountIds.join(','),
-    fields: 'account_id,nickname,last_battle_time,statistics.all.battles',
+    fields:
+      'account_id,nickname,last_battle_time,statistics.all.battles,statistics.rating.battles',
   });
   const res = await fetch(`${WG_BASE}/account/info/?${qs}`);
   if (!res.ok) throw new Error(`[snapshot] WoT /account/info/ ${res.status}`);
@@ -97,16 +101,18 @@ export default async function handler(): Promise<void> {
   // permanently null out the delta, it should just span the gap.
   const { data: prevSnapshots } = await supabase
     .from('player_activity_snapshots')
-    .select('account_id, battles, snapshot_date')
+    .select('account_id, battles, rating_battles, snapshot_date')
     .gte('snapshot_date', lookbackFrom)
     .lt('snapshot_date', today)
     .order('snapshot_date', { ascending: false });
 
   const prevBattles = new Map<number, number>();
+  const prevRatingBattles = new Map<number, number>();
   for (const s of prevSnapshots ?? []) {
     const accountId = s.account_id as number;
     if (!prevBattles.has(accountId)) {
       prevBattles.set(accountId, s.battles as number);
+      prevRatingBattles.set(accountId, (s.rating_battles as number | null) ?? 0);
     }
   }
 
@@ -133,9 +139,14 @@ export default async function handler(): Promise<void> {
       const info = wgData[String(player.account_id)];
       if (!info) continue;
 
-      const battles = info.statistics?.all?.battles ?? 0;
-      const prev = prevBattles.get(player.account_id as number) ?? null;
-      const battlesDelta = prev !== null ? battles - prev : null;
+      const randomBattles = info.statistics?.all?.battles ?? 0;
+      const ratingBattles = info.statistics?.rating?.battles ?? 0;
+      const battles = randomBattles + ratingBattles;
+      const prevTotal = prevBattles.get(player.account_id as number) ?? null;
+      const prevRating = prevRatingBattles.get(player.account_id as number) ?? null;
+      const battlesDelta = prevTotal !== null ? battles - prevTotal : null;
+      const ratingBattlesDelta =
+        prevRating !== null ? ratingBattles - prevRating : null;
       const lastBattleAt =
         info.last_battle_time && info.last_battle_time > 0
           ? new Date(info.last_battle_time * 1000).toISOString()
@@ -149,6 +160,9 @@ export default async function handler(): Promise<void> {
         last_battle_at: lastBattleAt,
         battles,
         battles_delta: battlesDelta,
+        random_battles: randomBattles,
+        rating_battles: ratingBattles,
+        rating_battles_delta: ratingBattlesDelta,
         active_day: (battlesDelta ?? 0) > 0,
         source: 'scheduled',
         meta: {},
