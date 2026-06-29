@@ -1,4 +1,4 @@
-import type { RoleEntry } from '@/features/clan-hub/types';
+import type { RoleEntry } from '@/features/clan/types';
 
 export const ROLES: RoleEntry[] = [
   {

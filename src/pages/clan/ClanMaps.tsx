@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { MAPS, MAP_FILTERS } from '@/data/clan-hub/maps';
-import type { GameMode } from '@/features/clan-hub/types';
-import { FilterBar } from '@/components/clan-hub/FilterBar';
-import { PriorityBadge } from '@/components/clan-hub/PriorityBadge';
-import { ModeBadge } from '@/components/clan-hub/ModeBadge';
-import { TagList } from '@/components/clan-hub/TagList';
-import { ValidatedBy } from '@/components/clan-hub/ValidatedBy';
-import { EmptyState } from '@/components/clan-hub/EmptyState';
+import { MAPS, MAP_FILTERS } from '@/data/clan/maps';
+import type { GameMode } from '@/features/clan/types';
+import { FilterBar } from '@/components/clan/FilterBar';
+import { PriorityBadge } from '@/components/clan/PriorityBadge';
+import { ModeBadge } from '@/components/clan/ModeBadge';
+import { TagList } from '@/components/clan/TagList';
+import { ValidatedBy } from '@/components/clan/ValidatedBy';
+import { EmptyState } from '@/components/clan/EmptyState';
 import { AlertTriangle, MessageSquareQuote, Lightbulb } from 'lucide-react';
 
 function SpawnBlock({ label, positions }: { label: string; positions: (typeof MAPS)[0]['spawn_a'] }) {
@@ -100,7 +100,7 @@ function MapCard({ map }: { map: (typeof MAPS)[0] }) {
   );
 }
 
-export default function ClanHubMaps() {
+export default function ClanMaps() {
   const [filter, setFilter] = useState('all');
 
   const filtered = MAPS.filter((m) => {

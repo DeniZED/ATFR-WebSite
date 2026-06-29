@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Swords, Plus } from 'lucide-react';
-import { Section, Card, CardBody, Badge, Button, Spinner, Input } from '@/components/ui';
-import { useRole } from '@/hooks/useRole';
-import { useCwEvents, useUpsertCwEvent } from '@/features/cw/queries';
+import { Swords } from 'lucide-react';
+import { Section, Card, CardBody, Badge, Spinner } from '@/components/ui';
+import { useCwEvents } from '@/features/cw/queries';
 import { CW_EVENT_STATUS_LABELS, type CwEventStatus } from '@/types/database';
 
 const STATUS_VARIANT: Record<CwEventStatus, 'neutral' | 'success' | 'warning'> = {
@@ -14,24 +12,7 @@ const STATUS_VARIANT: Record<CwEventStatus, 'neutral' | 'success' | 'warning'> =
 };
 
 export default function CwEventsList() {
-  const { isModerator } = useRole();
   const { data: events, isLoading } = useCwEvents();
-  const upsert = useUpsertCwEvent();
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ title: '', starts_at: '', ends_at: '' });
-
-  async function handleCreate() {
-    if (!form.title || !form.starts_at || !form.ends_at) return;
-    const event = await upsert.mutateAsync({
-      title: form.title,
-      starts_at: form.starts_at,
-      ends_at: form.ends_at,
-      status: 'draft',
-    });
-    setCreating(false);
-    setForm({ title: '', starts_at: '', ends_at: '' });
-    window.location.assign(`/clan/evenements/cw/${event.id}`);
-  }
 
   return (
     <Section
@@ -40,49 +21,6 @@ export default function CwEventsList() {
       description="Campagnes CW : inscriptions, dispo et composition des Line-Up."
       className="pt-10 sm:pt-16"
     >
-      {isModerator && (
-        <div className="mb-6 flex justify-end">
-          {!creating ? (
-            <Button variant="primary" size="md" onClick={() => setCreating(true)}>
-              <Plus size={16} /> Nouvel événement
-            </Button>
-          ) : null}
-        </div>
-      )}
-
-      {creating && (
-        <Card className="mb-6">
-          <CardBody className="space-y-4">
-            <Input
-              label="Titre de la campagne"
-              placeholder="Campagne à char — Novembre 2025"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                type="date"
-                label="Début"
-                value={form.starts_at}
-                onChange={(e) => setForm((f) => ({ ...f, starts_at: e.target.value }))}
-              />
-              <Input
-                type="date"
-                label="Fin"
-                value={form.ends_at}
-                onChange={(e) => setForm((f) => ({ ...f, ends_at: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <Button variant="ghost" onClick={() => setCreating(false)}>Annuler</Button>
-              <Button variant="primary" onClick={handleCreate} disabled={upsert.isPending}>
-                Créer
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
       {isLoading ? (
         <div className="py-16 flex justify-center"><Spinner label="Chargement…" /></div>
       ) : !events?.length ? (
@@ -95,7 +33,7 @@ export default function CwEventsList() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <Link key={event.id} to={`/clan/evenements/cw/${event.id}`}>
+            <Link key={event.id} to={`/clan/evenements/${event.id}`}>
               <Card className="h-full">
                 <CardBody className="space-y-3">
                   <div className="flex items-center justify-between">

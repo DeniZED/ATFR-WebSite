@@ -1,4 +1,4 @@
-import type { LinkEntry } from '@/features/clan-hub/types';
+import type { LinkEntry } from '@/features/clan/types';
 
 export const LINKS: LinkEntry[] = [
   {

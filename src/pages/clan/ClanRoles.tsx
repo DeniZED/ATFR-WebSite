@@ -1,6 +1,6 @@
-import { ROLES } from '@/data/clan-hub/roles';
-import { ModeBadge } from '@/components/clan-hub/ModeBadge';
-import { TagList } from '@/components/clan-hub/TagList';
+import { ROLES } from '@/data/clan/roles';
+import { ModeBadge } from '@/components/clan/ModeBadge';
+import { TagList } from '@/components/clan/TagList';
 import { ArrowRight, Target, AlertTriangle, MapPin, Heart, Clock } from 'lucide-react';
 
 function RoleCard({ role }: { role: (typeof ROLES)[0] }) {
@@ -84,7 +84,7 @@ function RoleCard({ role }: { role: (typeof ROLES)[0] }) {
   );
 }
 
-export default function ClanHubRoles() {
+export default function ClanRoles() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>

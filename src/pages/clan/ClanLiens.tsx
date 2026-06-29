@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 
-import { LINKS, LINK_CATEGORIES } from '@/data/clan-hub/links';
-import { FilterBar } from '@/components/clan-hub/FilterBar';
-import { TagList } from '@/components/clan-hub/TagList';
-import { EmptyState } from '@/components/clan-hub/EmptyState';
+import { LINKS, LINK_CATEGORIES } from '@/data/clan/links';
+import { FilterBar } from '@/components/clan/FilterBar';
+import { TagList } from '@/components/clan/TagList';
+import { EmptyState } from '@/components/clan/EmptyState';
 
-export default function ClanHubLiens() {
+export default function ClanLiens() {
   const [filter, setFilter] = useState('all');
 
   const filtered = LINKS.filter((l) => filter === 'all' || l.category === filter);

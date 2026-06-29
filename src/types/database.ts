@@ -28,12 +28,17 @@ export type StaffNoteType =
 export type ClanMovementContactStatus = 'new' | 'contacted' | 'linked' | 'ignored';
 export type CwEventStatus = 'draft' | 'open' | 'closed' | 'archived';
 export type CwLuRole = 'titulaire' | 'remplacant';
+export type CwEventType = 'campagne_char_manoeuvres';
 
 export const CW_EVENT_STATUS_LABELS: Record<CwEventStatus, string> = {
   draft: 'Brouillon',
   open: 'Ouvert',
   closed: 'Clos',
   archived: 'Archivé',
+};
+
+export const CW_EVENT_TYPE_LABELS: Record<CwEventType, string> = {
+  campagne_char_manoeuvres: 'Campagne à char - Manœuvres',
 };
 
 export interface ClanMovementStatusEntry {
@@ -140,6 +145,7 @@ export const ADMIN_MODULES: { key: string; label: string; area?: AdminArea }[] =
   { key: 'membres', label: 'Membres', area: 'members' },
   { key: 'rh', label: 'RH joueurs', area: 'members' },
   { key: 'evenements', label: 'Événements', area: 'events' },
+  { key: 'clan-wars', label: 'Clan Wars', area: 'events' },
   { key: 'contenu', label: 'Contenu', area: 'content' },
   { key: 'galerie', label: 'Galerie', area: 'media' },
   { key: 'moments', label: 'Moments forts', area: 'content' },
@@ -1656,8 +1662,11 @@ export interface Database {
           title: string;
           description: string | null;
           status: CwEventStatus;
+          type: CwEventType;
           starts_at: string;
           ends_at: string;
+          slot_start_time: string;
+          slot_end_time: string;
           created_by: string | null;
         };
         Insert: {
@@ -1667,8 +1676,11 @@ export interface Database {
           title: string;
           description?: string | null;
           status?: CwEventStatus;
+          type?: CwEventType;
           starts_at: string;
           ends_at: string;
+          slot_start_time?: string;
+          slot_end_time?: string;
           created_by?: string | null;
         };
         Update: {
@@ -1678,8 +1690,11 @@ export interface Database {
           title?: string;
           description?: string | null;
           status?: CwEventStatus;
+          type?: CwEventType;
           starts_at?: string;
           ends_at?: string;
+          slot_start_time?: string;
+          slot_end_time?: string;
           created_by?: string | null;
         };
         Relationships: [];

@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck, CircleX, Wrench, Users, AlertTriangle, MessageSquare, Crosshair } from 'lucide-react';
-import { TANKS } from '@/data/clan-hub/tanks';
-import { FilterBar } from '@/components/clan-hub/FilterBar';
-import { SearchInput } from '@/components/clan-hub/SearchInput';
-import { PriorityBadge } from '@/components/clan-hub/PriorityBadge';
-import { ModeBadge } from '@/components/clan-hub/ModeBadge';
-import { TagList } from '@/components/clan-hub/TagList';
-import { ValidatedBy } from '@/components/clan-hub/ValidatedBy';
-import { EmptyState } from '@/components/clan-hub/EmptyState';
+import { TANKS } from '@/data/clan/tanks';
+import { FilterBar } from '@/components/clan/FilterBar';
+import { SearchInput } from '@/components/clan/SearchInput';
+import { PriorityBadge } from '@/components/clan/PriorityBadge';
+import { ModeBadge } from '@/components/clan/ModeBadge';
+import { TagList } from '@/components/clan/TagList';
+import { ValidatedBy } from '@/components/clan/ValidatedBy';
+import { EmptyState } from '@/components/clan/EmptyState';
 import { cn } from '@/lib/cn';
-import type { TankEntry } from '@/features/clan-hub/types';
+import type { TankEntry } from '@/features/clan/types';
 
 const PRIORITY_FILTERS = [
   { id: 'all', label: 'Toutes priorités' },
@@ -225,7 +225,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
   );
 }
 
-export default function ClanHubChars() {
+export default function ClanChars() {
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');

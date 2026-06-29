@@ -1,6 +1,6 @@
 import { Shield, Swords, ClipboardList, TrendingUp, Mic, Users, Star, type LucideProps } from 'lucide-react';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-import { DOCTRINE, DOCTRINE_INTRO } from '@/data/clan-hub/doctrine';
+import { DOCTRINE, DOCTRINE_INTRO } from '@/data/clan/doctrine';
 
 type LucideIcon = ForwardRefExoticComponent<Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>>;
 
@@ -8,7 +8,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Shield, Swords, ClipboardList, TrendingUp, Mic, Users, Star,
 };
 
-export default function ClanHubDoctrine() {
+export default function ClanDoctrine() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>

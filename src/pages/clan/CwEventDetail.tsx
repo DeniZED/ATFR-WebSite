@@ -1,26 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Section, Card, CardBody, CardTitle, Badge, Button, Input, Textarea, Select, Spinner, StatCard } from '@/components/ui';
-import { useRole } from '@/hooks/useRole';
+import { Section, Card, CardBody, CardTitle, Badge, Button, Input, Textarea, Spinner, StatCard } from '@/components/ui';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import {
-  useCwEvent,
-  useRegisterToCwEvent,
-  useSetCwEventDays,
-  useSetCwEventStatus,
-  useSetCwLus,
-  useDeleteCwLu,
-  useAssignToLu,
-  useRemoveFromLu,
-  type CwEventDetail as CwEventDetailData,
-} from '@/features/cw/queries';
-import { CW_EVENT_STATUS_LABELS, type CwEventStatus } from '@/types/database';
+import { useCwEvent, useRegisterToCwEvent, type CwEventDetail as CwEventDetailData } from '@/features/cw/queries';
+import { CW_EVENT_STATUS_LABELS } from '@/types/database';
 
-type Tab = 'dashboard' | 'inscription' | 'lus';
+type Tab = 'dashboard' | 'inscription';
 
 export default function CwEventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { isModerator } = useRole();
   const { data: event, isLoading } = useCwEvent(eventId);
   const [tab, setTab] = useState<Tab>('dashboard');
 
@@ -35,7 +23,6 @@ export default function CwEventDetail() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'inscription', label: 'Inscription' },
-    ...(isModerator ? [{ id: 'lus' as Tab, label: 'Gestion des LU' }] : []),
   ];
 
   return (
@@ -51,7 +38,6 @@ export default function CwEventDetail() {
           {new Date(event.starts_at).toLocaleDateString('fr-FR')} —{' '}
           {new Date(event.ends_at).toLocaleDateString('fr-FR')}
         </span>
-        {isModerator && <EventStatusControl event={event} />}
       </div>
 
       <div className="mb-8 flex gap-2 border-b border-atfr-gold/10">
@@ -72,23 +58,7 @@ export default function CwEventDetail() {
 
       {tab === 'dashboard' && <DashboardTab event={event} />}
       {tab === 'inscription' && <InscriptionTab event={event} />}
-      {tab === 'lus' && isModerator && <LuManagementTab event={event} />}
     </Section>
-  );
-}
-
-function EventStatusControl({ event }: { event: CwEventDetailData }) {
-  const setStatus = useSetCwEventStatus();
-  return (
-    <Select
-      value={event.status}
-      onChange={(e) => setStatus.mutate({ id: event.id, status: e.target.value as CwEventStatus })}
-      className="w-auto"
-    >
-      {Object.entries(CW_EVENT_STATUS_LABELS).map(([value, label]) => (
-        <option key={value} value={value}>{label}</option>
-      ))}
-    </Select>
   );
 }
 
@@ -284,155 +254,5 @@ function InscriptionTab({ event }: { event: CwEventDetailData }) {
         {done && <p className="text-sm text-atfr-success">Inscription enregistrée.</p>}
       </CardBody>
     </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Gestion des LU
-// ---------------------------------------------------------------------------
-
-function LuManagementTab({ event }: { event: CwEventDetailData }) {
-  const setDays = useSetCwEventDays();
-  const setLu = useSetCwLus();
-  const deleteLu = useDeleteCwLu();
-  const assign = useAssignToLu();
-  const unassign = useRemoveFromLu();
-
-  const [newDay, setNewDay] = useState('');
-  const [newLuName, setNewLuName] = useState('');
-
-  function addDay() {
-    if (!newDay) return;
-    const days = [...event.days.map((d) => ({ day: d.day, label: d.label ?? undefined })), { day: newDay }];
-    setDays.mutate({ eventId: event.id, days });
-    setNewDay('');
-  }
-
-  function removeDay(dayId: string) {
-    const days = event.days.filter((d) => d.id !== dayId).map((d) => ({ day: d.day, label: d.label ?? undefined }));
-    setDays.mutate({ eventId: event.id, days });
-  }
-
-  function addLu() {
-    if (!newLuName.trim()) return;
-    setLu.mutate({ eventId: event.id, lu: { name: newLuName.trim() } });
-    setNewLuName('');
-  }
-
-  return (
-    <div className="space-y-8">
-      <Card>
-        <CardBody className="space-y-4">
-          <CardTitle>Soirées de la campagne</CardTitle>
-          <div className="flex flex-wrap gap-2">
-            {event.days.map((day) => (
-              <Badge key={day.id} variant="outline" className="gap-2">
-                {new Date(day.day).toLocaleDateString('fr-FR')}
-                <button onClick={() => removeDay(day.id)} className="text-atfr-danger">×</button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-3">
-            <Input type="date" value={newDay} onChange={(e) => setNewDay(e.target.value)} />
-            <Button variant="secondary" onClick={addDay}>Ajouter</Button>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody className="space-y-4">
-          <CardTitle>Créer une Line-Up</CardTitle>
-          <div className="flex gap-3">
-            <Input
-              value={newLuName}
-              onChange={(e) => setNewLuName(e.target.value)}
-              placeholder="Nom de la LU (ex: LU 1)"
-            />
-            <Button variant="secondary" onClick={addLu}>Créer</Button>
-          </div>
-        </CardBody>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {event.lus.map((lu) => {
-          const members = event.luMembers.filter((m) => m.lu_id === lu.id);
-          const assignedIds = new Set(members.map((m) => m.registration_id));
-          const available = event.registrations.filter((r) => !assignedIds.has(r.id));
-
-          return (
-            <Card key={lu.id}>
-              <CardBody className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle>{lu.name}</CardTitle>
-                  <button
-                    onClick={() => deleteLu.mutate({ luId: lu.id, eventId: event.id })}
-                    className="text-xs text-atfr-danger"
-                  >
-                    Supprimer la LU
-                  </button>
-                </div>
-
-                <div className="space-y-1">
-                  {members.map((m) => {
-                    const reg = event.registrations.find((r) => r.id === m.registration_id);
-                    return (
-                      <div key={m.id} className="flex items-center justify-between rounded-md bg-atfr-ink/60 px-3 py-2 text-sm">
-                        <span className="text-atfr-bone">{reg?.pseudo ?? '—'}</span>
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={m.role}
-                            onChange={(e) =>
-                              assign.mutate({
-                                eventId: event.id,
-                                luId: lu.id,
-                                registrationId: m.registration_id,
-                                role: e.target.value as 'titulaire' | 'remplacant',
-                              })
-                            }
-                            className="w-auto text-xs"
-                          >
-                            <option value="titulaire">Titulaire</option>
-                            <option value="remplacant">Remplaçant</option>
-                          </Select>
-                          <button
-                            onClick={() =>
-                              unassign.mutate({ eventId: event.id, luId: lu.id, registrationId: m.registration_id })
-                            }
-                            className="text-atfr-danger text-xs"
-                          >
-                            Retirer
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {!members.length && <p className="text-xs text-atfr-fog">Aucun joueur affecté.</p>}
-                </div>
-
-                {available.length > 0 && (
-                  <Select
-                    value=""
-                    onChange={(e) => {
-                      if (!e.target.value) return;
-                      assign.mutate({
-                        eventId: event.id,
-                        luId: lu.id,
-                        registrationId: e.target.value,
-                        role: 'titulaire',
-                      });
-                    }}
-                  >
-                    <option value="">+ Ajouter un joueur</option>
-                    {available.map((r) => (
-                      <option key={r.id} value={r.id}>{r.pseudo}</option>
-                    ))}
-                  </Select>
-                )}
-              </CardBody>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
   );
 }
