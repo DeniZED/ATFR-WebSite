@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Plus, Shield, Swords, Trophy, X } from 'lucide-react';
 import { Badge, Button, Card, CardBody, CardTitle, Input, Select, Spinner } from '@/components/ui';
 import {
   useCwEvent,
@@ -10,6 +10,10 @@ import {
   useSetRegistrationLu,
   type CwEventDetail as CwEventDetailData,
 } from '@/features/cw/queries';
+
+function formatDay(day: { day: string; label: string | null }) {
+  return day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
 
 export default function AdminCwEventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -25,9 +29,14 @@ export default function AdminCwEventDetail() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">Clan Wars</p>
-        <h1 className="font-display text-3xl text-atfr-bone">{event.title}</h1>
+      <div className="flex items-center gap-3">
+        <span className="h-11 w-11 rounded-xl bg-atfr-gold/10 border border-atfr-gold/30 text-atfr-gold flex items-center justify-center shrink-0">
+          <Swords size={20} strokeWidth={1.8} />
+        </span>
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">Clan Wars</p>
+          <h1 className="font-display text-3xl text-atfr-bone">{event.title}</h1>
+        </div>
       </div>
 
       <LuPanel event={event} />
@@ -54,13 +63,14 @@ function LuPanel({ event }: { event: CwEventDetailData }) {
         <CardTitle>Line-Up</CardTitle>
         <div className="flex flex-wrap gap-2">
           {event.lus.map((lu) => (
-            <Badge key={lu.id} variant="outline" className="gap-2">
+            <Badge key={lu.id} variant="outline" className="gap-2 py-1">
+              <Shield size={11} strokeWidth={2} />
               {lu.name}
               <button
                 onClick={() => {
                   if (confirm(`Supprimer ${lu.name} ?`)) deleteLu.mutate({ luId: lu.id, eventId: event.id });
                 }}
-                className="text-atfr-danger"
+                className="text-atfr-fog hover:text-atfr-danger transition-colors"
                 aria-label="Supprimer"
               >
                 <X size={12} />
@@ -101,15 +111,19 @@ function ResultsPanel({ event }: { event: CwEventDetailData }) {
   return (
     <Card>
       <CardBody>
-        <CardTitle>Résultats (saisie manuelle)</CardTitle>
-        <div className="mt-4 overflow-x-auto">
+        <div className="flex items-center gap-2 mb-1">
+          <Trophy size={16} strokeWidth={1.8} className="text-atfr-gold" />
+          <CardTitle>Résultats (saisie manuelle)</CardTitle>
+        </div>
+        <p className="text-xs text-atfr-fog mb-4">Victoires / défaites par LU et par soirée. Aucune stat WoT automatique : tout est saisi à la main.</p>
+        <div className="overflow-x-auto -mx-2">
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-left text-atfr-fog">
-                <th className="py-2 pr-4">LU</th>
+                <th className="py-2 px-2 sticky left-0 bg-atfr-carbon">LU</th>
                 {event.days.map((day) => (
-                  <th key={day.id} className="py-2 px-2 text-center">
-                    {day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                  <th key={day.id} className="py-2 px-2 text-center font-medium">
+                    {formatDay(day)}
                   </th>
                 ))}
               </tr>
@@ -117,7 +131,7 @@ function ResultsPanel({ event }: { event: CwEventDetailData }) {
             <tbody>
               {event.lus.map((lu) => (
                 <tr key={lu.id} className="border-t border-atfr-gold/10">
-                  <td className="py-2 pr-4 text-atfr-bone">{lu.name}</td>
+                  <td className="py-2 px-2 text-atfr-bone font-medium sticky left-0 bg-atfr-carbon">{lu.name}</td>
                   {event.days.map((day) => {
                     const result = resultFor(lu.id, day.id);
                     return (
@@ -136,10 +150,10 @@ function ResultsPanel({ event }: { event: CwEventDetailData }) {
                                 losses: result?.losses ?? 0,
                               })
                             }
-                            className="w-10 rounded-md bg-atfr-ink/80 border border-atfr-success/30 text-atfr-success text-center px-1 py-1"
+                            className="w-12 rounded-md bg-atfr-ink/80 border border-atfr-success/30 text-atfr-success text-center px-1 py-1.5 focus:border-atfr-success focus:outline-none"
                             aria-label={`Victoires ${lu.name} ${day.day}`}
                           />
-                          <span className="text-atfr-fog">/</span>
+                          <span className="text-atfr-fog text-xs">/</span>
                           <input
                             type="number"
                             min={0}
@@ -153,7 +167,7 @@ function ResultsPanel({ event }: { event: CwEventDetailData }) {
                                 losses: Number(e.target.value) || 0,
                               })
                             }
-                            className="w-10 rounded-md bg-atfr-ink/80 border border-atfr-danger/30 text-atfr-danger text-center px-1 py-1"
+                            className="w-12 rounded-md bg-atfr-ink/80 border border-atfr-danger/30 text-atfr-danger text-center px-1 py-1.5 focus:border-atfr-danger focus:outline-none"
                             aria-label={`Défaites ${lu.name} ${day.day}`}
                           />
                         </div>
@@ -165,7 +179,6 @@ function ResultsPanel({ event }: { event: CwEventDetailData }) {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-atfr-fog mt-3">Victoires / Défaites par soirée, saisies manuellement.</p>
       </CardBody>
     </Card>
   );
@@ -181,18 +194,21 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
   return (
     <Card>
       <CardBody>
-        <CardTitle>Inscriptions &amp; affectations</CardTitle>
-        <div className="mt-4 overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <CardTitle>Inscriptions &amp; affectations</CardTitle>
+          <span className="text-xs text-atfr-fog">{event.registrations.length} inscrit{event.registrations.length > 1 ? 's' : ''}</span>
+        </div>
+        <div className="overflow-x-auto -mx-2">
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-left text-atfr-fog">
-                <th className="py-2 pr-4">Pseudo</th>
-                <th className="py-2 pr-4">LU</th>
-                <th className="py-2 pr-4">Statut</th>
-                <th className="py-2 pr-4">Commentaire</th>
+                <th className="py-2 px-2 sticky left-0 bg-atfr-carbon">Pseudo</th>
+                <th className="py-2 px-2">LU</th>
+                <th className="py-2 px-2">Statut</th>
+                <th className="py-2 px-2">Commentaire</th>
                 {event.days.map((day) => (
-                  <th key={day.id} className="py-2 px-2 text-center">
-                    {day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                  <th key={day.id} className="py-2 px-2 text-center font-medium">
+                    {formatDay(day)}
                   </th>
                 ))}
               </tr>
@@ -201,9 +217,16 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
               {event.registrations.map((reg) => {
                 const member = luForRegistration(reg.id);
                 return (
-                  <tr key={reg.id} className="border-t border-atfr-gold/10">
-                    <td className="py-2 pr-4 text-atfr-bone">{reg.pseudo}</td>
-                    <td className="py-2 pr-4">
+                  <tr key={reg.id} className="border-t border-atfr-gold/10 hover:bg-atfr-gold/5 transition-colors">
+                    <td className="py-2 px-2 sticky left-0 bg-atfr-carbon">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-6 w-6 rounded-full bg-atfr-gold/15 text-atfr-gold text-[10px] font-semibold flex items-center justify-center uppercase">
+                          {reg.pseudo.slice(0, 2)}
+                        </span>
+                        <span className="text-atfr-bone">{reg.pseudo}</span>
+                      </span>
+                    </td>
+                    <td className="py-2 px-2">
                       <Select
                         value={member?.lu_id ?? ''}
                         onChange={(e) =>
@@ -214,7 +237,7 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
                             role: member?.role ?? 'titulaire',
                           })
                         }
-                        className="w-auto text-xs py-1"
+                        className="w-auto text-xs py-1.5"
                       >
                         <option value="">—</option>
                         {event.lus.map((lu) => (
@@ -222,7 +245,7 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
                         ))}
                       </Select>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="py-2 px-2">
                       <Select
                         value={member?.role ?? 'titulaire'}
                         disabled={!member}
@@ -235,13 +258,13 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
                             role: e.target.value as 'titulaire' | 'remplacant',
                           })
                         }
-                        className="w-auto text-xs py-1"
+                        className="w-auto text-xs py-1.5"
                       >
                         <option value="titulaire">Titulaire</option>
                         <option value="remplacant">Remplaçant</option>
                       </Select>
                     </td>
-                    <td className="py-2 pr-4 text-atfr-fog text-xs max-w-[16rem] truncate" title={reg.comment ?? ''}>
+                    <td className="py-2 px-2 text-atfr-fog text-xs max-w-[16rem] truncate" title={reg.comment ?? ''}>
                       {reg.comment ?? '—'}
                     </td>
                     {event.days.map((day) => {
@@ -251,9 +274,13 @@ function RegistrationsTable({ event }: { event: CwEventDetailData }) {
                       return (
                         <td key={day.id} className="py-2 px-2 text-center">
                           {avail?.available ? (
-                            <Check size={14} className="inline text-atfr-success" />
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-atfr-success/15 text-atfr-success">
+                              <Check size={12} strokeWidth={2.4} />
+                            </span>
                           ) : (
-                            <span className="inline-block h-3 w-3 rounded-sm border border-atfr-warning bg-atfr-warning/20" />
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-atfr-warning/10 text-atfr-warning/70">
+                              <X size={12} strokeWidth={2.4} />
+                            </span>
                           )}
                         </td>
                       );
