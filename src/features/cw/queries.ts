@@ -89,10 +89,12 @@ export function useUpsertCwEvent() {
           .select()
           .single();
         if (error) throw error;
+        await regenerateEventDays(data.id, data.starts_at, data.ends_at);
         return data as CwEventRow;
       }
       const { data, error } = await supabase.from('cw_events').insert(input).select().single();
       if (error) throw error;
+      await regenerateEventDays(data.id, data.starts_at, data.ends_at);
       return data as CwEventRow;
     },
     onSuccess: (data) => {
@@ -100,6 +102,25 @@ export function useUpsertCwEvent() {
       qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(data.id) });
     },
   });
+}
+
+// On participe tous les soirs entre starts_at et ends_at (inclus) : les
+// soirées sont régénérées à chaque création/modification de campagne plutôt
+// que choisies manuellement.
+async function regenerateEventDays(eventId: string, startsAt: string, endsAt: string) {
+  const { error: delErr } = await supabase.from('cw_event_days').delete().eq('event_id', eventId);
+  if (delErr) throw delErr;
+
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  const rows: { event_id: string; day: string; position: number }[] = [];
+  let position = 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    rows.push({ event_id: eventId, day: d.toISOString().slice(0, 10), position: position++ });
+  }
+  if (!rows.length) return;
+  const { error } = await supabase.from('cw_event_days').insert(rows);
+  if (error) throw error;
 }
 
 export function useSetCwEventStatus() {
@@ -116,25 +137,14 @@ export function useSetCwEventStatus() {
   });
 }
 
-export function useSetCwEventDays() {
+export function useDeleteCwEvent() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ eventId, days }: { eventId: string; days: { day: string; label?: string }[] }) => {
-      const { error: delErr } = await supabase.from('cw_event_days').delete().eq('event_id', eventId);
-      if (delErr) throw delErr;
-      if (!days.length) return;
-      const rows = days.map((d, i) => ({
-        event_id: eventId,
-        day: d.day,
-        label: d.label ?? null,
-        position: i,
-      }));
-      const { error } = await supabase.from('cw_event_days').insert(rows);
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('cw_events').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(vars.eventId) });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cw_events'] }),
   });
 }
 
@@ -210,36 +220,29 @@ export function useDeleteCwLu() {
   });
 }
 
-export function useAssignToLu() {
+/**
+ * Un joueur n'appartient qu'à une seule LU à la fois (comme dans le tableau
+ * d'inscriptions) : on retire ses éventuelles affectations précédentes avant
+ * d'en poser une nouvelle. Passer `luId: null` retire le joueur de toute LU.
+ */
+export function useSetRegistrationLu() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       eventId: string;
-      luId: string;
       registrationId: string;
+      luId: string | null;
       role: 'titulaire' | 'remplacant';
     }) => {
-      const { error } = await supabase
-        .from('cw_lu_members')
-        .upsert(
-          { lu_id: input.luId, registration_id: input.registrationId, role: input.role },
-          { onConflict: 'lu_id,registration_id' },
-        );
-      if (error) throw error;
-    },
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(vars.eventId) }),
-  });
-}
-
-export function useRemoveFromLu() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { eventId: string; luId: string; registrationId: string }) => {
-      const { error } = await supabase
+      const { error: delErr } = await supabase
         .from('cw_lu_members')
         .delete()
-        .eq('lu_id', input.luId)
         .eq('registration_id', input.registrationId);
+      if (delErr) throw delErr;
+      if (!input.luId) return;
+      const { error } = await supabase
+        .from('cw_lu_members')
+        .insert({ lu_id: input.luId, registration_id: input.registrationId, role: input.role });
       if (error) throw error;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(vars.eventId) }),

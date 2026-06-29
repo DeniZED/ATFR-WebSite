@@ -1,4 +1,4 @@
-import type { MapEntry } from '@/features/clan-hub/types';
+import type { MapEntry } from '@/features/clan/types';
 
 export const MAPS: MapEntry[] = [
   {

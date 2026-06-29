@@ -6,22 +6,20 @@ import { AcademyLayout } from '@/components/layout/AcademyLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
-import { RequireMember } from '@/components/layout/RequireMember';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
-import { ClanHubLayout } from '@/components/clan-hub/ClanHubLayout';
+import { ClanLayout } from '@/components/clan/ClanLayout';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
 const CwEventsList = lazy(() => import('@/pages/clan/CwEventsList'));
 const CwEventDetail = lazy(() => import('@/pages/clan/CwEventDetail'));
-const ClanHubHome = lazy(() => import('@/pages/clan-hub/ClanHubHome'));
-const ClanHubChars = lazy(() => import('@/pages/clan-hub/ClanHubChars'));
-const ClanHubRoles = lazy(() => import('@/pages/clan-hub/ClanHubRoles'));
-const ClanHubStrategies = lazy(() => import('@/pages/clan-hub/ClanHubStrategies'));
-const ClanHubMaps = lazy(() => import('@/pages/clan-hub/ClanHubMaps'));
-const ClanHubDoctrine = lazy(() => import('@/pages/clan-hub/ClanHubDoctrine'));
-const ClanHubCW = lazy(() => import('@/pages/clan-hub/ClanHubCW'));
-const ClanHubLiens = lazy(() => import('@/pages/clan-hub/ClanHubLiens'));
+const ClanHome = lazy(() => import('@/pages/clan/ClanHome'));
+const ClanChars = lazy(() => import('@/pages/clan/ClanChars'));
+const ClanRoles = lazy(() => import('@/pages/clan/ClanRoles'));
+const ClanStrategies = lazy(() => import('@/pages/clan/ClanStrategies'));
+const ClanMaps = lazy(() => import('@/pages/clan/ClanMaps'));
+const ClanDoctrine = lazy(() => import('@/pages/clan/ClanDoctrine'));
+const ClanLiens = lazy(() => import('@/pages/clan/ClanLiens'));
 const Members = lazy(() => import('@/pages/Members'));
 const Events = lazy(() => import('@/pages/Events'));
 const Gallery = lazy(() => import('@/pages/Gallery'));
@@ -40,6 +38,8 @@ const AdminMembers = lazy(() => import('@/pages/admin/AdminMembers'));
 const AdminPlayers = lazy(() => import('@/pages/admin/AdminPlayers'));
 const AdminPlayerDetail = lazy(() => import('@/pages/admin/AdminPlayerDetail'));
 const AdminEvents = lazy(() => import('@/pages/admin/AdminEvents'));
+const AdminCwEvents = lazy(() => import('@/pages/admin/AdminCwEvents'));
+const AdminCwEventDetail = lazy(() => import('@/pages/admin/AdminCwEventDetail'));
 const AdminContent = lazy(() => import('@/pages/admin/AdminContent'));
 const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
 const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
@@ -88,28 +88,23 @@ export const router = createBrowserRouter([
           { path: '/galerie', element: <Gallery /> },
           { path: '/recrutement', element: <Recruitment /> },
           { path: '/auth/wg/callback', element: <AuthWgCallback /> },
-          {
-            element: <RequireMember />,
-            children: [
-              { path: '/clan/evenements/CW', element: <CwEventsList /> },
-              { path: '/clan/evenements/cw/:eventId', element: <CwEventDetail /> },
-            ],
-          },
+          { path: '/clan-hub', element: <Navigate to="/clan" replace /> },
+          { path: '/clan-hub/*', element: <Navigate to="/clan" replace /> },
           {
             element: <RequireClanAccess slug="clan-hub" />,
             children: [
-              { path: '/clan', element: <Navigate to="/clan-hub" replace /> },
               {
-                element: <ClanHubLayout />,
+                element: <ClanLayout />,
                 children: [
-                  { path: '/clan-hub', element: <ClanHubHome /> },
-                  { path: '/clan-hub/chars', element: <ClanHubChars /> },
-                  { path: '/clan-hub/roles', element: <ClanHubRoles /> },
-                  { path: '/clan-hub/strategies', element: <ClanHubStrategies /> },
-                  { path: '/clan-hub/maps', element: <ClanHubMaps /> },
-                  { path: '/clan-hub/doctrine', element: <ClanHubDoctrine /> },
-                  { path: '/clan-hub/cw', element: <ClanHubCW /> },
-                  { path: '/clan-hub/liens', element: <ClanHubLiens /> },
+                  { path: '/clan', element: <ClanHome /> },
+                  { path: '/clan/chars', element: <ClanChars /> },
+                  { path: '/clan/roles', element: <ClanRoles /> },
+                  { path: '/clan/strategies', element: <ClanStrategies /> },
+                  { path: '/clan/maps', element: <ClanMaps /> },
+                  { path: '/clan/doctrine', element: <ClanDoctrine /> },
+                  { path: '/clan/liens', element: <ClanLiens /> },
+                  { path: '/clan/evenements', element: <CwEventsList /> },
+                  { path: '/clan/evenements/:eventId', element: <CwEventDetail /> },
                 ],
               },
             ],
@@ -153,6 +148,13 @@ export const router = createBrowserRouter([
           {
             element: <RequireModuleAccess moduleKey="evenements" />,
             children: [{ path: 'evenements', element: <AdminEvents /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="clan-wars" />,
+            children: [
+              { path: 'clan-wars', element: <AdminCwEvents /> },
+              { path: 'clan-wars/:eventId', element: <AdminCwEventDetail /> },
+            ],
           },
           {
             element: <RequireModuleAccess moduleKey="contenu" />,

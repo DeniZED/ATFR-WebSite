@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import type { GameMode } from '@/features/clan-hub/types';
+import type { GameMode } from '@/features/clan/types';
 
 const CONFIG: Record<GameMode, { label: string; className: string }> = {
   cw:        { label: 'CW',        className: 'bg-red-500/10 text-red-400 border-red-500/20' },

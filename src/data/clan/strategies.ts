@@ -1,4 +1,4 @@
-import type { StrategyEntry } from '@/features/clan-hub/types';
+import type { StrategyEntry } from '@/features/clan/types';
 
 export const STRATEGIES: StrategyEntry[] = [
   {

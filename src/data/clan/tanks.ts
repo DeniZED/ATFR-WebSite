@@ -1,4 +1,4 @@
-import type { TankEntry } from '@/features/clan-hub/types';
+import type { TankEntry } from '@/features/clan/types';
 
 export const TANKS: TankEntry[] = [
   {

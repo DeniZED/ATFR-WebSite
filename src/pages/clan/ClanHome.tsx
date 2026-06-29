@@ -1,20 +1,20 @@
 import { Link } from 'react-router-dom';
 import { Crosshair, Users, Swords, Map, BookOpen, Flag, Link as LinkIcon, Star, ArrowRight, Shield } from 'lucide-react';
-import { TANKS } from '@/data/clan-hub/tanks';
-import { STRATEGIES } from '@/data/clan-hub/strategies';
-import { MAPS } from '@/data/clan-hub/maps';
-import { PriorityBadge } from '@/components/clan-hub/PriorityBadge';
-import { ModeBadge } from '@/components/clan-hub/ModeBadge';
+import { TANKS } from '@/data/clan/tanks';
+import { STRATEGIES } from '@/data/clan/strategies';
+import { MAPS } from '@/data/clan/maps';
+import { PriorityBadge } from '@/components/clan/PriorityBadge';
+import { ModeBadge } from '@/components/clan/ModeBadge';
 import { cn } from '@/lib/cn';
 
 const SHORTCUTS = [
-  { to: '/clan-hub/chars',      icon: Crosshair, label: 'Fiches chars',  description: 'Équipement, compétences, do/don\'t', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
-  { to: '/clan-hub/roles',      icon: Users,     label: 'Rôles',         description: 'Heavy, medium, light, TD',            color: 'text-blue-300 bg-blue-500/10 border-blue-500/20' },
-  { to: '/clan-hub/strategies', icon: Swords,    label: 'Tactiques',     description: 'Focus fire, push, crossfire…',        color: 'text-atfr-gold bg-atfr-gold/10 border-atfr-gold/20' },
-  { to: '/clan-hub/maps',       icon: Map,       label: 'Cartes',        description: 'Spawns, strats par carte',             color: 'text-green-400 bg-green-500/10 border-green-500/20' },
-  { to: '/clan-hub/doctrine',   icon: BookOpen,  label: 'Doctrine',      description: 'Règles et attentes ATFR',              color: 'text-purple-300 bg-purple-500/10 border-purple-500/20' },
-  { to: '/clan-hub/cw',         icon: Flag,      label: 'Clan Wars',     description: 'Préparation et checklist',             color: 'text-orange-300 bg-orange-500/10 border-orange-500/20' },
-  { to: '/clan-hub/liens',      icon: LinkIcon,  label: 'Ressources',    description: 'Outils externes recommandés',          color: 'text-atfr-fog bg-atfr-graphite/40 border-atfr-gold/10' },
+  { to: '/clan/chars',      icon: Crosshair, label: 'Fiches chars',  description: 'Équipement, compétences, do/don\'t', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+  { to: '/clan/roles',      icon: Users,     label: 'Rôles',         description: 'Heavy, medium, light, TD',            color: 'text-blue-300 bg-blue-500/10 border-blue-500/20' },
+  { to: '/clan/strategies', icon: Swords,    label: 'Tactiques',     description: 'Focus fire, push, crossfire…',        color: 'text-atfr-gold bg-atfr-gold/10 border-atfr-gold/20' },
+  { to: '/clan/maps',       icon: Map,       label: 'Cartes',        description: 'Spawns, strats par carte',             color: 'text-green-400 bg-green-500/10 border-green-500/20' },
+  { to: '/clan/doctrine',   icon: BookOpen,  label: 'Doctrine',      description: 'Règles et attentes ATFR',              color: 'text-purple-300 bg-purple-500/10 border-purple-500/20' },
+  { to: '/clan/evenements',         icon: Flag,      label: 'Clan Wars',     description: 'Préparation et checklist',             color: 'text-orange-300 bg-orange-500/10 border-orange-500/20' },
+  { to: '/clan/liens',      icon: LinkIcon,  label: 'Ressources',    description: 'Outils externes recommandés',          color: 'text-atfr-fog bg-atfr-graphite/40 border-atfr-gold/10' },
 ];
 
 const CLASS_CONFIG = {
@@ -34,7 +34,7 @@ const stats = [
   { label: 'Chars prioritaires', value: priorityTanks.length },
 ];
 
-export default function ClanHubHome() {
+export default function ClanHome() {
   return (
     <div className="max-w-4xl mx-auto space-y-10">
 
@@ -92,7 +92,7 @@ export default function ClanHubHome() {
             <Star size={11} className="text-atfr-gold/60" />
             Chars prioritaires CW
           </h2>
-          <Link to="/clan-hub/chars" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+          <Link to="/clan/chars" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
             Voir tous <ArrowRight size={11} />
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default function ClanHubHome() {
             return (
               <Link
                 key={tank.slug}
-                to="/clan-hub/chars"
+                to="/clan/chars"
                 className="flex items-center gap-2.5 rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5 hover:border-atfr-gold/25 hover:bg-atfr-graphite/40 transition-all"
               >
                 <div className={cn('h-7 w-7 shrink-0 rounded-md flex items-center justify-center text-[11px] font-bold font-mono', cfg.bg, cfg.text)}>
@@ -129,7 +129,7 @@ export default function ClanHubHome() {
               <Swords size={11} className="text-atfr-gold/60" />
               Tactiques
             </h2>
-            <Link to="/clan-hub/strategies" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+            <Link to="/clan/strategies" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
               Voir toutes <ArrowRight size={11} />
             </Link>
           </div>
@@ -153,7 +153,7 @@ export default function ClanHubHome() {
               <Map size={11} className="text-atfr-gold/60" />
               Fiches cartes
             </h2>
-            <Link to="/clan-hub/maps" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+            <Link to="/clan/maps" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
               Voir toutes <ArrowRight size={11} />
             </Link>
           </div>

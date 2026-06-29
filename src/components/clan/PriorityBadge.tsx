@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn';
-import type { ClanPriority } from '@/features/clan-hub/types';
+import type { ClanPriority } from '@/features/clan/types';
 
 const CONFIG: Record<ClanPriority, { label: string; className: string }> = {
   prioritaire:     { label: 'Prioritaire',      className: 'bg-atfr-gold/15 text-atfr-gold border-atfr-gold/30' },

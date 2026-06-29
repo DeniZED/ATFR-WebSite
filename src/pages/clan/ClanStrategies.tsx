@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { STRATEGIES, STRATEGY_CATEGORIES } from '@/data/clan-hub/strategies';
-import { FilterBar } from '@/components/clan-hub/FilterBar';
-import { ModeBadge } from '@/components/clan-hub/ModeBadge';
-import { TagList } from '@/components/clan-hub/TagList';
-import { ValidatedBy } from '@/components/clan-hub/ValidatedBy';
-import { EmptyState } from '@/components/clan-hub/EmptyState';
+import { STRATEGIES, STRATEGY_CATEGORIES } from '@/data/clan/strategies';
+import { FilterBar } from '@/components/clan/FilterBar';
+import { ModeBadge } from '@/components/clan/ModeBadge';
+import { TagList } from '@/components/clan/TagList';
+import { ValidatedBy } from '@/components/clan/ValidatedBy';
+import { EmptyState } from '@/components/clan/EmptyState';
 import { AlertTriangle, MessageSquareQuote, User } from 'lucide-react';
 
 function StratCard({ strat }: { strat: (typeof STRATEGIES)[0] }) {
@@ -80,7 +80,7 @@ function StratCard({ strat }: { strat: (typeof STRATEGIES)[0] }) {
   );
 }
 
-export default function ClanHubStrategies() {
+export default function ClanStrategies() {
   const [category, setCategory] = useState('all');
 
   const filtered = STRATEGIES.filter((s) => category === 'all' || s.category === category);

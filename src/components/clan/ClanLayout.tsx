@@ -3,14 +3,14 @@ import { LayoutDashboard, Crosshair, Users, Swords, Map, BookOpen, Flag, Link } 
 import { cn } from '@/lib/cn';
 
 const NAV = [
-  { to: '/clan-hub',             label: 'Accueil',       icon: LayoutDashboard, end: true },
-  { to: '/clan-hub/chars',       label: 'Fiches chars',  icon: Crosshair },
-  { to: '/clan-hub/roles',       label: 'Rôles',         icon: Users },
-  { to: '/clan-hub/strategies',  label: 'Tactiques',     icon: Swords },
-  { to: '/clan-hub/maps',        label: 'Cartes',        icon: Map },
-  { to: '/clan-hub/doctrine',    label: 'Doctrine',      icon: BookOpen },
-  { to: '/clan-hub/cw',          label: 'Clan Wars',     icon: Flag },
-  { to: '/clan-hub/liens',       label: 'Ressources',    icon: Link },
+  { to: '/clan',             label: 'Accueil',       icon: LayoutDashboard, end: true },
+  { to: '/clan/chars',       label: 'Fiches chars',  icon: Crosshair },
+  { to: '/clan/roles',       label: 'Rôles',         icon: Users },
+  { to: '/clan/strategies',  label: 'Tactiques',     icon: Swords },
+  { to: '/clan/maps',        label: 'Cartes',        icon: Map },
+  { to: '/clan/doctrine',    label: 'Doctrine',      icon: BookOpen },
+  { to: '/clan/evenements',          label: 'Clan Wars',     icon: Flag },
+  { to: '/clan/liens',       label: 'Ressources',    icon: Link },
 ];
 
 function NavItem({ to, label, icon: Icon, end }: (typeof NAV)[0]) {
@@ -33,7 +33,7 @@ function NavItem({ to, label, icon: Icon, end }: (typeof NAV)[0]) {
   );
 }
 
-export function ClanHubLayout() {
+export function ClanLayout() {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row">
       {/* Sidebar desktop */}

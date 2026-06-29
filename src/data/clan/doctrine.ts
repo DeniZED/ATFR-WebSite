@@ -1,4 +1,4 @@
-import type { DoctrineSection } from '@/features/clan-hub/types';
+import type { DoctrineSection } from '@/features/clan/types';
 
 export const DOCTRINE: DoctrineSection[] = [
   {
