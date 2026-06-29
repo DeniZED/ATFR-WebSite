@@ -105,34 +105,6 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
 
       <Card>
         <CardBody>
-          <CardTitle>Dispo par soirée</CardTitle>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-atfr-fog">
-                  <th className="py-2 pr-4">Soirée</th>
-                  <th className="py-2">Dispo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.dayStats.map(({ day, availCount, total }) => (
-                  <tr key={day.id} className="border-t border-atfr-gold/10">
-                    <td className="py-2 pr-4 text-atfr-bone">
-                      {day.label ?? new Date(day.day).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="py-2 text-atfr-fog">
-                      {availCount} / {total}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody>
           <CardTitle>Inscrits</CardTitle>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm whitespace-nowrap">
@@ -167,6 +139,16 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-atfr-gold/20 font-medium">
+                  <td className="py-2 pr-4 text-atfr-fog">Dispo</td>
+                  {stats.dayStats.map(({ day, availCount, total }) => (
+                    <td key={day.id} className="py-2 px-2 text-center text-atfr-fog">
+                      {availCount}/{total}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
             </table>
             {!event.registrations.length && (
               <p className="text-sm text-atfr-fog py-6 text-center">Aucune inscription pour le moment.</p>
