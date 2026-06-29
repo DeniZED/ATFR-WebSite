@@ -12,7 +12,8 @@ import { ClanHubLayout } from '@/components/clan-hub/ClanHubLayout';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
-const ClanCW = lazy(() => import('@/pages/clan/ClanCW'));
+const CwEventsList = lazy(() => import('@/pages/clan/CwEventsList'));
+const CwEventDetail = lazy(() => import('@/pages/clan/CwEventDetail'));
 const ClanHubHome = lazy(() => import('@/pages/clan-hub/ClanHubHome'));
 const ClanHubChars = lazy(() => import('@/pages/clan-hub/ClanHubChars'));
 const ClanHubRoles = lazy(() => import('@/pages/clan-hub/ClanHubRoles'));
@@ -90,7 +91,8 @@ export const router = createBrowserRouter([
           {
             element: <RequireMember />,
             children: [
-              { path: '/clan/evenements/CW', element: <ClanCW /> },
+              { path: '/clan/evenements/CW', element: <CwEventsList /> },
+              { path: '/clan/evenements/cw/:eventId', element: <CwEventDetail /> },
             ],
           },
           {

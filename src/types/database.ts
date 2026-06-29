@@ -26,6 +26,15 @@ export type StaffNoteType =
   | 'behavior'
   | 'other';
 export type ClanMovementContactStatus = 'new' | 'contacted' | 'linked' | 'ignored';
+export type CwEventStatus = 'draft' | 'open' | 'closed' | 'archived';
+export type CwLuRole = 'titulaire' | 'remplacant';
+
+export const CW_EVENT_STATUS_LABELS: Record<CwEventStatus, string> = {
+  draft: 'Brouillon',
+  open: 'Ouvert',
+  closed: 'Clos',
+  archived: 'Archivé',
+};
 
 export interface ClanMovementStatusEntry {
   status: ClanMovementContactStatus;
@@ -1636,6 +1645,162 @@ export interface Database {
           max_score?: number;
           meta?: Record<string, unknown>;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      cw_events: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          title: string;
+          description: string | null;
+          status: CwEventStatus;
+          starts_at: string;
+          ends_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title: string;
+          description?: string | null;
+          status?: CwEventStatus;
+          starts_at: string;
+          ends_at: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          title?: string;
+          description?: string | null;
+          status?: CwEventStatus;
+          starts_at?: string;
+          ends_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
+      cw_event_days: {
+        Row: {
+          id: string;
+          event_id: string;
+          day: string;
+          label: string | null;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          day: string;
+          label?: string | null;
+          position?: number;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          day?: string;
+          label?: string | null;
+          position?: number;
+        };
+        Relationships: [];
+      };
+      cw_registrations: {
+        Row: {
+          id: string;
+          event_id: string;
+          account_id: number | null;
+          pseudo: string;
+          comment: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          account_id?: number | null;
+          pseudo: string;
+          comment?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          account_id?: number | null;
+          pseudo?: string;
+          comment?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      cw_availability: {
+        Row: {
+          id: string;
+          registration_id: string;
+          event_day_id: string;
+          available: boolean;
+        };
+        Insert: {
+          id?: string;
+          registration_id: string;
+          event_day_id: string;
+          available?: boolean;
+        };
+        Update: {
+          id?: string;
+          registration_id?: string;
+          event_day_id?: string;
+          available?: boolean;
+        };
+        Relationships: [];
+      };
+      cw_lus: {
+        Row: {
+          id: string;
+          event_id: string;
+          name: string;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          name: string;
+          position?: number;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          name?: string;
+          position?: number;
+        };
+        Relationships: [];
+      };
+      cw_lu_members: {
+        Row: {
+          id: string;
+          lu_id: string;
+          registration_id: string;
+          role: CwLuRole;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          lu_id: string;
+          registration_id: string;
+          role?: CwLuRole;
+          position?: number;
+        };
+        Update: {
+          id?: string;
+          lu_id?: string;
+          registration_id?: string;
+          role?: CwLuRole;
+          position?: number;
         };
         Relationships: [];
       };
