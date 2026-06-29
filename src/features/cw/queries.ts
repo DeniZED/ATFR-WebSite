@@ -8,6 +8,7 @@ type CwRegistrationRow = Database['public']['Tables']['cw_registrations']['Row']
 type CwAvailabilityRow = Database['public']['Tables']['cw_availability']['Row'];
 type CwLuRow = Database['public']['Tables']['cw_lus']['Row'];
 type CwLuMemberRow = Database['public']['Tables']['cw_lu_members']['Row'];
+type CwLuDayResultRow = Database['public']['Tables']['cw_lu_day_results']['Row'];
 
 export interface CwEventDetail extends CwEventRow {
   days: CwEventDayRow[];
@@ -15,6 +16,7 @@ export interface CwEventDetail extends CwEventRow {
   availability: CwAvailabilityRow[];
   lus: CwLuRow[];
   luMembers: CwLuMemberRow[];
+  luDayResults: CwLuDayResultRow[];
 }
 
 const EVENT_DETAIL_QUERY_KEY = (id: string) => ['cw_event', id];
@@ -52,16 +54,22 @@ export function useCwEvent(eventId: string | undefined) {
       const registrationIds = (regsRes.data ?? []).map((r) => r.id);
       const luIds = (lusRes.data ?? []).map((l) => l.id);
 
-      const [availRes, luMembersRes] = await Promise.all([
+      const dayIds = (daysRes.data ?? []).map((d) => d.id);
+
+      const [availRes, luMembersRes, luDayResultsRes] = await Promise.all([
         registrationIds.length
           ? supabase.from('cw_availability').select('*').in('registration_id', registrationIds)
           : Promise.resolve({ data: [], error: null }),
         luIds.length
           ? supabase.from('cw_lu_members').select('*').in('lu_id', luIds).order('position')
           : Promise.resolve({ data: [], error: null }),
+        dayIds.length
+          ? supabase.from('cw_lu_day_results').select('*').in('event_day_id', dayIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (availRes.error) throw availRes.error;
       if (luMembersRes.error) throw luMembersRes.error;
+      if (luDayResultsRes.error) throw luDayResultsRes.error;
 
       return {
         ...(eventRes.data as CwEventRow),
@@ -70,6 +78,7 @@ export function useCwEvent(eventId: string | undefined) {
         availability: (availRes.data ?? []) as CwAvailabilityRow[],
         lus: (lusRes.data ?? []) as CwLuRow[],
         luMembers: (luMembersRes.data ?? []) as CwLuMemberRow[],
+        luDayResults: (luDayResultsRes.data ?? []) as CwLuDayResultRow[],
       };
     },
   });
@@ -243,6 +252,26 @@ export function useSetRegistrationLu() {
       const { error } = await supabase
         .from('cw_lu_members')
         .insert({ lu_id: input.luId, registration_id: input.registrationId, role: input.role });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(vars.eventId) }),
+  });
+}
+
+/**
+ * Bilan victoires/défaites d'une LU pour une soirée donnée, saisi
+ * manuellement par le staff dans /admin/clan-wars.
+ */
+export function useSetLuDayResult() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { eventId: string; eventDayId: string; luId: string; wins: number; losses: number }) => {
+      const { error } = await supabase
+        .from('cw_lu_day_results')
+        .upsert(
+          { event_day_id: input.eventDayId, lu_id: input.luId, wins: input.wins, losses: input.losses },
+          { onConflict: 'event_day_id,lu_id' },
+        );
       if (error) throw error;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: EVENT_DETAIL_QUERY_KEY(vars.eventId) }),
