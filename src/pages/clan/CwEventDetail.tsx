@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { Section, Card, CardBody, CardTitle, Badge, Button, Input, Textarea, Spinner, StatCard } from '@/components/ui';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { useCwEvent, useRegisterToCwEvent, type CwEventDetail as CwEventDetailData } from '@/features/cw/queries';
@@ -126,6 +127,50 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <CardTitle>Inscrits</CardTitle>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead>
+                <tr className="text-left text-atfr-fog">
+                  <th className="py-2 pr-4">Pseudo</th>
+                  {event.days.map((day) => (
+                    <th key={day.id} className="py-2 px-2 text-center">
+                      {day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {event.registrations.map((reg) => (
+                  <tr key={reg.id} className="border-t border-atfr-gold/10">
+                    <td className="py-2 pr-4 text-atfr-bone">{reg.pseudo}</td>
+                    {event.days.map((day) => {
+                      const avail = event.availability.find(
+                        (a) => a.registration_id === reg.id && a.event_day_id === day.id,
+                      );
+                      return (
+                        <td key={day.id} className="py-2 px-2 text-center">
+                          {avail?.available ? (
+                            <Check size={14} className="inline text-atfr-success" />
+                          ) : (
+                            <span className="inline-block h-3 w-3 rounded-sm border border-atfr-warning bg-atfr-warning/20" />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!event.registrations.length && (
+              <p className="text-sm text-atfr-fog py-6 text-center">Aucune inscription pour le moment.</p>
+            )}
           </div>
         </CardBody>
       </Card>
