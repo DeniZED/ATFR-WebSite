@@ -6,6 +6,7 @@ import {
   useCwEvent,
   useDeleteCwLu,
   useSetCwLus,
+  useSetLuDayResult,
   useSetRegistrationLu,
   type CwEventDetail as CwEventDetailData,
 } from '@/features/cw/queries';
@@ -30,6 +31,7 @@ export default function AdminCwEventDetail() {
       </div>
 
       <LuPanel event={event} />
+      <ResultsPanel event={event} />
       <RegistrationsTable event={event} />
     </div>
   );
@@ -73,6 +75,97 @@ function LuPanel({ event }: { event: CwEventDetailData }) {
             Créer
           </Button>
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function ResultsPanel({ event }: { event: CwEventDetailData }) {
+  const setResult = useSetLuDayResult();
+
+  function resultFor(luId: string, dayId: string) {
+    return event.luDayResults.find((r) => r.lu_id === luId && r.event_day_id === dayId);
+  }
+
+  if (!event.lus.length) {
+    return (
+      <Card>
+        <CardBody>
+          <CardTitle>Résultats</CardTitle>
+          <p className="text-xs text-atfr-fog mt-2">Créez une LU pour pouvoir saisir des résultats.</p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardBody>
+        <CardTitle>Résultats (saisie manuelle)</CardTitle>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm whitespace-nowrap">
+            <thead>
+              <tr className="text-left text-atfr-fog">
+                <th className="py-2 pr-4">LU</th>
+                {event.days.map((day) => (
+                  <th key={day.id} className="py-2 px-2 text-center">
+                    {day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {event.lus.map((lu) => (
+                <tr key={lu.id} className="border-t border-atfr-gold/10">
+                  <td className="py-2 pr-4 text-atfr-bone">{lu.name}</td>
+                  {event.days.map((day) => {
+                    const result = resultFor(lu.id, day.id);
+                    return (
+                      <td key={day.id} className="py-2 px-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            value={result?.wins ?? 0}
+                            onChange={(e) =>
+                              setResult.mutate({
+                                eventId: event.id,
+                                eventDayId: day.id,
+                                luId: lu.id,
+                                wins: Number(e.target.value) || 0,
+                                losses: result?.losses ?? 0,
+                              })
+                            }
+                            className="w-10 rounded-md bg-atfr-ink/80 border border-atfr-success/30 text-atfr-success text-center px-1 py-1"
+                            aria-label={`Victoires ${lu.name} ${day.day}`}
+                          />
+                          <span className="text-atfr-fog">/</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={result?.losses ?? 0}
+                            onChange={(e) =>
+                              setResult.mutate({
+                                eventId: event.id,
+                                eventDayId: day.id,
+                                luId: lu.id,
+                                wins: result?.wins ?? 0,
+                                losses: Number(e.target.value) || 0,
+                              })
+                            }
+                            className="w-10 rounded-md bg-atfr-ink/80 border border-atfr-danger/30 text-atfr-danger text-center px-1 py-1"
+                            aria-label={`Défaites ${lu.name} ${day.day}`}
+                          />
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-atfr-fog mt-3">Victoires / Défaites par soirée, saisies manuellement.</p>
       </CardBody>
     </Card>
   );

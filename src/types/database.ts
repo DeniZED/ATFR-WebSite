@@ -1819,6 +1819,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      cw_lu_day_results: {
+        Row: {
+          id: string;
+          event_day_id: string;
+          lu_id: string;
+          wins: number;
+          losses: number;
+        };
+        Insert: {
+          id?: string;
+          event_day_id: string;
+          lu_id: string;
+          wins?: number;
+          losses?: number;
+        };
+        Update: {
+          id?: string;
+          event_day_id?: string;
+          lu_id?: string;
+          wins?: number;
+          losses?: number;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

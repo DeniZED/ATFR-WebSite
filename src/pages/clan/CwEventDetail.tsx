@@ -77,59 +77,62 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
       return { day, availCount, total: totalRegistrations };
     });
 
+    const isAvailable = (registrationId: string, dayId: string) =>
+      event.availability.some(
+        (a) => a.registration_id === registrationId && a.event_day_id === dayId && a.available,
+      );
+
+    const pseudoFor = (registrationId: string) =>
+      event.registrations.find((r) => r.id === registrationId)?.pseudo ?? '?';
+
     const luStats = event.lus.map((lu) => {
-      const members = event.luMembers.filter((m) => m.lu_id === lu.id);
+      const members = event.luMembers
+        .filter((m) => m.lu_id === lu.id)
+        .map((m) => ({ ...m, pseudo: pseudoFor(m.registration_id) }));
       const titulaires = members.filter((m) => m.role === 'titulaire');
       const remplacants = members.filter((m) => m.role === 'remplacant');
+
       const perDay = event.days.map((day) => {
-        const availableTitulaires = titulaires.filter((t) =>
-          event.availability.some(
-            (a) => a.registration_id === t.registration_id && a.event_day_id === day.id && a.available,
-          ),
-        ).length;
-        return { day, availableTitulaires, totalTitulaires: titulaires.length };
+        const absentTitulaires = titulaires.filter((t) => !isAvailable(t.registration_id, day.id));
+        const availableRemplacants = remplacants.filter((r) => isAvailable(r.registration_id, day.id));
+        const result = event.luDayResults.find((r) => r.lu_id === lu.id && r.event_day_id === day.id);
+        return {
+          day,
+          availableTitulaires: titulaires.length - absentTitulaires.length,
+          totalTitulaires: titulaires.length,
+          absentTitulaires,
+          availableRemplacants,
+          wins: result?.wins ?? 0,
+          losses: result?.losses ?? 0,
+        };
       });
-      return { lu, titulaires, remplacants, perDay };
+
+      const wins = perDay.reduce((sum, d) => sum + d.wins, 0);
+      const losses = perDay.reduce((sum, d) => sum + d.losses, 0);
+      const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : null;
+
+      return { lu, titulaires, remplacants, perDay, wins, losses, winRate };
     });
 
-    return { totalRegistrations, dayStats, luStats };
+    const clanWins = luStats.reduce((sum, l) => sum + l.wins, 0);
+    const clanLosses = luStats.reduce((sum, l) => sum + l.losses, 0);
+    const clanWinRate = clanWins + clanLosses > 0 ? Math.round((clanWins / (clanWins + clanLosses)) * 100) : null;
+
+    return { totalRegistrations, dayStats, luStats, clanWins, clanLosses, clanWinRate };
   }, [event]);
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Inscrits" value={stats.totalRegistrations} />
         <StatCard label="Line-Up créées" value={event.lus.length} />
         <StatCard label="Soirées" value={event.days.length} />
+        <StatCard
+          label="Bilan du clan"
+          value={`${stats.clanWins}V / ${stats.clanLosses}D`}
+          hint={stats.clanWinRate !== null ? `${stats.clanWinRate}% de victoires` : undefined}
+        />
       </div>
-
-      <Card>
-        <CardBody>
-          <CardTitle>Dispo par soirée</CardTitle>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-atfr-fog">
-                  <th className="py-2 pr-4">Soirée</th>
-                  <th className="py-2">Dispo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.dayStats.map(({ day, availCount, total }) => (
-                  <tr key={day.id} className="border-t border-atfr-gold/10">
-                    <td className="py-2 pr-4 text-atfr-bone">
-                      {day.label ?? new Date(day.day).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="py-2 text-atfr-fog">
-                      {availCount} / {total}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardBody>
-      </Card>
 
       <Card>
         <CardBody>
@@ -167,6 +170,16 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-atfr-gold/20 font-medium">
+                  <td className="py-2 pr-4 text-atfr-fog">Dispo</td>
+                  {stats.dayStats.map(({ day, availCount, total }) => (
+                    <td key={day.id} className="py-2 px-2 text-center text-atfr-fog">
+                      {availCount}/{total}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
             </table>
             {!event.registrations.length && (
               <p className="text-sm text-atfr-fog py-6 text-center">Aucune inscription pour le moment.</p>
@@ -176,26 +189,54 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {stats.luStats.map(({ lu, titulaires, remplacants, perDay }) => (
+        {stats.luStats.map(({ lu, titulaires, remplacants, perDay, wins, losses, winRate }) => (
           <Card key={lu.id}>
             <CardBody className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <CardTitle>{lu.name}</CardTitle>
-                <span className="text-xs text-atfr-fog">
-                  {titulaires.length} titulaires · {remplacants.length} remplaçants
-                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={winRate !== null && winRate >= 50 ? 'gold' : 'outline'}>
+                    {wins}V / {losses}D{winRate !== null ? ` · ${winRate}%` : ''}
+                  </Badge>
+                </div>
               </div>
-              <div className="space-y-1">
-                {perDay.map(({ day, availableTitulaires, totalTitulaires }) => {
-                  const incomplete = totalTitulaires > 0 && availableTitulaires < totalTitulaires;
+              <p className="text-xs text-atfr-fog">
+                {titulaires.length} titulaires · {remplacants.length} remplaçants
+              </p>
+              <div className="space-y-2">
+                {perDay.map(({ day, availableTitulaires, totalTitulaires, absentTitulaires, availableRemplacants, wins: dWins, losses: dLosses }) => {
+                  const incomplete = absentTitulaires.length > 0;
                   return (
-                    <div key={day.id} className="flex items-center justify-between text-xs">
-                      <span className="text-atfr-fog">
-                        {day.label ?? new Date(day.day).toLocaleDateString('fr-FR')}
-                      </span>
-                      <span className={incomplete ? 'text-atfr-warning' : 'text-atfr-success'}>
-                        {availableTitulaires} / {totalTitulaires}
-                      </span>
+                    <div key={day.id} className="rounded-md bg-atfr-ink/60 px-3 py-2 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-atfr-fog">
+                          {day.label ?? new Date(day.day).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span className={incomplete ? 'text-atfr-warning' : 'text-atfr-success'}>
+                            {availableTitulaires} / {totalTitulaires} dispo
+                          </span>
+                          {(dWins > 0 || dLosses > 0) && (
+                            <span className="text-atfr-bone">
+                              {dWins}V / {dLosses}D
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {incomplete && (
+                        <div className="text-atfr-warning/90">
+                          Absents : {absentTitulaires.map((t) => t.pseudo).join(', ')}
+                          {availableRemplacants.length > 0 && (
+                            <span className="text-atfr-success">
+                              {' '}
+                              · Remplaçants dispo : {availableRemplacants.map((r) => r.pseudo).join(', ')}
+                            </span>
+                          )}
+                          {availableRemplacants.length === 0 && (
+                            <span className="text-atfr-danger"> · Aucun remplaçant dispo</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
