@@ -7,11 +7,25 @@ import {
   ClipboardList,
   LayoutDashboard,
   Shield,
+  Star,
   Swords,
   Trophy,
   Users,
   X,
 } from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { Section, Card, CardBody, CardTitle, Badge, Button, Input, Textarea, Alert, Spinner, StatCard, Switch } from '@/components/ui';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { useCwEvent, useRegisterToCwEvent, type CwEventDetail as CwEventDetailData } from '@/features/cw/queries';
@@ -26,9 +40,26 @@ const STATUS_VARIANT: Record<CwEventStatus, 'neutral' | 'success' | 'warning' | 
   archived: 'neutral',
 };
 
+// Palette cyclique pour distinguer chaque LU visuellement (header, charts, badges).
+const LU_PALETTE = ['#3B82F6', '#D946EF', '#3FA55A', '#F59E0B', '#06B6D4', '#8B5CF6', '#EC4899', '#84CC16'];
+
+function colorFor(index: number) {
+  return LU_PALETTE[index % LU_PALETTE.length];
+}
+
 function formatDay(day: { day: string; label: string | null }) {
   return day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
+
+const chartTooltipStyle = {
+  contentStyle: {
+    background: '#121316',
+    border: '1px solid rgba(232,176,67,0.25)',
+    borderRadius: 8,
+    fontSize: 12,
+  },
+  labelStyle: { color: '#ECECEC' },
+};
 
 export default function CwEventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -117,7 +148,7 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
     const pseudoFor = (registrationId: string) =>
       event.registrations.find((r) => r.id === registrationId)?.pseudo ?? '?';
 
-    const luStats = event.lus.map((lu) => {
+    const luStats = event.lus.map((lu, index) => {
       const members = event.luMembers
         .filter((m) => m.lu_id === lu.id)
         .map((m) => ({ ...m, pseudo: pseudoFor(m.registration_id) }));
@@ -128,14 +159,17 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
         const absentTitulaires = titulaires.filter((t) => !isAvailable(t.registration_id, day.id));
         const availableRemplacants = remplacants.filter((r) => isAvailable(r.registration_id, day.id));
         const result = event.luDayResults.find((r) => r.lu_id === lu.id && r.event_day_id === day.id);
+        const wins = result?.wins ?? 0;
+        const losses = result?.losses ?? 0;
         return {
           day,
           availableTitulaires: titulaires.length - absentTitulaires.length,
           totalTitulaires: titulaires.length,
           absentTitulaires,
           availableRemplacants,
-          wins: result?.wins ?? 0,
-          losses: result?.losses ?? 0,
+          wins,
+          losses,
+          rate: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : null,
         };
       });
 
@@ -143,15 +177,42 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
       const losses = perDay.reduce((sum, d) => sum + d.losses, 0);
       const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : null;
       const replacementsNeeded = perDay.filter((d) => d.absentTitulaires.length > 0).length;
+      const presenceCountFor = (registrationId: string) =>
+        event.days.filter((day) => isAvailable(registrationId, day.id)).length;
 
-      return { lu, titulaires, remplacants, perDay, wins, losses, winRate, replacementsNeeded };
+      return {
+        lu,
+        color: colorFor(index),
+        titulaires,
+        remplacants,
+        perDay,
+        wins,
+        losses,
+        winRate,
+        replacementsNeeded,
+        presenceCountFor,
+      };
     });
 
     const clanWins = luStats.reduce((sum, l) => sum + l.wins, 0);
     const clanLosses = luStats.reduce((sum, l) => sum + l.losses, 0);
     const clanWinRate = clanWins + clanLosses > 0 ? Math.round((clanWins / (clanWins + clanLosses)) * 100) : null;
+    const totalBattles = clanWins + clanLosses;
 
-    return { totalRegistrations, dayStats, luStats, clanWins, clanLosses, clanWinRate };
+    const globalPie = clanWins + clanLosses > 0
+      ? [
+          { name: 'Victoires', value: clanWins, color: '#3FA55A' },
+          { name: 'Défaites', value: clanLosses, color: '#D2453A' },
+        ]
+      : [];
+
+    const luBarData = luStats.map((l) => ({ name: l.lu.name, Victoires: l.wins, Défaites: l.losses }));
+
+    const luBattlesPie = luStats
+      .map((l) => ({ name: l.lu.name, value: l.wins + l.losses, color: l.color }))
+      .filter((d) => d.value > 0);
+
+    return { totalRegistrations, dayStats, luStats, clanWins, clanLosses, clanWinRate, totalBattles, globalPie, luBarData, luBattlesPie };
   }, [event]);
 
   return (
@@ -166,6 +227,81 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
           hint={stats.clanWinRate !== null ? `${stats.clanWinRate}% de victoires` : 'Aucun résultat saisi'}
           icon={<Trophy size={18} strokeWidth={1.8} />}
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardBody className="p-5">
+            <h3 className="font-display text-lg text-atfr-bone mb-1">Résultats globaux</h3>
+            <p className="text-xs text-atfr-fog mb-3">Victoires / défaites, toutes LU confondues.</p>
+            {!stats.globalPie.length ? (
+              <p className="text-sm text-atfr-fog py-16 text-center">Aucun résultat saisi.</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={stats.globalPie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={88} paddingAngle={2}>
+                      {stats.globalPie.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...chartTooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-atfr-fog text-center mt-1">
+                  Total : {stats.clanWins + stats.clanLosses} batailles · {stats.clanWinRate}% de victoires
+                </p>
+              </>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody className="p-5">
+            <h3 className="font-display text-lg text-atfr-bone mb-1">Résultats par LU</h3>
+            <p className="text-xs text-atfr-fog mb-3">Victoires / défaites cumulées par Line-Up.</p>
+            {!stats.luBarData.length ? (
+              <p className="text-sm text-atfr-fog py-16 text-center">Aucune LU créée.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={stats.luBarData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid stroke="#1C1D22" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9CA0AA" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
+                  <YAxis stroke="#9CA0AA" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
+                  <Tooltip {...chartTooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="Victoires" fill="#3FA55A" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Défaites" fill="#D2453A" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody className="p-5">
+            <h3 className="font-display text-lg text-atfr-bone mb-1">Batailles par LU</h3>
+            <p className="text-xs text-atfr-fog mb-3">Part de chaque LU dans le volume total.</p>
+            {!stats.luBattlesPie.length ? (
+              <p className="text-sm text-atfr-fog py-16 text-center">Aucune bataille saisie.</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={stats.luBattlesPie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={88} paddingAngle={2}>
+                      {stats.luBattlesPie.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...chartTooltipStyle} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-atfr-fog text-center mt-1">Total : {stats.totalBattles} batailles</p>
+              </>
+            )}
+          </CardBody>
+        </Card>
       </div>
 
       <Card>
@@ -238,90 +374,8 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
 
       <div>
         <h3 className="font-display text-lg text-atfr-bone mb-4">Line-Up</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {stats.luStats.map(({ lu, titulaires, remplacants, perDay, wins, losses, winRate, replacementsNeeded }) => (
-            <Card key={lu.id}>
-              <CardBody className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="h-9 w-9 shrink-0 rounded-lg bg-atfr-gold/10 border border-atfr-gold/30 text-atfr-gold flex items-center justify-center">
-                      <Shield size={16} strokeWidth={1.8} />
-                    </span>
-                    <div>
-                      <CardTitle className="text-base">{lu.name}</CardTitle>
-                      <p className="text-xs text-atfr-fog">
-                        {titulaires.length} titulaires · {remplacants.length} remplaçants
-                      </p>
-                    </div>
-                  </div>
-                  {replacementsNeeded > 0 && (
-                    <Badge variant="warning" className="shrink-0">
-                      <AlertTriangle size={11} strokeWidth={2.2} />
-                      {replacementsNeeded}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="rounded-lg bg-atfr-ink/60 px-3 py-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-atfr-fog">Bilan</span>
-                    <span className="font-medium text-atfr-bone">
-                      {wins}V – {losses}D{winRate !== null ? ` (${winRate}%)` : ''}
-                    </span>
-                  </div>
-                  {winRate !== null && (
-                    <div className="h-1.5 rounded-full bg-atfr-graphite overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${winRate >= 50 ? 'bg-atfr-success' : 'bg-atfr-danger'}`}
-                        style={{ width: `${winRate}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {perDay.map(({ day, availableTitulaires, totalTitulaires, absentTitulaires, availableRemplacants, wins: dWins, losses: dLosses }) => {
-                    const incomplete = absentTitulaires.length > 0;
-                    return (
-                      <div
-                        key={day.id}
-                        className={`rounded-md px-3 py-2 text-xs space-y-1.5 border ${
-                          incomplete ? 'border-atfr-warning/30 bg-atfr-warning/5' : 'border-transparent bg-atfr-ink/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-atfr-fog font-medium">{formatDay(day)}</span>
-                          <span className="flex items-center gap-2">
-                            <Badge variant={incomplete ? 'warning' : 'success'} className="px-2 py-0">
-                              {availableTitulaires}/{totalTitulaires} dispo
-                            </Badge>
-                            {(dWins > 0 || dLosses > 0) && (
-                              <span className="text-atfr-bone tabular-nums">{dWins}V – {dLosses}D</span>
-                            )}
-                          </span>
-                        </div>
-                        {incomplete && (
-                          <div className="flex flex-wrap items-start gap-1.5 text-[11px] leading-relaxed">
-                            <span className="text-atfr-warning/90">
-                              Absents : {absentTitulaires.map((t) => t.pseudo).join(', ')}
-                            </span>
-                            {availableRemplacants.length > 0 ? (
-                              <span className="text-atfr-success">
-                                → dispo : {availableRemplacants.map((r) => r.pseudo).join(', ')}
-                              </span>
-                            ) : (
-                              <span className="text-atfr-danger">→ aucun remplaçant dispo</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {!perDay.length && <p className="text-xs text-atfr-fog">Aucune soirée définie.</p>}
-                </div>
-              </CardBody>
-            </Card>
-          ))}
+        <div className="grid gap-4 xl:grid-cols-2">
+          {stats.luStats.map((lu) => <LuPanel key={lu.lu.id} stats={lu} days={event.days} />)}
         </div>
         {!stats.luStats.length && (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-atfr-gold/15 bg-atfr-graphite/30 py-12">
@@ -331,6 +385,165 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
         )}
       </div>
     </div>
+  );
+}
+
+type LuMemberWithPseudo = CwEventDetailData['luMembers'][number] & { pseudo: string };
+
+interface LuStats {
+  lu: CwEventDetailData['lus'][number];
+  color: string;
+  titulaires: LuMemberWithPseudo[];
+  remplacants: LuMemberWithPseudo[];
+  perDay: {
+    day: CwEventDetailData['days'][number];
+    availableTitulaires: number;
+    totalTitulaires: number;
+    absentTitulaires: LuMemberWithPseudo[];
+    availableRemplacants: LuMemberWithPseudo[];
+    wins: number;
+    losses: number;
+    rate: number | null;
+  }[];
+  wins: number;
+  losses: number;
+  winRate: number | null;
+  replacementsNeeded: number;
+  presenceCountFor: (registrationId: string) => number;
+}
+
+function LuPanel({ stats, days }: { stats: LuStats; days: CwEventDetailData['days'] }) {
+  const { lu, color, titulaires, remplacants, perDay, wins, losses, winRate, replacementsNeeded, presenceCountFor } = stats;
+  const members = [...titulaires, ...remplacants];
+
+  return (
+    <Card className="overflow-hidden" style={{ borderColor: `${color}33` }}>
+      <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: color }}>
+        <span className="font-display text-base text-white drop-shadow">{lu.name}</span>
+        {replacementsNeeded > 0 && (
+          <Badge className="bg-white/20 border-white/40 text-white shrink-0">
+            <AlertTriangle size={11} strokeWidth={2.2} />
+            {replacementsNeeded} remplacement{replacementsNeeded > 1 ? 's' : ''}
+          </Badge>
+        )}
+      </div>
+
+      <CardBody className="space-y-5">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-lg bg-atfr-ink/60 py-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-atfr-fog">Victoires</p>
+            <p className="text-lg font-display text-atfr-success">{wins}</p>
+          </div>
+          <div className="rounded-lg bg-atfr-ink/60 py-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-atfr-fog">Défaites</p>
+            <p className="text-lg font-display text-atfr-danger">{losses}</p>
+          </div>
+          <div className="rounded-lg bg-atfr-ink/60 py-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-atfr-fog">Moyenne</p>
+            <p className="text-lg font-display text-atfr-bone">{winRate !== null ? `${winRate}%` : '—'}</p>
+          </div>
+        </div>
+        {winRate !== null && (
+          <div className="h-1.5 rounded-full bg-atfr-graphite overflow-hidden -mt-2">
+            <div
+              className={`h-full rounded-full ${winRate >= 50 ? 'bg-atfr-success' : 'bg-atfr-danger'}`}
+              style={{ width: `${winRate}%` }}
+            />
+          </div>
+        )}
+
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-atfr-fog mb-2">
+            Composition ({titulaires.length} titulaires · {remplacants.length} remplaçants)
+          </p>
+          <div className="grid sm:grid-cols-2 gap-1.5">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 rounded-md bg-atfr-ink/40 px-2.5 py-1.5 text-xs">
+                {m.role === 'titulaire' ? (
+                  <Star size={12} strokeWidth={2} className="text-atfr-gold shrink-0" />
+                ) : (
+                  <Shield size={12} strokeWidth={2} className="text-atfr-fog shrink-0" />
+                )}
+                <span className="text-atfr-bone truncate">{m.pseudo}</span>
+              </div>
+            ))}
+            {!members.length && <p className="text-xs text-atfr-fog">Aucun joueur affecté.</p>}
+          </div>
+        </div>
+
+        {!!perDay.length && (
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-atfr-fog mb-2">Résultats par soirée</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs whitespace-nowrap">
+                <thead>
+                  <tr className="text-left text-atfr-fog">
+                    <th className="py-1.5 pr-2">Soirée</th>
+                    <th className="py-1.5 px-2 text-center">V</th>
+                    <th className="py-1.5 px-2 text-center">D</th>
+                    <th className="py-1.5 px-2 text-center">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perDay.map(({ day, wins: dWins, losses: dLosses, rate }) => (
+                    <tr key={day.id} className="border-t border-atfr-gold/10">
+                      <td className="py-1.5 pr-2 text-atfr-fog">{formatDay(day)}</td>
+                      <td className="py-1.5 px-2 text-center text-atfr-success">{dWins}</td>
+                      <td className="py-1.5 px-2 text-center text-atfr-danger">{dLosses}</td>
+                      <td className="py-1.5 px-2 text-center text-atfr-bone">{rate !== null ? `${rate}%` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {!!members.length && !!days.length && (
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-atfr-fog mb-2">Présence des joueurs par soirée</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs whitespace-nowrap">
+                <thead>
+                  <tr className="text-left text-atfr-fog">
+                    <th className="py-1 pr-2 sticky left-0 bg-atfr-carbon">Joueur</th>
+                    {days.map((day) => (
+                      <th key={day.id} className="py-1 px-1 text-center font-medium">{formatDay(day)}</th>
+                    ))}
+                    <th className="py-1 px-1 text-center">TT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((m) => {
+                    const dayRow = perDay.map((d) => ({
+                      dayId: d.day.id,
+                      isAbsentTitulaire: m.role === 'titulaire' && d.absentTitulaires.some((t) => t.id === m.id),
+                      isAvailableRemplacant: m.role === 'remplacant' && d.availableRemplacants.some((r) => r.id === m.id),
+                    }));
+                    return (
+                      <tr key={m.id} className="border-t border-atfr-gold/10">
+                        <td className="py-1 pr-2 sticky left-0 bg-atfr-carbon text-atfr-bone truncate max-w-[7rem]">{m.pseudo}</td>
+                        {dayRow.map((d) => {
+                          const ok = m.role === 'titulaire' ? !d.isAbsentTitulaire : d.isAvailableRemplacant;
+                          return (
+                            <td key={d.dayId} className="py-1 px-1 text-center">
+                              <span
+                                className={`inline-block h-3.5 w-3.5 rounded-sm ${ok ? 'bg-atfr-success/70' : 'bg-atfr-danger/60'}`}
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="py-1 px-1 text-center text-atfr-fog">{presenceCountFor(m.registration_id)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 
