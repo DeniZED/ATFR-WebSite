@@ -1844,7 +1844,23 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<never, never>;
+    Views: {
+      geoguesser_shots_public: {
+        Row: {
+          id: string;
+          map_id: string;
+          image_url: string;
+          difficulty: QuizDifficulty;
+          caption: string | null;
+          tags: string[];
+          is_published: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       list_users_with_roles: {
         Args: Record<string, never>;

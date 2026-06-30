@@ -3,6 +3,8 @@
 Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu pour être livrable indépendamment, sans bloquer les suivants.
 
 > **Mise à jour 2026-06-30** : le porteur du projet a validé l'exécution du périmètre « Lot 1 sûr + Lot 2 » (items ne nécessitant pas de décision produit). Ce périmètre est **livré** — voir le détail ✅ ci-dessous. Le reste de la roadmap (P0-1, P0-2, P0-6, Lots 3-5) reste une proposition de séquencement à valider avant exécution, conformément à la consigne de ne pas faire de refonte sans validation.
+>
+> **Mise à jour 2026-06-30 (2)** : P0-1 a été tranché par le porteur du projet (Option A — recalcul serveur complet) et scopé au **Geoguesser uniquement** pour cette passe (« Geoguesser d'abord, quiz ensuite »). Le volet Geoguesser est **livré** : migration `0044_geoguesser_server_sessions.sql`, helper de scoring serveur `_geoguesser-scoring.ts`, 3 fonctions Netlify (`geoguesser-start-session.mts`, `geoguesser-submit-round.mts`, `geoguesser-finish-session.mts`), intégration `Geoguesser.tsx`, et test de parité client/serveur. Le volet quiz reste **non traité**, à planifier séparément.
 
 ---
 
@@ -12,7 +14,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 1. **✅ P0-4** Focus clavier sur `Button.tsx` — correction d'une ligne, risque quasi nul, bénéfice immédiat sitewide. **CORRIGÉ.**
 2. **✅ P0-5** Rendre `MinimapClickPlacer` accessible au clavier — correction ciblée, risque faible. **CORRIGÉ** (flèches + Entrée/Espace, `role="button"`, `aria-label`).
 3. **✅ P0-3** Garde-fou roster vide avant `syncClanRoster()` — correction défensive ciblée, risque faible, évite un incident de données potentiellement lourd à corriger après coup. **CORRIGÉ.**
-4. **P0-1** Score Geoguesser/quiz falsifiable — **nécessite une décision produit** (recalcul serveur complet vs. token à usage unique lié à un round) avant tout développement ; à valider avec le porteur du projet en premier, car c'est le chantier le plus structurant du lot. *Non traité — hors périmètre de cette vague.*
+4. **⚠️ P0-1** Score Geoguesser/quiz falsifiable — décision produit tranchée (Option A, recalcul serveur complet). **Volet Geoguesser CORRIGÉ** (sessions serveur-autoritaires + 3 fonctions Netlify + test de parité de scoring). **Volet quiz non traité** — à planifier dans une passe ultérieure dédiée.
 5. **P0-2** Contenu clan-hub exposé via bundle public — **nécessite une décision produit** (migration du contenu vers Supabase + RLS) ; à valider également, effort de migration de contenu non négligeable. *Non traité — hors périmètre de cette vague.*
 6. **P0-6** Modales accessibles (`role="dialog"`, piège de focus, `Echap`) — à traiter après validation d'un composant `Modal` partagé (évite de corriger 3-4 fois la même chose séparément). *Non traité — dépend du Lot 3.*
 
@@ -52,13 +54,13 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 *Objectif : consolider les axes transverses une fois les fondations stabilisées par les lots 1-3.*
 
 1. **P2-5** Lazy-load ciblé du chunk `recharts`/`PieChart` au niveau sous-composant.
-2. **P2-1** Découpage de `Geoguesser.tsx` (3317 lignes) en sous-composants/hooks — à mener une fois Lot 1 (P0-1, score) tranché, car le chantier touche le même fichier.
+2. **P2-1** Découpage de `Geoguesser.tsx` (désormais ~3300+ lignes après l'intégration serveur-autoritaire P0-1) en sous-composants/hooks — peut démarrer, le volet Geoguesser de P0-1 étant livré.
 3. **P2-8** Introduire une gestion de métadonnées par route (`react-helmet-async`) sur les pages publiques à enjeu de partage (`Recruitment.tsx`, `Events.tsx`).
 4. **P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` (pan/zoom Geoguesser sur mobile).
 5. **P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`).
 6. **P1-1** Appliquer `npm audit fix` (sans `--force`) pour `react-router-dom`/`ws`/`js-yaml`/`brace-expansion`/`@babel/core`, avec test de non-régression sur le routing et les abonnements realtime Supabase.
 7. **P2-9** Ajouter un script `gen:types` au `package.json`.
-8. Élargir la couverture de tests au-delà des 2 fichiers actuels — prioriser les fonctions Netlify sensibles (`submit-score.mts`, `_player-token.ts` après correction P0-1) et la logique métier extraite au Lot 3.
+8. Élargir la couverture de tests au-delà des fichiers actuels (`_player-token.test.ts`, `geoguesser-scoring-parity.test.ts`, `scoring.test.ts`) — prioriser `submit-score.mts` (volet quiz, après correction P0-1 quiz) et la logique métier extraite au Lot 3.
 
 ---
 
@@ -77,7 +79,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 
 ```
 Lot 1 (P0)  ──┬──> Lot 3 (item 1, modale) ──> complète P0-6
-              └──> Lot 4 (item 2, Geoguesser.tsx) attend la décision P0-1
+              └──> Lot 4 (item 2, Geoguesser.tsx) : décision P0-1 tranchée, volet Geoguesser livré — peut démarrer
 
 Lot 2 ──> indépendant, peut démarrer immédiatement en parallèle du Lot 1
 
