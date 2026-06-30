@@ -13,6 +13,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { CLANS } from '@/lib/constants';
+import { translateSupabaseError } from '@/lib/error-messages';
 import {
   applicationSchema,
   serializeAvailability,
@@ -96,7 +97,7 @@ export default function Recruitment() {
 
   if (submitted) {
     return (
-      <Section eyebrow="Merci" title="Candidature envoyée">
+      <Section eyebrow="Merci" title="Candidature envoyée" as="h1">
         <Card className="max-w-xl mx-auto">
           <CardBody className="text-center py-10">
             <CheckCircle2 size={48} className="mx-auto text-atfr-success mb-4" />
@@ -117,6 +118,7 @@ export default function Recruitment() {
     <Section
       eyebrow="Recrutement"
       title="Rejoindre le clan"
+      as="h1"
       description="Formulaire en 3 étapes. Vos stats publiques sont vérifiées en direct via l'API Wargaming et tomato.gg pour faciliter la review."
     >
       <div className="max-w-3xl mx-auto">
@@ -254,7 +256,7 @@ export default function Recruitment() {
 
           {submit.isError && (
             <Alert tone="danger" title="Échec de l'envoi">
-              {(submit.error as Error).message ?? 'Réessayez dans un instant.'}
+              {translateSupabaseError(submit.error, "Une erreur est survenue lors de l'envoi. Réessayez dans un instant.")}
             </Alert>
           )}
 

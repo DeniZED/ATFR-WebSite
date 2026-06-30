@@ -5,6 +5,8 @@ interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   id?: string;
   eyebrow?: string;
   title?: ReactNode;
+  /** Heading level for `title`. Use "h1" when this is the page's main heading. Defaults to "h2". */
+  as?: 'h1' | 'h2';
   description?: ReactNode;
   /** Optional element rendered top-right of the header (e.g. a profile widget). */
   headerAction?: ReactNode;
@@ -15,6 +17,7 @@ export function Section({
   id,
   eyebrow,
   title,
+  as: Heading = 'h2',
   description,
   headerAction,
   className,
@@ -43,9 +46,9 @@ export function Section({
                 </p>
               )}
               {title && (
-                <h2 className="text-4xl sm:text-5xl font-display font-semibold text-atfr-bone">
+                <Heading className="text-4xl sm:text-5xl font-display font-semibold text-atfr-bone">
                   {title}
-                </h2>
+                </Heading>
               )}
               {description && (
                 <p className="mt-4 text-atfr-fog text-base sm:text-lg leading-relaxed">

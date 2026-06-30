@@ -37,6 +37,13 @@ async function scanClanForGuild(
     return;
   }
 
+  if (roster.members.length === 0) {
+    warn(
+      `Clan ${clan.clan_id} : roster vide reçu de l'API WG (guild=${guildId}), sync ignorée pour éviter de marquer tous les membres comme partis`,
+    );
+    return;
+  }
+
   const result = await syncClanRoster({
     guild_id: guildId,
     clan_id: clan.clan_id,

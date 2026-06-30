@@ -4,10 +4,11 @@ import { cn } from '@/lib/cn';
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string | null;
+  hint?: string;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, id, children, ...props }, ref) => {
+  ({ className, label, error, hint, id, children, ...props }, ref) => {
     const selectId = id ?? props.name;
     return (
       <div className="space-y-1.5">
@@ -27,11 +28,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             error && 'border-atfr-danger',
             className,
           )}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error && selectId ? `${selectId}-error` : hint && selectId ? `${selectId}-hint` : undefined}
           {...props}
         >
           {children}
         </select>
-        {error && <p className="text-xs text-atfr-danger">{error}</p>}
+        {hint && !error && <p id={selectId ? `${selectId}-hint` : undefined} className="text-xs text-atfr-fog/70">{hint}</p>}
+        {error && <p id={selectId ? `${selectId}-error` : undefined} className="text-xs text-atfr-danger">{error}</p>}
       </div>
     );
   },

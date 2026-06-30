@@ -26,6 +26,7 @@ export default function Members() {
     <Section
       eyebrow="Roster"
       title="Nos membres"
+      as="h1"
       description="Liste synchronisée depuis l'API Wargaming. Cliquez sur un joueur pour ouvrir son profil tomato.gg."
     >
       <div className="mb-8 max-w-sm mx-auto">

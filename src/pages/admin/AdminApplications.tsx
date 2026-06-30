@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Check, ExternalLink, Trash2, X } from 'lucide-react';
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -66,11 +67,17 @@ export default function AdminApplications() {
         </div>
       </div>
 
+      {list.isError && (
+        <Alert tone="danger">
+          {(list.error as Error).message || 'Impossible de charger les candidatures.'}
+        </Alert>
+      )}
+
       {list.isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner label="Chargement…" />
         </div>
-      ) : !list.data || list.data.length === 0 ? (
+      ) : list.isError ? null : !list.data || list.data.length === 0 ? (
         <p className="text-center text-atfr-fog py-10">Aucune candidature.</p>
       ) : (
         <div className="grid gap-4">
