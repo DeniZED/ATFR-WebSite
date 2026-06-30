@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { Alert, Button, Card, CardBody, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
+import { translateSupabaseError } from '@/lib/error-messages';
 
 export default function Login() {
   const { signIn, user, loading } = useAuth();
@@ -29,7 +30,7 @@ export default function Login() {
       await signIn(email, password);
       navigate('/admin', { replace: true });
     } catch (err) {
-      setError((err as Error).message ?? 'Identifiants invalides');
+      setError(translateSupabaseError(err, 'Identifiants invalides.'));
     } finally {
       setSubmitting(false);
     }

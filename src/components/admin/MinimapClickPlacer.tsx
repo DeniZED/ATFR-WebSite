@@ -1,6 +1,9 @@
-import { useRef, type MouseEvent } from 'react';
+import { useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import { Crosshair } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+const KEYBOARD_STEP = 0.02;
+const KEYBOARD_STEP_LARGE = 0.1;
 
 interface Point {
   x: number;
@@ -46,6 +49,38 @@ export function MinimapClickPlacer({
     onPlace(clampedX, clampedY);
   }
 
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onPlace(x ?? 0.5, y ?? 0.5);
+      return;
+    }
+
+    if (x == null || y == null) return;
+
+    const step = e.shiftKey ? KEYBOARD_STEP_LARGE : KEYBOARD_STEP;
+    let nextX = x;
+    let nextY = y;
+    switch (e.key) {
+      case 'ArrowLeft':
+        nextX = x - step;
+        break;
+      case 'ArrowRight':
+        nextX = x + step;
+        break;
+      case 'ArrowUp':
+        nextY = y - step;
+        break;
+      case 'ArrowDown':
+        nextY = y + step;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    onPlace(Math.max(0, Math.min(1, nextX)), Math.max(0, Math.min(1, nextY)));
+  }
+
   if (!imageUrl) {
     return (
       <div
@@ -65,7 +100,15 @@ export function MinimapClickPlacer({
       <div
         ref={containerRef}
         onClick={handleClick}
-        className="relative aspect-square w-full overflow-hidden rounded-lg border border-atfr-gold/20 bg-atfr-ink cursor-crosshair select-none"
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={
+          x != null && y != null
+            ? 'Position du screenshot sur la minimap. Flèches pour ajuster, Entrée pour repositionner au centre.'
+            : 'Placer la position du screenshot sur la minimap. Entrée ou Espace pour placer au centre, puis flèches pour ajuster.'
+        }
+        className="relative aspect-square w-full overflow-hidden rounded-lg border border-atfr-gold/20 bg-atfr-ink cursor-crosshair select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-atfr-gold focus-visible:ring-offset-2 focus-visible:ring-offset-atfr-ink"
       >
         <img
           src={imageUrl}

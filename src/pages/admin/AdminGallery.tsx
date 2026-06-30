@@ -25,7 +25,7 @@ export default function AdminGallery() {
   const [filter, setFilter] = useState<MediaKind | 'all'>('all');
   const [visibilityFilter, setVisibilityFilter] =
     useState<VisibilityFilter>('all');
-  const { data, isLoading } = useMediaAssets();
+  const { data, isLoading, isError, error } = useMediaAssets();
   const upload = useUploadMedia();
   const update = useUpdateMedia();
   const remove = useDeleteMedia();
@@ -133,11 +133,17 @@ export default function AdminGallery() {
         </Alert>
       )}
 
+      {isError && (
+        <Alert tone="danger">
+          {(error as Error).message || 'Impossible de charger la galerie.'}
+        </Alert>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : isError ? null : filtered.length === 0 ? (
         <p className="text-center text-atfr-fog py-10">Aucun média.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

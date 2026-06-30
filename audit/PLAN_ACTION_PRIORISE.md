@@ -2,6 +2,8 @@
 
 Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction : Faible / Moyen / Élevé (probabilité de régression si la correction est appliquée sans précaution).
 
+> **Mise à jour 2026-06-30** : une première vague de corrections (« Lot 1 sûr + Lot 2 » validé par le porteur du projet) a été appliquée. 9 findings sont marqués ✅ **CORRIGÉ** ci-dessous : P0-3, P0-4, P0-5, P1-7, P1-9, P1-10, P1-12, P1-13, P2-7. `npm run lint`, `npm run typecheck`, `npm test` et `npm run build` ont tous été vérifiés au vert après ces changements. P0-1, P0-2 et P0-6 restent **intentionnellement non traités** (décision produit requise / dépendance à un composant `Modal` partagé du Lot 3) — voir `ROADMAP_CORRECTIONS.md` pour le détail.
+
 ---
 
 ## P0 — Critique (à traiter avant toute mise en production avec données réelles)
@@ -22,29 +24,32 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 - **Risque de correction** : Élevé (migration de contenu + nouvelle politique RLS + refonte des pages concernées).
 - **Effort** : Élevé. **Impact** : Élevé.
 
-### P0-3 — Roster clan vide → départs en masse faussement enregistrés
+### ✅ P0-3 — Roster clan vide → départs en masse faussement enregistrés — CORRIGÉ
 - **Problème** : aucun garde-fou si l'API WG renvoie un roster vide ; la RPC `sync_clan_roster` interprète alors tous les membres en cache comme partis.
 - **Localisation** : `discord-bot/src/clan/wgClient.ts:71-94`, `netlify/functions/discord-clan-sync.mts:93-131`, `supabase/migrations/0035_clan_tracker.sql:266-306`
 - **Pourquoi** : un incident temporaire de l'API WG (timeout, panne) peut déclencher l'enregistrement erroné du départ de tout le clan, fausser les statistiques RH visibles par les admins, et potentiellement déclencher des notifications Discord en masse.
 - **Solution de principe** : ajouter un garde dans `discord-bot/src/clan/scanner.ts` rejetant un roster vide avant d'appeler `syncClanRoster()`.
 - **Risque de correction** : Faible (ajout d'une vérification défensive ciblée, ne change pas le comportement nominal).
 - **Effort** : Faible. **Impact** : Élevé.
+- **Statut** : ✅ Corrigé — garde ajouté dans `discord-bot/src/clan/scanner.ts` (rejet du roster vide avant `syncClanRoster()`).
 
-### P0-4 — Focus clavier invisible sur les boutons (sitewide)
+### ✅ P0-4 — Focus clavier invisible sur les boutons (sitewide) — CORRIGÉ
 - **Problème** : `Button.tsx` définit `focus-visible:ring-offset-atfr-ink` sans jamais définir l'anneau de focus lui-même.
 - **Localisation** : `src/components/ui/Button.tsx:6`
 - **Pourquoi** : aucune indication visuelle de focus clavier sur la quasi-totalité des boutons du site, y compris en back-office admin (WCAG 2.4.7).
 - **Solution de principe** : ajouter `focus-visible:ring-2 focus-visible:ring-atfr-gold` à la définition `cva`.
 - **Risque de correction** : Faible (changement centralisé d'une ligne, purement visuel/additif).
 - **Effort** : Faible. **Impact** : Élevé (bénéficie à tout le site immédiatement).
+- **Statut** : ✅ Corrigé — `focus-visible:ring-2 focus-visible:ring-atfr-gold focus-visible:ring-offset-2` ajouté à la définition `cva`.
 
-### P0-5 — Élément interactif inaccessible au clavier (admin Geoguesser)
+### ✅ P0-5 — Élément interactif inaccessible au clavier (admin Geoguesser) — CORRIGÉ
 - **Problème** : `<div onClick>` sans `role`/`tabIndex`/`onKeyDown` pour placer un point sur la mini-carte.
 - **Localisation** : `src/components/admin/MinimapClickPlacer.tsx:65-68`
 - **Pourquoi** : fonctionnalité admin totalement bloquée pour un usage clavier (WCAG 2.1.1).
 - **Solution de principe** : ajouter `role="button"`, `tabIndex={0}`, gestion `onKeyDown` (Entrée/Espace).
 - **Risque de correction** : Faible.
 - **Effort** : Faible. **Impact** : Moyen (périmètre admin restreint, mais bloquant pour l'utilisateur concerné).
+- **Statut** : ✅ Corrigé — `role="button"`, `tabIndex={0}`, `aria-label` et `onKeyDown` ajoutés (flèches pour ajuster, Entrée/Espace pour placer au centre).
 
 ### P0-6 — Modales custom inaccessibles (pas de `role="dialog"`, pas de piège de focus, pas d'`Echap`)
 - **Problème** : 3 des 4 overlays audités (dont `AvatarCustomizer.tsx`) n'implémentent aucune des bonnes pratiques de modale accessible.
@@ -66,13 +71,13 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 | P1-4 | 3 réimplémentations divergentes de l'éligibilité recrutement | `PlayerLookupCard.tsx:9-14`, `ClanMovementsTab.tsx:67-93`, `player-stats.mts` | Risque de décision de recrutement basée sur un seuil obsolète côté UI | Centraliser dans `features/recruitment/logic.ts`, consommer partout | Moyen | Moyen | Élevé |
 | P1-5 | Logique métier dispersée dans 11 emplacements UI (badges, scoring, agrégats) | Voir `AUDIT_ARCHITECTURE.md` §6 | Non testable, source de divergences (ex. 2 systèmes de tier) | Extraction progressive vers `features/*/logic.ts`, suivre le pattern `features/rh/activity.ts` | Moyen | Élevé | Élevé |
 | P1-6 | Contraste insuffisant (94 occurrences `text-atfr-fog/opacité`) | `src/pages/clan/*.tsx`, composants Geoguesser | WCAG 1.4.3, lisibilité dégradée | Relever les opacités sous le seuil 4.5:1 | Faible | Moyen | Moyen |
-| P1-7 | `og-image.png` manquant | `index.html:26,37`, `public/` | Partage social sans image (Discord, Twitter...) | Ajouter le fichier image | Faible | Faible | Moyen |
+| ✅ P1-7 | `og-image.png` manquant — **CORRIGÉ** | `index.html:26,37`, `public/` | Partage social sans image (Discord, Twitter...) | Ajouter le fichier image | Faible | Faible | Moyen |
 | P1-8 | Carte Geoguesser inutilisable au tactile une fois zoomée | `src/components/geoguesser/FloatingMapPicker.tsx` | Module académie dégradé sur mobile | Ajouter gestion `touchstart`/`touchmove`/`touchend` | Moyen | Moyen | Élevé |
-| P1-9 | Messages d'erreur techniques/anglais exposés | `Recruitment.tsx:255-259`, `Login.tsx` | Confusion utilisateurs non techniques | Traduire/mapper les erreurs Supabase vers des messages FR | Faible | Faible | Moyen |
-| P1-10 | États d'erreur masqués en "liste vide" | `AdminGallery.tsx`, `AdminApplications.tsx` | Admin peut croire à tort une section vide | Distinguer `isError`/`isEmpty` (pattern déjà présent ailleurs) | Faible | Faible | Moyen |
+| ✅ P1-9 | Messages d'erreur techniques/anglais exposés — **CORRIGÉ** | `Recruitment.tsx:255-259`, `Login.tsx` | Confusion utilisateurs non techniques | Traduire/mapper les erreurs Supabase vers des messages FR | Faible | Faible | Moyen |
+| ✅ P1-10 | États d'erreur masqués en "liste vide" — **CORRIGÉ** | `AdminGallery.tsx`, `AdminApplications.tsx` | Admin peut croire à tort une section vide | Distinguer `isError`/`isEmpty` (pattern déjà présent ailleurs) | Faible | Faible | Moyen |
 | P1-11 | Seuils WN8 dupliqués manuellement site/bot | `discord-bot/src/clan/wn8.ts` (commentaire l'admet) | Risque de divergence silencieuse | Package partagé ou source unique exposée en API | Élevé | Élevé | Moyen |
-| P1-12 | Labels d'onglets retirés de l'arbre a11y sous `sm` | `AvatarCustomizer.tsx:150-163` | Boutons icône-seule sans nom accessible sur mobile | `hidden sm:inline` → `sr-only sm:not-sr-only` | Faible | Faible | Faible |
-| P1-13 | `Select.tsx` sans `aria-invalid`/`aria-describedby` | `src/components/ui/Select.tsx` | Incohérence avec `Input.tsx`, WCAG 4.1.2 | Aligner sur `Input.tsx` | Faible | Faible | Faible |
+| ✅ P1-12 | Labels d'onglets retirés de l'arbre a11y sous `sm` — **CORRIGÉ** | `AvatarCustomizer.tsx:150-163` | Boutons icône-seule sans nom accessible sur mobile | `hidden sm:inline` → `sr-only sm:not-sr-only` | Faible | Faible | Faible |
+| ✅ P1-13 | `Select.tsx` sans `aria-invalid`/`aria-describedby` — **CORRIGÉ** | `src/components/ui/Select.tsx` | Incohérence avec `Input.tsx`, WCAG 4.1.2 | Aligner sur `Input.tsx` | Faible | Faible | Faible |
 
 ---
 
@@ -86,7 +91,7 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 | P2-4 | Zéro test sur `computeRecruitmentScore` | `netlify/functions/player-stats.mts:198-221` | Ajouter des tests unitaires (cas limites) | Faible | Élevé |
 | P2-5 | Chunk `recharts`/`PieChart` (115 kB gzip) potentiellement sur-chargé | Pages avec graphiques | Lazy-load au niveau du sous-composant graphique | Faible | Moyen |
 | P2-6 | Révocation d'accès clan-hub non instantanée (cache 5 min) | `src/features/clan/useClanAccess.ts:34` | Réduire le `staleTime` ou ajouter un abonnement realtime si besoin d'instantanéité | Faible | Faible-moyen |
-| P2-7 | Hiérarchie de titres incohérente | `Members.tsx`, `Recruitment.tsx`, `Home.tsx` | Ajouter `h1` manquants, corriger les sauts de niveau | Faible | Moyen |
+| ✅ P2-7 | Hiérarchie de titres incohérente — **CORRIGÉ** | `Members.tsx`, `Recruitment.tsx`, `Home.tsx` | Ajouter `h1` manquants, corriger les sauts de niveau | Faible | Moyen |
 | P2-8 | Métadonnées SEO statiques (identiques sur toutes les routes) | `index.html`, absence de gestion par route | Introduire `react-helmet-async` sur les pages publiques clés | Moyen | Moyen |
 | P2-9 | Pas de script `gen:types` — risque de dérive de `database.ts` | `package.json` | Ajouter le script de génération | Faible | Moyen (préventif) |
 

@@ -158,7 +158,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                 )}
               >
                 <Icon size={12} />
-                <span className="hidden sm:inline">{label}</span>
+                <span className="sr-only sm:not-sr-only">{label}</span>
               </button>
             ))}
           </div>
