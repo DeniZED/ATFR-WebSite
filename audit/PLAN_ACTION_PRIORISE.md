@@ -60,13 +60,14 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 - **Effort** : Faible. **Impact** : Moyen (périmètre admin restreint, mais bloquant pour l'utilisateur concerné).
 - **Statut** : ✅ Corrigé — `role="button"`, `tabIndex={0}`, `aria-label` et `onKeyDown` ajoutés (flèches pour ajuster, Entrée/Espace pour placer au centre).
 
-### P0-6 — Modales custom inaccessibles (pas de `role="dialog"`, pas de piège de focus, pas d'`Echap`)
+### ✅ P0-6 — Modales custom inaccessibles (pas de `role="dialog"`, pas de piège de focus, pas d'`Echap`) — CORRIGÉ
 - **Problème** : 3 des 4 overlays audités (dont `AvatarCustomizer.tsx`) n'implémentent aucune des bonnes pratiques de modale accessible.
 - **Localisation** : `src/components/geoguesser/AvatarCustomizer.tsx` (et overlays similaires)
 - **Pourquoi** : invisible pour les lecteurs d'écran, pas de fermeture clavier standard (WCAG 4.1.2 / 2.1.1).
 - **Solution de principe** : généraliser le pattern déjà correct de `Gallery.tsx` (`role="dialog"`, `aria-modal`, `Escape`) via un composant `Modal` partagé.
 - **Risque de correction** : Moyen (touche le comportement interactif de composants existants).
 - **Effort** : Moyen. **Impact** : Élevé.
+- **Statut** : ✅ Corrigé — hook partagé `src/hooks/useModalA11y.ts` (fermeture `Echap`, piège de focus Tab/Maj+Tab, focus initial sur le conteneur, restauration du focus à la fermeture, pile de dialogues pour l'empilement `AvatarCustomizer` au-dessus d'`AcademyProfilePanel`) + composant `ModalShell` (`src/components/ui/ModalShell.tsx`) portant `role="dialog"`/`aria-modal`/`aria-label`. Appliqué aux 3 overlays non conformes : `AvatarCustomizer` (via `ModalShell`), `AcademyProfilePanel` et le panneau « Mes stats » de `Geoguesser.tsx` (via le hook sur leurs conteneurs framer-motion, + `aria-label="Fermer"` ajouté aux boutons de fermeture icône seule). `Gallery.tsx`, déjà conforme, est inchangé.
 
 ---
 
