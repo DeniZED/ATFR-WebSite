@@ -11,6 +11,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 > **Mise à jour 2026-07-02 (2)** : P0-6 (modales accessibles) puis P0-2 (contenu clan-hub) ont été livrés à leur tour — voir détails ✅ ci-dessous. **Tous les findings P0 de l'audit sont désormais corrigés.**
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
+>
+> **Mise à jour 2026-07-02 (4)** : **P1-1** (npm audit fix — react-router/ws/js-yaml/@babel/core/brace-expansion patchés, restent des remontées dev-only vite/vitest) et **P1-3** (anti-doublons candidatures via index uniques partiels + verrouillage optimiste sur la revue, migration `0047`) livrés.
 
 ---
 
@@ -64,7 +66,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 3. **P2-8** Introduire une gestion de métadonnées par route (`react-helmet-async`) sur les pages publiques à enjeu de partage (`Recruitment.tsx`, `Events.tsx`).
 4. **P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` (pan/zoom Geoguesser sur mobile).
 5. **✅ P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`) — **CORRIGÉ** (pattern `**/*.{ts,tsx,mts}` + globals Node, zéro remontée sur l'existant).
-6. **P1-1** Appliquer `npm audit fix` (sans `--force`) pour `react-router-dom`/`ws`/`js-yaml`/`brace-expansion`/`@babel/core`, avec test de non-régression sur le routing et les abonnements realtime Supabase.
+6. **✅ P1-1** Appliquer `npm audit fix` (sans `--force`) — **CORRIGÉ** (react-router 6.30.4, ws 8.21.0, js-yaml 4.3.0, @babel/core, brace-expansion ; lint/typecheck/tests/build au vert, test manuel routing + realtime recommandé au déploiement).
 7. **P2-9** Ajouter un script `gen:types` au `package.json`.
 8. Élargir la couverture de tests au-delà des fichiers actuels (`_player-token.test.ts`, `geoguesser-scoring-parity.test.ts`, `scoring.test.ts`) — prioriser les fonctions de session quiz/geoguesser et la logique métier extraite au Lot 3.
 

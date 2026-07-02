@@ -73,6 +73,12 @@ export default function AdminApplications() {
         </Alert>
       )}
 
+      {update.isError && (
+        <Alert tone="warning" title="Statut non modifié">
+          {(update.error as Error).message}
+        </Alert>
+      )}
+
       {list.isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner label="Chargement…" />
@@ -163,7 +169,11 @@ export default function AdminApplications() {
                       size="sm"
                       leadingIcon={<Check size={14} />}
                       onClick={() =>
-                        update.mutate({ id: app.id, status: 'accepted' })
+                        update.mutate({
+                          id: app.id,
+                          status: 'accepted',
+                          expectedStatus: app.status,
+                        })
                       }
                       disabled={update.isPending}
                     >
@@ -176,7 +186,11 @@ export default function AdminApplications() {
                       size="sm"
                       leadingIcon={<X size={14} />}
                       onClick={() =>
-                        update.mutate({ id: app.id, status: 'rejected' })
+                        update.mutate({
+                          id: app.id,
+                          status: 'rejected',
+                          expectedStatus: app.status,
+                        })
                       }
                       disabled={update.isPending}
                     >
@@ -187,7 +201,11 @@ export default function AdminApplications() {
                     variant="ghost"
                     size="sm"
                     onClick={() =>
-                      update.mutate({ id: app.id, status: 'archived' })
+                      update.mutate({
+                        id: app.id,
+                        status: 'archived',
+                        expectedStatus: app.status,
+                      })
                     }
                     disabled={update.isPending}
                   >
