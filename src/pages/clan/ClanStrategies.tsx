@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { STRATEGIES, STRATEGY_CATEGORIES } from '@/data/clan/strategies';
+import { STRATEGY_CATEGORIES } from '@/features/clan/filters';
+import { useClanContent } from '@/features/clan/contentQueries';
+import type { StrategyEntry } from '@/features/clan/types';
+import { ClanContentBoundary } from '@/components/clan/ClanContentBoundary';
 import { FilterBar } from '@/components/clan/FilterBar';
 import { ModeBadge } from '@/components/clan/ModeBadge';
 import { TagList } from '@/components/clan/TagList';
@@ -7,7 +10,7 @@ import { ValidatedBy } from '@/components/clan/ValidatedBy';
 import { EmptyState } from '@/components/clan/EmptyState';
 import { AlertTriangle, MessageSquareQuote, User } from 'lucide-react';
 
-function StratCard({ strat }: { strat: (typeof STRATEGIES)[0] }) {
+function StratCard({ strat }: { strat: StrategyEntry }) {
   return (
     <div className="rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 p-5 space-y-4">
       <div>
@@ -82,8 +85,7 @@ function StratCard({ strat }: { strat: (typeof STRATEGIES)[0] }) {
 
 export default function ClanStrategies() {
   const [category, setCategory] = useState('all');
-
-  const filtered = STRATEGIES.filter((s) => category === 'all' || s.category === category);
+  const content = useClanContent();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -95,13 +97,21 @@ export default function ClanStrategies() {
 
       <FilterBar options={STRATEGY_CATEGORIES} active={category} onChange={setCategory} />
 
-      {filtered.length === 0 ? (
-        <EmptyState message="Aucune tactique dans cette catégorie." />
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((s) => <StratCard key={s.slug} strat={s} />)}
-        </div>
-      )}
+      <ClanContentBoundary query={content}>
+        {({ strategies }) => {
+          const filtered = (strategies?.strategies ?? []).filter(
+            (s) => category === 'all' || s.category === category,
+          );
+          if (filtered.length === 0) {
+            return <EmptyState message="Aucune tactique dans cette catégorie." />;
+          }
+          return (
+            <div className="space-y-4">
+              {filtered.map((s) => <StratCard key={s.slug} strat={s} />)}
+            </div>
+          );
+        }}
+      </ClanContentBoundary>
     </div>
   );
 }

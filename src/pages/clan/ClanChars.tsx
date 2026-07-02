@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck, CircleX, Wrench, Users, AlertTriangle, MessageSquare, Crosshair } from 'lucide-react';
-import { TANKS } from '@/data/clan/tanks';
+import { useClanContent } from '@/features/clan/contentQueries';
+import { ClanContentBoundary } from '@/components/clan/ClanContentBoundary';
 import { FilterBar } from '@/components/clan/FilterBar';
 import { SearchInput } from '@/components/clan/SearchInput';
 import { PriorityBadge } from '@/components/clan/PriorityBadge';
@@ -229,67 +230,78 @@ export default function ClanChars() {
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-
-  const filtered = TANKS.filter((t) => {
-    if (classFilter !== 'all' && t.class !== classFilter) return false;
-    if (priorityFilter !== 'all' && t.clan_priority !== priorityFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return t.name.toLowerCase().includes(q) || t.tags.some((tag) => tag.includes(q));
-    }
-    return true;
-  });
-
-  const counts = { HT: 0, MT: 0, LT: 0, TD: 0 };
-  TANKS.forEach((t) => { if (t.class in counts) counts[t.class as keyof typeof counts]++; });
+  const content = useClanContent();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-gold/60 mb-1">Clan Hub</p>
-        <h1 className="font-display text-2xl sm:text-3xl text-atfr-bone">Fiches chars</h1>
-        <p className="mt-1 text-sm text-atfr-fog">Équipement, compétences, munitions et conseils par char.</p>
+      <ClanContentBoundary query={content}>
+        {({ tanks }) => {
+          const all = tanks?.tanks ?? [];
 
-        {/* Compteurs par classe */}
-        <div className="flex gap-3 mt-3">
-          {(Object.entries(counts) as [keyof typeof counts, number][]).map(([cls, count]) => {
-            const cfg = CLASS_CONFIG[cls];
-            return (
-              <button
-                key={cls}
-                type="button"
-                onClick={() => setClassFilter(classFilter === cls ? 'all' : cls)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all border',
-                  classFilter === cls
-                    ? cn(cfg.bg, cfg.text, 'border-current/30 ring-1', cfg.ring)
-                    : 'border-atfr-gold/10 text-atfr-fog hover:text-atfr-bone bg-atfr-graphite/20',
-                )}
-              >
-                <span className={cn(
-                  'h-1.5 w-1.5 rounded-full',
-                  classFilter === cls ? cfg.text : 'bg-atfr-fog/40',
-                )} style={{ backgroundColor: 'currentColor' }} />
-                {cls}
-                <span className="text-[10px] opacity-60">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+          const filtered = all.filter((t) => {
+            if (classFilter !== 'all' && t.class !== classFilter) return false;
+            if (priorityFilter !== 'all' && t.clan_priority !== priorityFilter) return false;
+            if (search) {
+              const q = search.toLowerCase();
+              return t.name.toLowerCase().includes(q) || t.tags.some((tag) => tag.includes(q));
+            }
+            return true;
+          });
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un char…" className="sm:flex-1" />
-        <FilterBar options={PRIORITY_FILTERS} active={priorityFilter} onChange={setPriorityFilter} />
-      </div>
+          const counts = { HT: 0, MT: 0, LT: 0, TD: 0 };
+          all.forEach((t) => { if (t.class in counts) counts[t.class as keyof typeof counts]++; });
 
-      {filtered.length === 0 ? (
-        <EmptyState message="Aucun char ne correspond à cette recherche." />
-      ) : (
-        <div className="space-y-2.5">
-          {filtered.map((tank) => <TankCard key={tank.slug} tank={tank} />)}
-        </div>
-      )}
+          return (
+            <>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-atfr-gold/60 mb-1">Clan Hub</p>
+                <h1 className="font-display text-2xl sm:text-3xl text-atfr-bone">Fiches chars</h1>
+                <p className="mt-1 text-sm text-atfr-fog">Équipement, compétences, munitions et conseils par char.</p>
+
+                {/* Compteurs par classe */}
+                <div className="flex gap-3 mt-3">
+                  {(Object.entries(counts) as [keyof typeof counts, number][]).map(([cls, count]) => {
+                    const cfg = CLASS_CONFIG[cls];
+                    return (
+                      <button
+                        key={cls}
+                        type="button"
+                        onClick={() => setClassFilter(classFilter === cls ? 'all' : cls)}
+                        className={cn(
+                          'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all border',
+                          classFilter === cls
+                            ? cn(cfg.bg, cfg.text, 'border-current/30 ring-1', cfg.ring)
+                            : 'border-atfr-gold/10 text-atfr-fog hover:text-atfr-bone bg-atfr-graphite/20',
+                        )}
+                      >
+                        <span className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          classFilter === cls ? cfg.text : 'bg-atfr-fog/40',
+                        )} style={{ backgroundColor: 'currentColor' }} />
+                        {cls}
+                        <span className="text-[10px] opacity-60">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un char…" className="sm:flex-1" />
+                <FilterBar options={PRIORITY_FILTERS} active={priorityFilter} onChange={setPriorityFilter} />
+              </div>
+
+              {filtered.length === 0 ? (
+                <EmptyState message="Aucun char ne correspond à cette recherche." />
+              ) : (
+                <div className="space-y-2.5">
+                  {filtered.map((tank) => <TankCard key={tank.slug} tank={tank} />)}
+                </div>
+              )}
+            </>
+          );
+        }}
+      </ClanContentBoundary>
     </div>
   );
 }
