@@ -8,6 +8,10 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Regex for safe module_slug / submode identifiers.
 // Submodes can include colons as separators (e.g. daily:2026-06-06:default:5).
 const SLUG_RE = /^[a-z0-9_:.-]{1,128}$/;
+// Modules dont le score est désormais recalculé côté serveur (P0-1) : leurs
+// lignes module_scores sont insérées par les fonctions *-finish-session, ce
+// endpoint générique ne doit plus accepter de score forgé pour eux.
+const SERVER_AUTHORITATIVE_SLUGS = new Set(['wot-geoguesser', 'guide-bots']);
 // UUIDv4 pattern for player_anon_id.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -72,6 +76,9 @@ export default async (req: Request, _ctx: Context): Promise<Response> => {
 
   if (!moduleSlug || score === null || maxScore === null || !playerAnonId || !playerNickname) {
     return json({ error: 'Missing or invalid required fields' }, 400);
+  }
+  if (SERVER_AUTHORITATIVE_SLUGS.has(moduleSlug)) {
+    return json({ error: 'This module submits scores via its own session flow' }, 403);
   }
   const MAX_ALLOWED_SCORE = 1_000_000;
   if (score < 0 || score > maxScore || maxScore <= 0 || maxScore > MAX_ALLOWED_SCORE) {

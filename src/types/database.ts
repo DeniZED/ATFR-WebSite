@@ -1860,6 +1860,26 @@ export interface Database {
         };
         Relationships: [];
       };
+      quiz_answers_public: {
+        Row: {
+          id: string;
+          question_id: string;
+          label: string;
+          sort_order: number;
+        };
+        // Relation héritée de quiz_answers (table de base de la vue) —
+        // nécessaire pour l'embed `answers:quiz_answers_public(*)` depuis
+        // quiz_questions.
+        Relationships: [
+          {
+            foreignKeyName: 'quiz_answers_question_id_fkey';
+            columns: ['question_id'];
+            isOneToOne: false;
+            referencedRelation: 'quiz_questions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Functions: {
       list_users_with_roles: {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Database, QuizMode } from '@/types/database';
+import type { Database } from '@/types/database';
 
 type CategoryRow = Database['public']['Tables']['quiz_categories']['Row'];
 type CategoryInsert = Database['public']['Tables']['quiz_categories']['Insert'];
@@ -11,6 +11,16 @@ type AnswerInsert = Database['public']['Tables']['quiz_answers']['Insert'];
 
 export interface QuestionWithAnswers extends QuestionRow {
   answers: AnswerRow[];
+  category: CategoryRow | null;
+}
+
+// Vue publique sans is_correct (P0-1) : la bonne réponse n'est révélée
+// qu'après soumission, via quiz-submit-answer.
+export type PublicAnswer =
+  Database['public']['Views']['quiz_answers_public']['Row'];
+
+export interface QuestionWithPublicAnswers extends QuestionRow {
+  answers: PublicAnswer[];
   category: CategoryRow | null;
 }
 
@@ -233,15 +243,17 @@ export function useDuplicateQuizQuestion() {
 }
 
 // ----------------------------------------------------------------------
-// Public quiz: published questions + session logging
+// Public quiz — questions publiées, réponses via la vue sans is_correct.
+// La création/journalisation/clôture de session se font désormais côté
+// serveur (quiz-start-session / quiz-submit-answer / quiz-finish-session).
 // ----------------------------------------------------------------------
 export function usePublicQuiz(opts: { categoryId?: string | null } = {}) {
   return useQuery({
     queryKey: ['quiz_questions', 'public', opts.categoryId ?? 'all'],
-    queryFn: async (): Promise<QuestionWithAnswers[]> => {
+    queryFn: async (): Promise<QuestionWithPublicAnswers[]> => {
       let q = supabase
         .from('quiz_questions')
-        .select('*, answers:quiz_answers(*), category:quiz_categories(*)')
+        .select('*, answers:quiz_answers_public(*), category:quiz_categories(*)')
         .eq('is_published', true);
       if (opts.categoryId) q = q.eq('category_id', opts.categoryId);
       const { data, error } = await q;
@@ -249,69 +261,11 @@ export function usePublicQuiz(opts: { categoryId?: string | null } = {}) {
       return (data ?? []).map((row) => ({
         ...row,
         answers: [...(row.answers ?? [])].sort(
-          (a, b) => a.sort_order - b.sort_order,
+          (a: PublicAnswer, b: PublicAnswer) => a.sort_order - b.sort_order,
         ),
-      })) as QuestionWithAnswers[];
+      })) as QuestionWithPublicAnswers[];
     },
     staleTime: 5 * 60_000,
-  });
-}
-
-interface CreateSessionArgs {
-  mode: QuizMode;
-  categoryId: string | null;
-  total: number;
-}
-
-export function useCreateQuizSession() {
-  return useMutation({
-    mutationFn: async (args: CreateSessionArgs): Promise<string> => {
-      const { data, error } = await supabase
-        .from('quiz_sessions')
-        .insert({
-          mode: args.mode,
-          category_id: args.categoryId,
-          total: args.total,
-        })
-        .select('id')
-        .single();
-      if (error) throw error;
-      return data.id;
-    },
-  });
-}
-
-export function useLogQuizAnswer() {
-  return useMutation({
-    mutationFn: async (args: {
-      sessionId: string;
-      questionId: string;
-      answerId: string | null;
-      isCorrect: boolean;
-    }) => {
-      const { error } = await supabase.from('quiz_session_answers').insert({
-        session_id: args.sessionId,
-        question_id: args.questionId,
-        answer_id: args.answerId,
-        is_correct: args.isCorrect,
-      });
-      if (error) throw error;
-    },
-  });
-}
-
-export function useFinishQuizSession() {
-  return useMutation({
-    mutationFn: async (args: { sessionId: string; score: number }) => {
-      const { error } = await supabase
-        .from('quiz_sessions')
-        .update({
-          finished_at: new Date().toISOString(),
-          score: args.score,
-        })
-        .eq('id', args.sessionId);
-      if (error) throw error;
-    },
   });
 }
 
