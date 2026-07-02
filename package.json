@@ -12,7 +12,8 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "audit:deps": "npm audit --audit-level=moderate"
+    "audit:deps": "npm audit --audit-level=moderate",
+    "gen:types": "supabase gen types typescript --linked --schema public > src/types/database.gen.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -13,19 +13,6 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import { Section, Card, CardBody, CardTitle, Badge, Button, Input, Textarea, Alert, Spinner, StatCard, Switch } from '@/components/ui';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { useCwEvent, useRegisterToCwEvent, type CwEventDetail as CwEventDetailData } from '@/features/cw/queries';
@@ -51,15 +38,9 @@ function formatDay(day: { day: string; label: string | null }) {
   return day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
 
-const chartTooltipStyle = {
-  contentStyle: {
-    background: '#121316',
-    border: '1px solid rgba(232,176,67,0.25)',
-    borderRadius: 8,
-    fontSize: 12,
-  },
-  labelStyle: { color: '#ECECEC' },
-};
+// Graphiques recharts chargés en lazy (P2-5) : le chunk recharts
+// (~115 kB gzip) n'est téléchargé qu'au rendu du dashboard.
+const CwEventCharts = lazy(() => import('@/components/cw/CwEventCharts'));
 
 export default function CwEventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -229,80 +210,23 @@ function DashboardTab({ event }: { event: CwEventDetailData }) {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardBody className="p-5">
-            <h3 className="font-display text-lg text-atfr-bone mb-1">Résultats globaux</h3>
-            <p className="text-xs text-atfr-fog mb-3">Victoires / défaites, toutes LU confondues.</p>
-            {!stats.globalPie.length ? (
-              <p className="text-sm text-atfr-fog py-16 text-center">Aucun résultat saisi.</p>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={stats.globalPie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={88} paddingAngle={2}>
-                      {stats.globalPie.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip {...chartTooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <p className="text-xs text-atfr-fog text-center mt-1">
-                  Total : {stats.clanWins + stats.clanLosses} batailles · {stats.clanWinRate}% de victoires
-                </p>
-              </>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="p-5">
-            <h3 className="font-display text-lg text-atfr-bone mb-1">Résultats par LU</h3>
-            <p className="text-xs text-atfr-fog mb-3">Victoires / défaites cumulées par Line-Up.</p>
-            {!stats.luBarData.length ? (
-              <p className="text-sm text-atfr-fog py-16 text-center">Aucune LU créée.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={stats.luBarData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid stroke="#1C1D22" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9CA0AA" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} interval={0} angle={-20} textAnchor="end" height={50} />
-                  <YAxis stroke="#9CA0AA" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
-                  <Tooltip {...chartTooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Victoires" fill="#3FA55A" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Défaites" fill="#D2453A" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody className="p-5">
-            <h3 className="font-display text-lg text-atfr-bone mb-1">Batailles par LU</h3>
-            <p className="text-xs text-atfr-fog mb-3">Part de chaque LU dans le volume total.</p>
-            {!stats.luBattlesPie.length ? (
-              <p className="text-sm text-atfr-fog py-16 text-center">Aucune bataille saisie.</p>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={stats.luBattlesPie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={88} paddingAngle={2}>
-                      {stats.luBattlesPie.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip {...chartTooltipStyle} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <p className="text-xs text-atfr-fog text-center mt-1">Total : {stats.totalBattles} batailles</p>
-              </>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <CwEventCharts
+          globalPie={stats.globalPie}
+          luBarData={stats.luBarData}
+          luBattlesPie={stats.luBattlesPie}
+          clanWins={stats.clanWins}
+          clanLosses={stats.clanLosses}
+          clanWinRate={stats.clanWinRate}
+          totalBattles={stats.totalBattles}
+        />
+      </Suspense>
 
       <Card>
         <CardBody>

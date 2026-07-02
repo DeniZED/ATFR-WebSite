@@ -38,3 +38,4 @@ coverage/
 .turbo/
 .netlify/
 .claude/
+src/types/database.gen.ts

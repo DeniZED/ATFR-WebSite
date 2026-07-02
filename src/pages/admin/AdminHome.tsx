@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import {
   Calendar,
   FileText,
@@ -15,10 +15,17 @@ import { useClanStats } from '@/features/stats/queries';
 import { makeRollingPeriod } from '@/features/rh/activity';
 import { useHrPlayers } from '@/features/rh/queries';
 import { useRole } from '@/hooks/useRole';
-import { HrTrendChart } from '@/components/admin/HrTrendChart';
 import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
-import { HrStatusBreakdown } from '@/components/admin/HrStatusBreakdown';
 import { useClanMovements } from '@/features/clanMovements/queries';
+
+// Graphiques recharts chargés en lazy (P2-5) : le chunk recharts
+// (~115 kB gzip) ne bloque pas le premier rendu du dashboard admin.
+const HrTrendChart = lazy(() =>
+  import('@/components/admin/HrTrendChart').then((m) => ({ default: m.HrTrendChart })),
+);
+const HrStatusBreakdown = lazy(() =>
+  import('@/components/admin/HrStatusBreakdown').then((m) => ({ default: m.HrStatusBreakdown })),
+);
 
 export default function AdminHome() {
   const pending = useApplications('pending');
@@ -83,12 +90,14 @@ export default function AdminHome() {
 
       {canReadRh && !hr.isError && hr.data && (
         <>
-          <HrTrendChart
-            players={hr.data.players}
-            period={hr.data.period}
-            movements={movements.data}
-          />
-          <HrStatusBreakdown players={hr.data.players} />
+          <Suspense fallback={null}>
+            <HrTrendChart
+              players={hr.data.players}
+              period={hr.data.period}
+              movements={movements.data}
+            />
+            <HrStatusBreakdown players={hr.data.players} />
+          </Suspense>
           <HrTopPerformers players={hr.data.players} />
         </>
       )}
