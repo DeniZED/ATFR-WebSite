@@ -22,5 +22,10 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/__tests__", "netlify/functions"]
+  "include": [
+    "src/__tests__",
+    "netlify/functions",
+    "src/features/geoguesser/scoring.ts",
+    "src/types/database.ts"
+  ]
 }

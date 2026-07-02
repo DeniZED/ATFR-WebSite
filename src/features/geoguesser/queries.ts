@@ -11,6 +11,10 @@ export interface ShotWithMap extends ShotRow {
   map: MapRow | null;
 }
 
+// Vue publique sans x_pct/y_pct (P0-1) : la position correcte n'est révélée
+// qu'après soumission d'une manche, via geoguesser-submit-round.
+export type PublicShot = Database['public']['Views']['geoguesser_shots_public']['Row'];
+
 // ----------------------------------------------------------------------
 // Maps
 // ----------------------------------------------------------------------
@@ -216,38 +220,24 @@ export function useDuplicateShot() {
 // ----------------------------------------------------------------------
 // Public game data
 // ----------------------------------------------------------------------
+// Coordonnées (x_pct/y_pct) volontairement absentes : cette vue alimente
+// uniquement l'écran d'intro (disponibilité par difficulté). Le tirage du
+// pool de manches et le scoring se font côté serveur (geoguesser-start-session
+// / -submit-round), qui seuls ont accès aux coordonnées réelles.
 export function usePublicGeoShots(opts: { difficulty?: string } = {}) {
   return useQuery({
     queryKey: ['geo_shots', 'public', opts.difficulty ?? 'all'],
-    queryFn: async (): Promise<ShotWithMap[]> => {
-      let q = supabase
-        .from('geoguesser_shots')
-        .select('*, map:wot_maps(*)')
-        .eq('is_published', true);
+    queryFn: async (): Promise<PublicShot[]> => {
+      let q = supabase.from('geoguesser_shots_public').select('*');
       if (opts.difficulty && opts.difficulty !== 'all') {
         q = q.eq('difficulty', opts.difficulty as QuizDifficulty);
       }
       const { data, error } = await q;
       if (error) throw error;
-      // Filter out shots whose map is inactive (RLS catches this server-side
-      // but we double-check client-side).
-      return (data ?? []).filter(
-        (s) => (s as ShotWithMap).map && (s as ShotWithMap).map?.is_active,
-      ) as ShotWithMap[];
+      return data ?? [];
     },
     staleTime: 60_000,
   });
-}
-
-// ----------------------------------------------------------------------
-// Adaptive difficulty — RPC enregistrant chaque tentative et réajustant
-// la difficulté toutes les 10 manches côté serveur.
-// ----------------------------------------------------------------------
-export interface ShotAttemptInput {
-  shot_id: string;
-  correct_map: boolean;
-  round_score: number;
-  max_round_score: number;
 }
 
 // ----------------------------------------------------------------------
@@ -304,20 +294,6 @@ export function useUpdateGeoSettings() {
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['geoguesser_settings'] }),
-  });
-}
-
-export function useRecordShotAttempt() {
-  return useMutation({
-    mutationFn: async (input: ShotAttemptInput) => {
-      const { error } = await supabase.rpc('record_shot_attempt', {
-        p_shot_id: input.shot_id,
-        p_correct_map: input.correct_map,
-        p_round_score: input.round_score,
-        p_max_round_score: input.max_round_score,
-      });
-      if (error) throw error;
-    },
   });
 }
 

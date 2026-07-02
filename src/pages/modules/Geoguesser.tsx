@@ -43,21 +43,17 @@ import {
   useGeoMaps,
   useGeoSettings,
   usePublicGeoShots,
-  useRecordShotAttempt,
+  type PublicShot,
   type ShotWithMap,
 } from '@/features/geoguesser/queries';
 import {
   useLeaderboard,
   usePlayerModuleScores,
-  useSubmitScore,
   type LeaderboardEntry,
 } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import {
-  diagonalM,
   formatDistance,
-  realDistanceM,
-  roundScore,
   scoreTier,
   worstTotalFor,
   type RoundScoreResult,
@@ -65,8 +61,11 @@ import {
 } from '@/features/geoguesser/scoring';
 import {
   DIFFICULTY_LABELS,
+  type Database,
   type QuizDifficulty,
 } from '@/types/database';
+
+type MapRow = Database['public']['Tables']['wot_maps']['Row'];
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
 import { getUnlockById, type AvatarConfig, type LevelInfo } from '@/features/geoguesser/playerProfile';
 import { TankAvatar } from '@/components/geoguesser/TankAvatar';
@@ -148,8 +147,6 @@ export default function Geoguesser() {
   const allShots = usePublicGeoShots();
   const shots = usePublicGeoShots({ difficulty });
   const settings = useGeoSettings();
-  const submitScore = useSubmitScore();
-  const recordAttempt = useRecordShotAttempt();
   const identity = usePlayerIdentity();
   const playerScores = usePlayerModuleScores({
     moduleSlug: MODULE_SLUG,
@@ -175,6 +172,10 @@ export default function Geoguesser() {
   const [pool, setPool] = useState<ShotWithMap[]>([]);
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [roundError, setRoundError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [pickX, setPickX] = useState<number | null>(null);
@@ -298,31 +299,65 @@ export default function Geoguesser() {
     () => (maps.data ?? []).find((m) => m.id === selectedMapId) ?? null,
     [maps.data, selectedMapId],
   );
+  const mapsById = useMemo(
+    () => new Map((maps.data ?? []).map((m) => [m.id, m])),
+    [maps.data],
+  );
 
-  function startGame() {
-    if (!canStartGame || !shots.data || shots.data.length === 0) return;
-    const challengeKey = getDailyChallengeKey();
-    const rounds = roundTarget;
-    const subset =
-      gameMode === 'daily'
-        ? pickPool(
-            sortShotsStable(shots.data),
-            rounds,
-            createSeededRandom(`${challengeKey}:${difficulty}:${rounds}`),
-          )
-        : pickPool(shots.data, rounds);
-    if (subset.length === 0) return;
+  async function startGame() {
+    if (!canStartGame) return;
+    setStartError(null);
+    const trainingModeAtStart = trainingMode;
+    let res: Response;
+    try {
+      res = await fetch('/.netlify/functions/geoguesser-start-session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode: gameMode,
+          difficulty,
+          training_mode: trainingModeAtStart,
+          player_anon_id: identity.id,
+          player_nickname: identity.nickname,
+          player_token: identity.playerToken,
+        }),
+      });
+    } catch {
+      setStartError('Connexion au serveur impossible. Réessaie.');
+      return;
+    }
+    const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+    if (!res.ok) {
+      setStartError(
+        typeof json.error === 'string' ? json.error : 'Impossible de démarrer la partie.',
+      );
+      return;
+    }
+    const startedPool = (json.pool ?? []) as PublicShot[];
+    const subset = startedPool.map((s) => toShotWithMap(s, null, mapsById));
+    if (subset.length === 0) {
+      setStartError('Aucun screenshot disponible pour ce mode.');
+      return;
+    }
+    setSessionId(typeof json.session_id === 'string' ? json.session_id : null);
     setPool(subset);
     setIndex(0);
     setResults([]);
-    setActiveChallengeKey(challengeKey);
-    setActiveRoundTarget(rounds);
-    setActiveTrainingMode(trainingMode);
+    setActiveChallengeKey(
+      typeof json.daily_key === 'string' ? json.daily_key : getDailyChallengeKey(),
+    );
+    setActiveRoundTarget(
+      typeof json.round_target === 'number' ? json.round_target : subset.length,
+    );
+    setActiveTrainingMode(trainingModeAtStart);
     setShareCopied(false);
     setSelectedMapId(null);
     setPickX(null);
     setPickY(null);
-    setSecondsLeft(roundTimeLimitS);
+    setRoundError(null);
+    setSecondsLeft(
+      typeof json.round_time_limit_s === 'number' ? json.round_time_limit_s : roundTimeLimitS,
+    );
     if (typeof window !== 'undefined' && !localStorage.getItem(TUTORIAL_KEY)) {
       setShowTutorial(true);
     }
@@ -336,68 +371,63 @@ export default function Geoguesser() {
     }
   }
 
-  function validate() {
-    if (!current) return;
-    const hasPick = pickX != null && pickY != null;
-    const hasMap = !!selectedMapId;
-    const correctMap = hasMap && selectedMapId === current.map_id;
-    const widthM = current.map?.width_m ?? current.map?.size_m ?? 1000;
-    const heightM = current.map?.height_m ?? current.map?.size_m ?? 1000;
-    let d: number | null = null;
-    if (correctMap && hasPick) {
-      d = realDistanceM(
-        { x: pickX!, y: pickY! },
-        { x: current.x_pct, y: current.y_pct },
-        widthM,
-        heightM,
-      );
-    }
-    const r = roundScore({
-      correctMap,
-      hasPick,
-      distanceM: d ?? 0,
-      settings: malus,
-    });
-    const elapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
-    const timePenalty = getSprintTimePenalty(
-      gameMode,
-      r.kind,
-      elapsedSeconds,
-      modeSettings,
-    );
-    setResults((prev) => [
-      ...prev,
-      {
-        shot: current,
-        selectedMapId: hasMap ? selectedMapId : null,
-        selectedX: hasPick ? pickX : null,
-        selectedY: hasPick ? pickY : null,
-        correctMap,
-        distanceM: d,
-        score: r.score + timePenalty,
-        baseScore: r.score,
-        timePenalty,
-        elapsedSeconds,
-        kind: r.kind,
-      },
-    ]);
-    // Difficulté adaptative : on passe une "perf" 0..maxRound où plus
-    // c'est élevé mieux c'est, pour que la RPC garde son comportement.
-    const maxRound = diagonalM(widthM, heightM);
-    const perf = Math.max(0, Math.round(maxRound - (d ?? maxRound)));
-    // Les modes challenge ne recalibrent pas la difficulté des screenshots.
-    if (gameMode === 'daily' || gameMode === 'random') {
-      recordAttempt.mutate(
-        {
+  async function validate() {
+    if (!current || !sessionId || isSubmitting) return;
+    setIsSubmitting(true);
+    setRoundError(null);
+    try {
+      const res = await fetch('/.netlify/functions/geoguesser-submit-round', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
           shot_id: current.id,
-          correct_map: correctMap,
-          round_score: perf,
-          max_round_score: Math.round(maxRound),
+          selected_map_id: selectedMapId,
+          pick_x: pickX,
+          pick_y: pickY,
+        }),
+      });
+      const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+      if (!res.ok) {
+        setRoundError(
+          typeof json.error === 'string' ? json.error : 'Échec de la soumission de la manche.',
+        );
+        return;
+      }
+      const revealedShot = toShotWithMap(
+        {
+          id: current.id,
+          map_id: String(json.map_id),
+          image_url: current.image_url,
+          difficulty: current.difficulty,
+          caption: current.caption,
+          tags: current.tags,
         },
-        { onError: () => undefined },
+        { x_pct: Number(json.x_pct), y_pct: Number(json.y_pct) },
+        mapsById,
       );
+      setResults((prev) => [
+        ...prev,
+        {
+          shot: revealedShot,
+          selectedMapId,
+          selectedX: pickX,
+          selectedY: pickY,
+          correctMap: !!json.correct_map,
+          distanceM: typeof json.distance_m === 'number' ? json.distance_m : null,
+          score: Number(json.score),
+          baseScore: Number(json.base_score),
+          timePenalty: Number(json.time_penalty),
+          elapsedSeconds: Number(json.elapsed_seconds),
+          kind: json.kind as RoundScoreResult['kind'],
+        },
+      ]);
+      setStage('reveal');
+    } catch {
+      setRoundError('Connexion au serveur impossible. Réessaie.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setStage('reveal');
   }
 
   // Auto-validate when the timer expires.
@@ -414,67 +444,15 @@ export default function Geoguesser() {
       setStage('playing');
       return;
     }
-    // End of game: submit + show result.
-    const finalScore = results.reduce((acc, r) => acc + r.score, 0);
-    const finalBaseScore = results.reduce((acc, r) => acc + r.baseScore, 0);
-    const finalTimePenalty = results.reduce(
-      (acc, r) => acc + r.timePenalty,
-      0,
-    );
-    const finalElapsedSeconds = results.reduce(
-      (acc, r) => acc + r.elapsedSeconds,
-      0,
-    );
-    const worst = Math.max(
-      1,
-      getWorstTotalForMode(
-        gameMode,
-        pool.length,
-        malus,
-        roundTimeLimitS,
-        modeSettings,
-      ),
-    );
-    const finalStats = summarizeResults(results);
-    if (identity.nickname && pool.length > 0 && !activeTrainingMode) {
+    // End of game: le score (déjà accumulé manche par manche côté serveur)
+    // est agrégé et poussé au leaderboard par geoguesser-finish-session,
+    // qui décide aussi seul si la session doit compter (training_mode).
+    if (sessionId) {
       try {
-        // Lower-is-better in-game ; pour que le leaderboard générique
-        // (sort score DESC) classe correctement, on stocke
-        // `score = worst - finalScore` (= "perf" : plus c'est haut, mieux
-        // c'est). La distance réelle est conservée dans `meta.distance_m`
-        // pour affichage / debug.
-        await submitScore.mutateAsync({
-          module_slug: MODULE_SLUG,
-          submode: getLeaderboardSubmode(
-            gameMode,
-            difficulty,
-            activeChallengeKey,
-            activeRoundTarget,
-            modeSettings,
-          ),
-          player_anon_id: identity.id,
-          player_nickname: identity.nickname,
-          player_token: identity.playerToken,
-          score: Math.max(0, worst - finalScore),
-          max_score: worst,
-          meta: {
-            mode: gameMode === 'sprint' ? 'distance_time' : 'distance',
-            game_mode: gameMode,
-            daily_key: gameMode === 'daily' ? activeChallengeKey : null,
-            daily_rounds: gameMode === 'daily' ? activeRoundTarget : null,
-            rounds: pool.length,
-            difficulty,
-            distance_m: finalScore,
-            raw_distance_m: finalBaseScore,
-            time_penalty_m: finalTimePenalty,
-            elapsed_seconds: finalElapsedSeconds,
-            avg_distance_m: pool.length > 0 ? finalScore / pool.length : 0,
-            map_accuracy_pct: finalStats.mapAccuracyPct,
-            correct_maps: finalStats.correctMaps,
-            wrong_maps: finalStats.wrongMaps,
-            timeouts: finalStats.timeouts,
-            best_streak: finalStats.bestStreak,
-          },
+        await fetch('/.netlify/functions/geoguesser-finish-session', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
         });
       } catch {
         /* best-effort */
@@ -491,6 +469,9 @@ export default function Geoguesser() {
 
   function restart() {
     setStage('intro');
+    setSessionId(null);
+    setStartError(null);
+    setRoundError(null);
     setPool([]);
     setIndex(0);
     setResults([]);
@@ -629,6 +610,8 @@ export default function Geoguesser() {
                   )}
                 </AnimatePresence>
 
+                {startError && <Alert tone="danger">{startError}</Alert>}
+
                 <SetupSummaryPanel
                   gameMode={gameMode}
                   roundTimeS={roundTimeLimitS}
@@ -678,7 +661,8 @@ export default function Geoguesser() {
       : null;
     // Map shown in the picker overlay (placement or reveal).
     const overlayMap = showReveal && correctMap ? correctMap : selectedMap;
-    const canValidate = !!selectedMapId && pickX != null && pickY != null;
+    const canValidate =
+      !!selectedMapId && pickX != null && pickY != null && !isSubmitting;
     const roundElapsedSeconds = Math.max(0, roundTimeLimitS - secondsLeft);
     const blindPreviewLimitS = blindPreviewSeconds;
     const blindPreviewLeft = Math.ceil(
@@ -807,6 +791,10 @@ export default function Geoguesser() {
               )}
             </CardBody>
           </Card>
+
+          {roundError && !showReveal && (
+            <Alert tone="danger">{roundError}</Alert>
+          )}
 
           {/* Reveal banner */}
           <AnimatePresence>
@@ -1069,6 +1057,44 @@ export default function Geoguesser() {
 // Game helpers
 // ---------------------------------------------------------------------------
 
+// Reconstruit un ShotWithMap depuis les réponses (coordonnée-less) des
+// endpoints serveur, pour réutiliser les composants d'affichage existants
+// sans changer leur type. `coords` est null avant la révélation d'une
+// manche (start-session ne renvoie jamais x_pct/y_pct) et contient la
+// position réelle une fois renvoyée par geoguesser-submit-round.
+function toShotWithMap(
+  shot: {
+    id: string;
+    map_id: string;
+    image_url: string;
+    difficulty: QuizDifficulty;
+    caption: string | null;
+    tags: string[];
+  },
+  coords: { x_pct: number; y_pct: number } | null,
+  mapsById: Map<string, MapRow>,
+): ShotWithMap {
+  return {
+    id: shot.id,
+    map_id: shot.map_id,
+    image_url: shot.image_url,
+    x_pct: coords?.x_pct ?? 0,
+    y_pct: coords?.y_pct ?? 0,
+    difficulty: shot.difficulty,
+    caption: shot.caption,
+    tags: shot.tags,
+    is_published: true,
+    sort_order: 0,
+    attempt_count: 0,
+    correct_map_count: 0,
+    success_score_sum: 0,
+    created_at: '',
+    updated_at: '',
+    created_by: null,
+    map: coords ? (mapsById.get(shot.map_id) ?? null) : null,
+  };
+}
+
 function clampNumber(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, Math.round(value)));
@@ -1153,16 +1179,6 @@ function getBlindPreviewSeconds(
   return Math.min(settings.blindPreviewSeconds, roundTimeS);
 }
 
-function getSprintTimePenalty(
-  mode: GameMode,
-  kind: RoundScoreResult['kind'],
-  elapsedSeconds: number,
-  settings: GeoguesserModeSettings,
-): number {
-  if (mode !== 'sprint' || kind !== 'distance') return 0;
-  return Math.round(Math.max(0, elapsedSeconds) * settings.sprintTimePenaltyM);
-}
-
 function getWorstTotalForMode(
   mode: GameMode,
   rounds: number,
@@ -1219,7 +1235,7 @@ function getDifficultyDotClass(difficulty: DifficultyFilter): string {
 }
 
 function buildDifficultyAvailability(
-  shots: ShotWithMap[],
+  shots: PublicShot[],
   requiredMapCount: number,
   requiredShotCount: number,
 ): Record<DifficultyFilter, DifficultyAvailability> {
@@ -1346,21 +1362,6 @@ function getLeaderboardSubmode(
     : `random:${difficultyKey}:${settings.randomRounds}`;
 }
 
-function createSeededRandom(seed: string): () => number {
-  let state = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    state ^= seed.charCodeAt(i);
-    state = Math.imul(state, 16777619);
-  }
-  return () => {
-    state += 0x6d2b79f5;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function getMetaNumber(
   meta: Record<string, unknown> | null | undefined,
   key: string,
@@ -1375,77 +1376,6 @@ function getMetaString(
 ): string | null {
   const value = meta?.[key];
   return typeof value === 'string' ? value : null;
-}
-
-function sortShotsStable(shots: ShotWithMap[]): ShotWithMap[] {
-  return [...shots].sort((a, b) => {
-    const map = a.map_id.localeCompare(b.map_id);
-    if (map !== 0) return map;
-    return a.id.localeCompare(b.id);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Pool selection — Fisher-Yates + prefer one shot per map (variety),
-// then dedup by id and image_url.
-// ---------------------------------------------------------------------------
-function pickPool(
-  all: ShotWithMap[],
-  n: number,
-  rng: () => number = Math.random,
-): ShotWithMap[] {
-  if (all.length === 0) return [];
-  // Group by map.
-  const byMap = new Map<string, ShotWithMap[]>();
-  for (const s of all) {
-    const k = s.map_id ?? '_none';
-    const arr = byMap.get(k) ?? [];
-    arr.push(s);
-    byMap.set(k, arr);
-  }
-  // Shuffle each bucket independently.
-  for (const arr of byMap.values()) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-  }
-  // Pick one shot per map first (random map order), then refill.
-  const mapKeys = [...byMap.keys()];
-  for (let i = mapKeys.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [mapKeys[i], mapKeys[j]] = [mapKeys[j], mapKeys[i]];
-  }
-  const out: ShotWithMap[] = [];
-  const seenIds = new Set<string>();
-  const seenImgs = new Set<string>();
-  for (const k of mapKeys) {
-    if (out.length >= n) break;
-    const arr = byMap.get(k);
-    if (!arr || arr.length === 0) continue;
-    const s = arr.shift()!;
-    if (seenIds.has(s.id) || seenImgs.has(s.image_url)) continue;
-    seenIds.add(s.id);
-    seenImgs.add(s.image_url);
-    out.push(s);
-  }
-  // Refill from the remaining shots (still shuffled inside their bucket).
-  if (out.length < n) {
-    const rest: ShotWithMap[] = [];
-    for (const arr of byMap.values()) rest.push(...arr);
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
-    }
-    for (const s of rest) {
-      if (out.length >= n) break;
-      if (seenIds.has(s.id) || seenImgs.has(s.image_url)) continue;
-      seenIds.add(s.id);
-      seenImgs.add(s.image_url);
-      out.push(s);
-    }
-  }
-  return out;
 }
 
 interface RoundInsight {

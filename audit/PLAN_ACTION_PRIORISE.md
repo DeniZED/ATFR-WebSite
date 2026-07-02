@@ -3,18 +3,21 @@
 Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction : Faible / Moyen / Élevé (probabilité de régression si la correction est appliquée sans précaution).
 
 > **Mise à jour 2026-06-30** : une première vague de corrections (« Lot 1 sûr + Lot 2 » validé par le porteur du projet) a été appliquée. 9 findings sont marqués ✅ **CORRIGÉ** ci-dessous : P0-3, P0-4, P0-5, P1-7, P1-9, P1-10, P1-12, P1-13, P2-7. `npm run lint`, `npm run typecheck`, `npm test` et `npm run build` ont tous été vérifiés au vert après ces changements. P0-1, P0-2 et P0-6 restent **intentionnellement non traités** (décision produit requise / dépendance à un composant `Modal` partagé du Lot 3) — voir `ROADMAP_CORRECTIONS.md` pour le détail.
+>
+> **Mise à jour 2026-06-30 (2)** : le porteur du projet a tranché P0-1 (Option A : recalcul serveur complet) et validé le périmètre **Geoguesser uniquement** pour cette passe (« Geoguesser d'abord, quiz ensuite »). Le volet Geoguesser de P0-1 est **✅ corrigé** — voir détail ci-dessous. Le volet quiz (`GuideBots.tsx` / `submit-score.mts` pour le module quiz) reste **non traité**, à planifier dans une passe ultérieure dédiée.
 
 ---
 
 ## P0 — Critique (à traiter avant toute mise en production avec données réelles)
 
-### P0-1 — Score Geoguesser/quiz falsifiable côté client
+### ⚠️ P0-1 — Score Geoguesser/quiz falsifiable côté client — PARTIELLEMENT CORRIGÉ (volet Geoguesser)
 - **Problème** : `submit-score.mts` insère le score envoyé par le client sans recalcul serveur ; `player_token` n'a ni nonce, ni lien à une partie, ni protection anti-rejeu.
 - **Localisation** : `netlify/functions/submit-score.mts`, `netlify/functions/_player-token.ts`
 - **Pourquoi** : n'importe quel visiteur peut fausser le classement public via un simple appel API direct.
 - **Solution de principe** : recalcul serveur du score à partir d'événements bruts (clics, timing), ou a minima token à usage unique lié à un round précis stocké en base.
 - **Risque de correction** : Élevé (refonte du flux de soumission, touche un parcours utilisateur central).
 - **Effort** : Élevé. **Impact** : Élevé.
+- **Statut** : ⚠️ Partiellement corrigé — **volet Geoguesser ✅ corrigé** (Option A — recalcul serveur complet) : la session de jeu (pool de manches, paramètres de scoring figés, horloge de round) est désormais portée par la table `geoguesser_sessions` et 3 fonctions Netlify serveur-autoritaires (`geoguesser-start-session.mts`, `geoguesser-submit-round.mts`, `geoguesser-finish-session.mts`). Les coordonnées réelles (`x_pct`/`y_pct`) ne sont plus exposées au client avant soumission d'une manche (vue publique `geoguesser_shots_public` sans coordonnées) ; le score, la distance et la pénalité de temps sont recalculés côté serveur à partir des coordonnées réelles du shot et du timestamp serveur (`round_started_at`), avec verrouillage optimiste anti-rejeu/anti-race sur `current_round`. Un test de parité (`src/__tests__/geoguesser-scoring-parity.test.ts`) garantit que la copie serveur des fonctions de scoring reste identique à l'original client. `npm run lint`, `npm run typecheck`, `npm test` et `npm run build` vérifiés au vert. **Le volet quiz reste non traité** : `submit-score.mts` insère toujours le score quiz envoyé par le client sans recalcul serveur — à corriger dans une passe ultérieure dédiée (« quiz ensuite »).
 
 ### P0-2 — Contenu clan-hub confidentiel exposé via bundle JS public
 - **Problème** : doctrine/stratégies/cartes/rôles du clan codés en dur dans `src/data/clan/*.ts`, compilés dans des chunks JS publics non protégés, malgré `RequireClanAccess` qui ne protège que le rendu React.
