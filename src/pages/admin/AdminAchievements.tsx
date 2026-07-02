@@ -15,10 +15,12 @@ import {
   useDeleteAchievement,
   useUpsertAchievement,
 } from '@/features/content/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminAchievements() {
   const list = useAchievements();
   const remove = useDeleteAchievement();
+  const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -107,8 +109,15 @@ export default function AdminAchievements() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer ?')) remove.mutate(a.id);
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: 'Supprimer ce fait d’armes ?',
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
+                        remove.mutate(a.id);
                     }}
                     disabled={remove.isPending}
                   >

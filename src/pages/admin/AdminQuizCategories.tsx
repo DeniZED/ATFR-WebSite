@@ -15,10 +15,12 @@ import {
   useQuizCategories,
   useUpsertQuizCategory,
 } from '@/features/quiz/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminQuizCategories() {
   const list = useQuizCategories();
   const remove = useDeleteQuizCategory();
+  const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -108,11 +110,13 @@ export default function AdminQuizCategories() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        confirm(
-                          `Supprimer la catégorie "${c.name}" ? Les questions associées resteront mais seront décatégorisées.`,
-                        )
+                        await confirmDialog({
+                          message: `Supprimer la catégorie « ${c.name} » ? Les questions associées resteront mais seront décatégorisées.`,
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
                       ) {
                         remove.mutate(c.id);
                       }

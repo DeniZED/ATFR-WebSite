@@ -19,6 +19,7 @@ import {
 import { useRole } from '@/hooks/useRole';
 import { tomatoProfileUrl, wn8Color } from '@/lib/tomato-api';
 import type { ApplicationStatus } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
   pending: 'En attente',
@@ -42,6 +43,7 @@ export default function AdminApplications() {
   const list = useApplications(filter === 'all' ? undefined : filter);
   const update = useUpdateApplicationStatus();
   const remove = useDeleteApplication();
+  const confirmDialog = useConfirm();
   const { isAdmin } = useRole();
 
   return (
@@ -216,8 +218,14 @@ export default function AdminApplications() {
                       variant="danger"
                       size="sm"
                       leadingIcon={<Trash2 size={14} />}
-                      onClick={() => {
-                        if (confirm('Supprimer définitivement ?')) {
+                      onClick={async () => {
+                        if (
+                          await confirmDialog({
+                            message: 'Supprimer définitivement cette candidature ?',
+                            tone: 'danger',
+                            confirmLabel: 'Supprimer',
+                          })
+                        ) {
                           remove.mutate(app.id);
                         }
                       }}

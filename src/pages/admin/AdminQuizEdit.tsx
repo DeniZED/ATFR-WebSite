@@ -34,6 +34,7 @@ import {
   type QuizDifficulty,
 } from '@/types/database';
 import { cn } from '@/lib/cn';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface DraftAnswer {
   id?: string;
@@ -83,6 +84,7 @@ export default function AdminQuizEdit() {
   const existing = useQuizQuestion(isNew ? null : (id ?? null));
   const save = useSaveQuizQuestion();
   const remove = useDeleteQuizQuestion();
+  const confirmDialog = useConfirm();
   const dup = useDuplicateQuizQuestion();
 
   const [draft, setDraft] = useState<Draft>(empty);
@@ -197,7 +199,14 @@ export default function AdminQuizEdit() {
 
   async function onDelete() {
     if (isNew || !id) return;
-    if (!confirm(`Supprimer "${draft.title}" ?`)) return;
+    if (
+      !(await confirmDialog({
+        message: `Supprimer « ${draft.title} » ?`,
+        tone: 'danger',
+        confirmLabel: 'Supprimer',
+      }))
+    )
+      return;
     await remove.mutateAsync(id);
     navigate('/admin/quiz');
   }

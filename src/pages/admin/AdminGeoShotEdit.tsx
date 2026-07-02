@@ -28,6 +28,7 @@ import {
   DIFFICULTY_LABELS,
   type QuizDifficulty,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface Draft {
   map_id: string;
@@ -62,6 +63,7 @@ export default function AdminGeoShotEdit() {
   const existing = useGeoShot(isNew ? null : (id ?? null));
   const upsert = useUpsertShot();
   const remove = useDeleteShot();
+  const confirmDialog = useConfirm();
   const dup = useDuplicateShot();
   const resetStats = useResetShotStats();
 
@@ -136,7 +138,14 @@ export default function AdminGeoShotEdit() {
 
   async function onDelete() {
     if (isNew || !id) return;
-    if (!confirm('Supprimer ce screenshot ?')) return;
+    if (
+      !(await confirmDialog({
+        message: 'Supprimer ce screenshot ?',
+        tone: 'danger',
+        confirmLabel: 'Supprimer',
+      }))
+    )
+      return;
     await remove.mutateAsync(id);
     navigate('/admin/geoguesser/shots');
   }
@@ -150,9 +159,11 @@ export default function AdminGeoShotEdit() {
   async function onResetStats() {
     if (isNew || !id) return;
     if (
-      !confirm(
-        'Réinitialiser les stats de ce screenshot ? Les compteurs repassent à 0 et la difficulté redevient Facile.',
-      )
+      !(await confirmDialog({
+        message:
+          'Réinitialiser les stats de ce screenshot ? Les compteurs repassent à 0 et la difficulté redevient Facile.',
+        confirmLabel: 'Réinitialiser',
+      }))
     ) {
       return;
     }

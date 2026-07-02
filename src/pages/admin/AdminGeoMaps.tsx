@@ -36,6 +36,7 @@ import {
   type Database,
   type QuizDifficulty,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type MapRow = Database['public']['Tables']['wot_maps']['Row'];
 
@@ -47,6 +48,7 @@ export default function AdminGeoMaps() {
   const bulkUpsert = useBulkUpsertMaps();
   const upsert = useUpsertMap();
   const remove = useDeleteMap();
+  const confirmDialog = useConfirm();
   const resetMapStats = useResetMapShotStats();
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -97,10 +99,12 @@ export default function AdminGeoMaps() {
   async function resetStatsForMap(map: MapRow) {
     const mapShots = statsByMap.get(map.id) ?? [];
     if (
-      !confirm(
-        `Réinitialiser les stats des ${mapShots.length} screenshot(s) de "${map.name}" ? ` +
+      !(await confirmDialog({
+        message:
+          `Réinitialiser les stats des ${mapShots.length} screenshot(s) de « ${map.name} » ? ` +
           'Les compteurs repassent à 0 et toutes les difficultés redeviennent Facile.',
-      )
+        confirmLabel: 'Réinitialiser',
+      }))
     ) {
       return;
     }
@@ -274,11 +278,13 @@ export default function AdminGeoMaps() {
                       size="sm"
                       variant="danger"
                       leadingIcon={<Trash2 size={14} />}
-                      onClick={() => {
+                      onClick={async () => {
                         if (
-                          confirm(
-                            `Supprimer la map "${m.name}" ? Tous ses screenshots seront supprimés.`,
-                          )
+                          await confirmDialog({
+                            message: `Supprimer la map « ${m.name} » ? Tous ses screenshots seront supprimés.`,
+                            tone: 'danger',
+                            confirmLabel: 'Supprimer',
+                          })
                         ) {
                           remove.mutate(m.id);
                         }

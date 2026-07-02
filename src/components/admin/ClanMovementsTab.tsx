@@ -9,6 +9,7 @@ import {
 } from '@/features/clanMovements/queries';
 import { useMovementsStatsBatch, usePlayerLookup } from '@/features/stats/queries';
 import { useRecruitmentSettings } from '@/features/recruitment/settings';
+import { meetsWn8Threshold } from '@/features/recruitment/logic';
 import { wn8Color, type PlayerExtendedStats } from '@/lib/tomato-api';
 import type { ClanMemberMovementRow, ClanMovementContactStatus } from '@/types/database';
 
@@ -86,10 +87,9 @@ export function ClanMovementsTab({
 
   const filtered = useMemo(() => {
     if (minWn8Value == null || !Number.isFinite(minWn8Value)) return baseFiltered;
-    return baseFiltered.filter((movement) => {
-      const stats = statsBatch.data?.get(movement.account_id);
-      return stats?.wn8 != null && stats.wn8 >= minWn8Value;
-    });
+    return baseFiltered.filter((movement) =>
+      meetsWn8Threshold(statsBatch.data?.get(movement.account_id)?.wn8, minWn8Value),
+    );
   }, [baseFiltered, minWn8Value, statsBatch.data]);
 
   async function handleAddProspect(movement: ClanMemberMovementRow) {

@@ -17,6 +17,7 @@ import {
   useUploadMedia,
 } from '@/features/media/queries';
 import type { Database, MediaKind } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type MediaRow = Database['public']['Tables']['media_assets']['Row'];
 type VisibilityFilter = 'all' | 'gallery' | 'site';
@@ -188,6 +189,7 @@ function MediaCard({
   deleting,
 }: MediaCardProps) {
   const [caption, setCaption] = useState(asset.caption ?? '');
+  const confirmDialog = useConfirm();
   const dirty = caption !== (asset.caption ?? '');
 
   return (
@@ -273,8 +275,15 @@ function MediaCard({
               size="sm"
               variant="danger"
               leadingIcon={<Trash2 size={12} />}
-              onClick={() => {
-                if (confirm('Supprimer ce média ?')) void onDelete();
+              onClick={async () => {
+                if (
+                  await confirmDialog({
+                    message: 'Supprimer ce média ?',
+                    tone: 'danger',
+                    confirmLabel: 'Supprimer',
+                  })
+                )
+                  void onDelete();
               }}
               disabled={deleting}
               className="ml-auto"

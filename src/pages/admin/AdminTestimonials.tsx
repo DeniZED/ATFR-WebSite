@@ -15,10 +15,12 @@ import {
   useTestimonials,
   useUpsertTestimonial,
 } from '@/features/content/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminTestimonials() {
   const list = useTestimonials();
   const remove = useDeleteTestimonial();
+  const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -100,8 +102,15 @@ export default function AdminTestimonials() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer ?')) remove.mutate(t.id);
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: 'Supprimer ce témoignage ?',
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
+                        remove.mutate(t.id);
                     }}
                     disabled={remove.isPending}
                   >

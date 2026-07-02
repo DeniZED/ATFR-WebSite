@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-02 (5)** : **P1-4** (éligibilité recrutement centralisée dans `features/recruitment/logic.ts` + tests) et **P2-2 volet confirmation** (`useConfirm`/`ConfirmProvider` accessibles, 22 `confirm()` natifs remplacés) livrés.
+>
 > **Mise à jour 2026-07-02 (4)** : **P1-1** (npm audit fix — react-router/ws/js-yaml/@babel/core/brace-expansion patchés, restent des remontées dev-only vite/vitest) et **P1-3** (anti-doublons candidatures via index uniques partiels + verrouillage optimiste sur la revue, migration `0047`) livrés.
 
 ---
@@ -48,8 +50,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Lot 3 — Nettoyage et refactor de modules ciblés
 *Objectif : réduire la duplication et le couplage logique métier/UI identifiés comme cause racine de plusieurs findings.*
 
-1. **P2-2** Factoriser le pattern modale/confirmation/pied de formulaire utilisé par les 8 pages admin CRUD + remplacer les 19 `window.confirm()` par un composant `ConfirmDialog` cohérent avec le design system — P0-6 étant désormais corrigé, `ConfirmDialog` peut se construire directement sur le `ModalShell`/`useModalA11y` partagé.
-2. **P1-4** Centraliser la règle d'éligibilité recrutement (actuellement dupliquée 3 fois) dans `features/recruitment/logic.ts`.
+1. **⚠️ P2-2** Factoriser le pattern modale/confirmation/pied de formulaire des 8 pages admin CRUD + remplacer les `window.confirm()` — **volet confirmation CORRIGÉ** : `useConfirm`/`ConfirmProvider` construits sur `ModalShell`, 22 `confirm()` natifs remplacés dans 18 pages admin. La factorisation des formulaires CRUD reste ouverte.
+2. **✅ P1-4** Centraliser la règle d'éligibilité recrutement — **CORRIGÉ** (`features/recruitment/logic.ts` + tests, consommé par `PlayerLookupCard` et `ClanMovementsTab`).
 3. **P1-5** Extraire progressivement la logique métier des 11 emplacements UI identifiés (`AcademyBadge`, `GeoguesseurStats`, `HrTopPerformers`, `ClanMovementsTab`, fonctions inline de `Geoguesser.tsx`) vers des modules `features/*/logic.ts` purs et testables, en suivant le pattern déjà correct de `features/rh/activity.ts`.
 4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.
 5. **P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **uniquement après validation explicite**, conformément à la consigne de ne supprimer aucun fichier sans accord préalable.
