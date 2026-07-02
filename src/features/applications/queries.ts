@@ -63,23 +63,38 @@ export function useUpdateApplicationStatus() {
     mutationFn: async ({
       id,
       status,
+      expectedStatus,
       notes,
     }: {
       id: string;
       status: ApplicationStatus;
+      /** Statut affiché au moment du clic — verrouillage optimiste (P1-3) :
+       *  si un autre admin a traité la candidature entre-temps, l'UPDATE ne
+       *  matche aucune ligne et on signale le conflit au lieu d'écraser
+       *  silencieusement sa décision. */
+      expectedStatus: ApplicationStatus;
       notes?: string;
     }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('applications')
         .update({
           status,
           review_notes: notes,
           reviewed_at: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('status', expectedStatus)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error(
+          'Cette candidature a été modifiée entre-temps (autre admin ?). La liste a été rechargée — vérifie son statut avant de réessayer.',
+        );
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['applications'] }),
+    // onSettled (pas onSuccess) : en cas de conflit, il faut aussi recharger
+    // la liste pour afficher le statut réel.
+    onSettled: () => qc.invalidateQueries({ queryKey: ['applications'] }),
   });
 }
 
