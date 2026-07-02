@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { ClanPageInsert, ClanPageRow } from '@/types/database';
+import type {
+  ClanContentKey,
+  ClanPageContentRow,
+  ClanPageInsert,
+  ClanPageRow,
+} from '@/types/database';
 
 /**
  * Liste toutes les pages clan et leurs clans autorisés.
@@ -71,5 +76,46 @@ export function useDeleteClanPage() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clan_pages'] }),
+  });
+}
+
+// ----------------------------------------------------------------------
+// Contenu des pages clan (P0-2) — édition admin.
+// Lecture/écriture réservées aux éditeurs par RLS (aucune policy anon) ;
+// les joueurs, eux, reçoivent ce contenu via la fonction clan-content.
+// ----------------------------------------------------------------------
+export function useAdminClanPageContent() {
+  return useQuery({
+    queryKey: ['clan_page_content', 'admin'],
+    queryFn: async (): Promise<ClanPageContentRow[]> => {
+      const { data, error } = await supabase
+        .from('clan_page_content')
+        .select('*')
+        .order('page_slug', { ascending: true })
+        .order('content_key', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateClanPageContent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      page_slug: string;
+      content_key: ClanContentKey;
+      payload: Record<string, unknown>;
+    }) => {
+      const { error } = await supabase
+        .from('clan_page_content')
+        .update({ payload: input.payload, updated_at: new Date().toISOString() })
+        .eq('page_slug', input.page_slug)
+        .eq('content_key', input.content_key);
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['clan_page_content'] }),
   });
 }

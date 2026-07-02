@@ -8,7 +8,7 @@ export default tseslint.config(
   { ignores: ['dist', 'node_modules', '.claude'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,mts}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -27,6 +27,13 @@ export default tseslint.config(
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+    },
+  },
+  // Fonctions Netlify : code serveur Node (P1-2 — auparavant jamais linté).
+  {
+    files: ['netlify/functions/**/*.{ts,mts}'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 );

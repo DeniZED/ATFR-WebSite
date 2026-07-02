@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Lock, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileJson, Lock, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -37,15 +38,22 @@ export default function AdminClanPages() {
             dans la liste autorisée.
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setCreating(true);
-          }}
-          leadingIcon={<Plus size={14} />}
-        >
-          Nouvelle page
-        </Button>
+        <div className="flex gap-2">
+          <Link to="/admin/pages-clan/contenu">
+            <Button variant="outline" leadingIcon={<FileJson size={14} />}>
+              Contenu clan
+            </Button>
+          </Link>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setCreating(true);
+            }}
+            leadingIcon={<Plus size={14} />}
+          >
+            Nouvelle page
+          </Button>
+        </div>
       </div>
 
       {(creating || editing) && (
