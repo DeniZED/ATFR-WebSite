@@ -25,13 +25,15 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
   - **Verrouillage transversal** : `submit-score.mts` refuse désormais les slugs `wot-geoguesser` et `guide-bots` (403) — leurs scores ne passent plus que par les fonctions `*-finish-session`, fermant la porte à la soumission directe de scores forgés pour ces modules.
   - `npm run lint`, `npm run typecheck`, `npm test` et `npm run build` vérifiés au vert après chaque passe. Migrations à appliquer : `0044_geoguesser_server_sessions.sql`, `0045_quiz_server_sessions.sql`.
 
-### P0-2 — Contenu clan-hub confidentiel exposé via bundle JS public
+### ✅ P0-2 — Contenu clan-hub confidentiel exposé via bundle JS public — CORRIGÉ
 - **Problème** : doctrine/stratégies/cartes/rôles du clan codés en dur dans `src/data/clan/*.ts`, compilés dans des chunks JS publics non protégés, malgré `RequireClanAccess` qui ne protège que le rendu React.
 - **Localisation** : `src/data/clan/*.ts`, `src/components/layout/RequireClanAccess.tsx`, pages `src/pages/clan/*.tsx`
 - **Pourquoi** : un clan rival ou tout visiteur peut lire ce contenu sans authentification en récupérant directement l'URL du chunk.
 - **Solution de principe** : migrer ce contenu en base Supabase avec RLS conditionnée au `clan_id` vérifié du joueur.
 - **Risque de correction** : Élevé (migration de contenu + nouvelle politique RLS + refonte des pages concernées).
 - **Effort** : Élevé. **Impact** : Élevé.
+- **Statut** : ✅ Corrigé — le contenu vit désormais dans la table `clan_page_content` (migration `0046_clan_content.sql`, seedée avec le snapshot des 6 fichiers TS, supprimés du dépôt). Adaptation nécessaire par rapport à la solution de principe : les joueurs n'étant pas authentifiés Supabase (identité = `player_token` HMAC Wargaming), la RLS par `clan_id` n'est pas applicable directement — la table n'a **aucune policy anon** et le contenu n'est servi que par la fonction Netlify `clan-content.mts`, qui vérifie côté serveur le token HMAC puis le `clan_id` réel du joueur (API WG, jamais déclaré par le client) contre `clan_pages.allowed_clans`. Les 7 pages clan consomment le hook `useClanContent` (+ `ClanContentBoundary` pour les états chargement/erreur) ; seuls les libellés de filtres UI, sans valeur tactique, restent côté client (`features/clan/filters.ts`). Vérifié : le contenu tactique est absent des chunks du build. Les éditeurs conservent lecture/écriture via RLS pour l'édition admin (voir note ci-dessous).
+- **Suite (édition admin, à cadrer)** : le contenu est éditable dès maintenant par les éditeurs via Supabase Studio (policies en place). Trois options par ordre d'effort : (a) statu quo Studio ; (b) page admin légère avec édition JSON par `content_key` (textarea + validation) — livrable rapidement ; (c) CRUD structuré par type de contenu (fiches chars, cartes…) — chantier UI conséquent, à prioriser selon la fréquence réelle d'édition.
 
 ### ✅ P0-3 — Roster clan vide → départs en masse faussement enregistrés — CORRIGÉ
 - **Problème** : aucun garde-fou si l'API WG renvoie un roster vide ; la RPC `sync_clan_roster` interprète alors tous les membres en cache comme partis.

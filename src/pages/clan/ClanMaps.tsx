@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { MAPS, MAP_FILTERS } from '@/data/clan/maps';
-import type { GameMode } from '@/features/clan/types';
+import { MAP_FILTERS } from '@/features/clan/filters';
+import { useClanContent } from '@/features/clan/contentQueries';
+import type { GameMode, MapEntry, SpawnPosition } from '@/features/clan/types';
+import { ClanContentBoundary } from '@/components/clan/ClanContentBoundary';
 import { FilterBar } from '@/components/clan/FilterBar';
 import { PriorityBadge } from '@/components/clan/PriorityBadge';
 import { ModeBadge } from '@/components/clan/ModeBadge';
@@ -9,7 +11,7 @@ import { ValidatedBy } from '@/components/clan/ValidatedBy';
 import { EmptyState } from '@/components/clan/EmptyState';
 import { AlertTriangle, MessageSquareQuote, Lightbulb } from 'lucide-react';
 
-function SpawnBlock({ label, positions }: { label: string; positions: (typeof MAPS)[0]['spawn_a'] }) {
+function SpawnBlock({ label, positions }: { label: string; positions: SpawnPosition[] }) {
   return (
     <div className="rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 p-3">
       <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">Spawn {label}</p>
@@ -26,7 +28,7 @@ function SpawnBlock({ label, positions }: { label: string; positions: (typeof MA
   );
 }
 
-function MapCard({ map }: { map: (typeof MAPS)[0] }) {
+function MapCard({ map }: { map: MapEntry }) {
   return (
     <div className="rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 p-5 space-y-4">
       <div>
@@ -102,11 +104,7 @@ function MapCard({ map }: { map: (typeof MAPS)[0] }) {
 
 export default function ClanMaps() {
   const [filter, setFilter] = useState('all');
-
-  const filtered = MAPS.filter((m) => {
-    if (filter === 'all') return true;
-    return m.modes.includes(filter as GameMode) || m.map_type === filter || m.tags.includes(filter);
-  });
+  const content = useClanContent();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -118,13 +116,22 @@ export default function ClanMaps() {
 
       <FilterBar options={MAP_FILTERS} active={filter} onChange={setFilter} />
 
-      {filtered.length === 0 ? (
-        <EmptyState message="Aucune carte pour ce filtre." />
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((m) => <MapCard key={m.slug} map={m} />)}
-        </div>
-      )}
+      <ClanContentBoundary query={content}>
+        {({ maps }) => {
+          const filtered = (maps?.maps ?? []).filter((m) => {
+            if (filter === 'all') return true;
+            return m.modes.includes(filter as GameMode) || m.map_type === filter || m.tags.includes(filter);
+          });
+          if (filtered.length === 0) {
+            return <EmptyState message="Aucune carte pour ce filtre." />;
+          }
+          return (
+            <div className="space-y-4">
+              {filtered.map((m) => <MapCard key={m.slug} map={m} />)}
+            </div>
+          );
+        }}
+      </ClanContentBoundary>
     </div>
   );
 }

@@ -1,9 +1,12 @@
-import { ROLES } from '@/data/clan/roles';
+import { useClanContent } from '@/features/clan/contentQueries';
+import type { RoleEntry } from '@/features/clan/types';
+import { ClanContentBoundary } from '@/components/clan/ClanContentBoundary';
+import { EmptyState } from '@/components/clan/EmptyState';
 import { ModeBadge } from '@/components/clan/ModeBadge';
 import { TagList } from '@/components/clan/TagList';
 import { ArrowRight, Target, AlertTriangle, MapPin, Heart, Clock } from 'lucide-react';
 
-function RoleCard({ role }: { role: (typeof ROLES)[0] }) {
+function RoleCard({ role }: { role: RoleEntry }) {
   return (
     <div className="rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 p-5 space-y-4">
       <div>
@@ -85,6 +88,8 @@ function RoleCard({ role }: { role: (typeof ROLES)[0] }) {
 }
 
 export default function ClanRoles() {
+  const content = useClanContent();
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -92,9 +97,17 @@ export default function ClanRoles() {
         <h1 className="font-display text-2xl sm:text-3xl text-atfr-bone">Rôles & gameplay</h1>
         <p className="mt-1 text-sm text-atfr-fog">Mission, priorités, erreurs courantes et conseils par rôle en battle.</p>
       </div>
-      <div className="space-y-4">
-        {ROLES.map((role) => <RoleCard key={role.slug} role={role} />)}
-      </div>
+      <ClanContentBoundary query={content}>
+        {({ roles }) => {
+          const list = roles?.roles ?? [];
+          if (list.length === 0) return <EmptyState message="Contenu indisponible." />;
+          return (
+            <div className="space-y-4">
+              {list.map((role) => <RoleCard key={role.slug} role={role} />)}
+            </div>
+          );
+        }}
+      </ClanContentBoundary>
     </div>
   );
 }

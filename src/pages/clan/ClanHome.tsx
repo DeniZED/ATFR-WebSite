@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Crosshair, Users, Swords, Map, BookOpen, Flag, Link as LinkIcon, Star, ArrowRight, Shield } from 'lucide-react';
-import { TANKS } from '@/data/clan/tanks';
-import { STRATEGIES } from '@/data/clan/strategies';
-import { MAPS } from '@/data/clan/maps';
+import { useClanContent } from '@/features/clan/contentQueries';
+import { ClanContentBoundary } from '@/components/clan/ClanContentBoundary';
 import { PriorityBadge } from '@/components/clan/PriorityBadge';
 import { ModeBadge } from '@/components/clan/ModeBadge';
 import { cn } from '@/lib/cn';
@@ -25,153 +24,165 @@ const CLASS_CONFIG = {
   SPG: { text: 'text-orange-400', bg: 'bg-orange-500/10' },
 };
 
-const priorityTanks = TANKS.filter((t) => t.clan_priority === 'prioritaire');
-
-const stats = [
-  { label: 'Chars référencés', value: TANKS.length },
-  { label: 'Tactiques disponibles', value: STRATEGIES.length },
-  { label: 'Cartes analysées', value: MAPS.length },
-  { label: 'Chars prioritaires', value: priorityTanks.length },
-];
-
 export default function ClanHome() {
+  const content = useClanContent();
+
   return (
     <div className="max-w-4xl mx-auto space-y-10">
+      <ClanContentBoundary query={content}>
+        {({ tanks, strategies, maps }) => {
+          const allTanks = tanks?.tanks ?? [];
+          const allStrategies = strategies?.strategies ?? [];
+          const allMaps = maps?.maps ?? [];
+          const priorityTanks = allTanks.filter((t) => t.clan_priority === 'prioritaire');
 
-      {/* Hero */}
-      <div className="relative rounded-2xl overflow-hidden border border-atfr-gold/15 bg-gradient-to-br from-atfr-graphite/60 via-atfr-graphite/30 to-atfr-ink/80 p-6 sm:p-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-atfr-gold/5 via-transparent to-transparent pointer-events-none" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <Shield size={16} className="text-atfr-gold/70" strokeWidth={1.5} />
-            <span className="text-xs font-semibold uppercase tracking-widest text-atfr-gold/60">Centre Tactique</span>
-          </div>
-          <h1 className="font-display text-3xl sm:text-4xl text-atfr-bone mb-2">
-            ATFR Clan Hub
-          </h1>
-          <p className="text-sm text-atfr-fog max-w-xl mb-6">
-            Toutes les ressources tactiques du clan en un seul endroit. Équipement, stratégies, doctrine — réservé aux membres ATFR.
-          </p>
+          const stats = [
+            { label: 'Chars référencés', value: allTanks.length },
+            { label: 'Tactiques disponibles', value: allStrategies.length },
+            { label: 'Cartes analysées', value: allMaps.length },
+            { label: 'Chars prioritaires', value: priorityTanks.length },
+          ];
 
-          {/* Stats rapides */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats.map(({ label, value }) => (
-              <div key={label} className="rounded-lg bg-atfr-ink/40 border border-atfr-gold/10 px-3 py-2.5 text-center">
-                <p className="font-display text-2xl text-atfr-gold">{value}</p>
-                <p className="text-[11px] text-atfr-fog/60 mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          return (
+            <>
+              {/* Hero */}
+              <div className="relative rounded-2xl overflow-hidden border border-atfr-gold/15 bg-gradient-to-br from-atfr-graphite/60 via-atfr-graphite/30 to-atfr-ink/80 p-6 sm:p-8">
+                <div className="absolute inset-0 bg-gradient-to-br from-atfr-gold/5 via-transparent to-transparent pointer-events-none" />
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Shield size={16} className="text-atfr-gold/70" strokeWidth={1.5} />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-atfr-gold/60">Centre Tactique</span>
+                  </div>
+                  <h1 className="font-display text-3xl sm:text-4xl text-atfr-bone mb-2">
+                    ATFR Clan Hub
+                  </h1>
+                  <p className="text-sm text-atfr-fog max-w-xl mb-6">
+                    Toutes les ressources tactiques du clan en un seul endroit. Équipement, stratégies, doctrine — réservé aux membres ATFR.
+                  </p>
 
-      {/* Raccourcis */}
-      <div>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-3">Sections</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-          {SHORTCUTS.map(({ to, icon: Icon, label, description, color }) => (
-            <Link
-              key={to}
-              to={to}
-              className="group rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 p-4 hover:border-atfr-gold/25 hover:bg-atfr-graphite/40 transition-all"
-            >
-              <div className={cn('h-8 w-8 rounded-lg border flex items-center justify-center mb-3', color)}>
-                <Icon size={16} strokeWidth={1.5} />
-              </div>
-              <p className="text-sm font-medium text-atfr-bone group-hover:text-atfr-gold transition-colors">{label}</p>
-              <p className="text-xs text-atfr-fog/50 mt-0.5">{description}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Chars prioritaires */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
-            <Star size={11} className="text-atfr-gold/60" />
-            Chars prioritaires CW
-          </h2>
-          <Link to="/clan/chars" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
-            Voir tous <ArrowRight size={11} />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {priorityTanks.map((tank) => {
-            const cfg = CLASS_CONFIG[tank.class] ?? CLASS_CONFIG.HT;
-            return (
-              <Link
-                key={tank.slug}
-                to="/clan/chars"
-                className="flex items-center gap-2.5 rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5 hover:border-atfr-gold/25 hover:bg-atfr-graphite/40 transition-all"
-              >
-                <div className={cn('h-7 w-7 shrink-0 rounded-md flex items-center justify-center text-[11px] font-bold font-mono', cfg.bg, cfg.text)}>
-                  {tank.class}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-atfr-bone leading-tight truncate">{tank.name}</p>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {tank.modes.slice(0, 2).map((m) => <ModeBadge key={m} mode={m} />)}
+                  {/* Stats rapides */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {stats.map(({ label, value }) => (
+                      <div key={label} className="rounded-lg bg-atfr-ink/40 border border-atfr-gold/10 px-3 py-2.5 text-center">
+                        <p className="font-display text-2xl text-atfr-gold">{value}</p>
+                        <p className="text-[11px] text-atfr-fog/60 mt-0.5">{label}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+              </div>
 
-      {/* Dernières strats + cartes */}
-      <div className="grid sm:grid-cols-2 gap-6">
-        {/* Strats */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
-              <Swords size={11} className="text-atfr-gold/60" />
-              Tactiques
-            </h2>
-            <Link to="/clan/strategies" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
-              Voir toutes <ArrowRight size={11} />
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {STRATEGIES.slice(0, 5).map((s) => (
-              <div key={s.slug} className="flex items-start gap-2 rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5">
-                <Swords size={12} className="text-atfr-gold/40 shrink-0 mt-0.5" strokeWidth={1.5} />
+              {/* Raccourcis */}
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-3">Sections</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {SHORTCUTS.map(({ to, icon: Icon, label, description, color }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      className="group rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 p-4 hover:border-atfr-gold/25 hover:bg-atfr-graphite/40 transition-all"
+                    >
+                      <div className={cn('h-8 w-8 rounded-lg border flex items-center justify-center mb-3', color)}>
+                        <Icon size={16} strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-atfr-bone group-hover:text-atfr-gold transition-colors">{label}</p>
+                      <p className="text-xs text-atfr-fog/50 mt-0.5">{description}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chars prioritaires */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                    <Star size={11} className="text-atfr-gold/60" />
+                    Chars prioritaires CW
+                  </h2>
+                  <Link to="/clan/chars" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+                    Voir tous <ArrowRight size={11} />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {priorityTanks.map((tank) => {
+                    const cfg = CLASS_CONFIG[tank.class] ?? CLASS_CONFIG.HT;
+                    return (
+                      <Link
+                        key={tank.slug}
+                        to="/clan/chars"
+                        className="flex items-center gap-2.5 rounded-xl border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5 hover:border-atfr-gold/25 hover:bg-atfr-graphite/40 transition-all"
+                      >
+                        <div className={cn('h-7 w-7 shrink-0 rounded-md flex items-center justify-center text-[11px] font-bold font-mono', cfg.bg, cfg.text)}>
+                          {tank.class}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-atfr-bone leading-tight truncate">{tank.name}</p>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {tank.modes.slice(0, 2).map((m) => <ModeBadge key={m} mode={m} />)}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dernières strats + cartes */}
+              <div className="grid sm:grid-cols-2 gap-6">
+                {/* Strats */}
                 <div>
-                  <p className="text-sm font-medium text-atfr-bone">{s.title}</p>
-                  <p className="text-xs text-atfr-fog/50 mt-0.5 line-clamp-1">{s.summary}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                      <Swords size={11} className="text-atfr-gold/60" />
+                      Tactiques
+                    </h2>
+                    <Link to="/clan/strategies" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+                      Voir toutes <ArrowRight size={11} />
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {allStrategies.slice(0, 5).map((s) => (
+                      <div key={s.slug} className="flex items-start gap-2 rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5">
+                        <Swords size={12} className="text-atfr-gold/40 shrink-0 mt-0.5" strokeWidth={1.5} />
+                        <div>
+                          <p className="text-sm font-medium text-atfr-bone">{s.title}</p>
+                          <p className="text-xs text-atfr-fog/50 mt-0.5 line-clamp-1">{s.summary}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Cartes */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
-              <Map size={11} className="text-atfr-gold/60" />
-              Fiches cartes
-            </h2>
-            <Link to="/clan/maps" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
-              Voir toutes <ArrowRight size={11} />
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {MAPS.map((m) => (
-              <div key={m.slug} className="rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-atfr-bone">{m.name}</p>
-                  <PriorityBadge priority={m.priority} />
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {m.modes.map((mode) => <ModeBadge key={mode} mode={mode} />)}
+                {/* Cartes */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                      <Map size={11} className="text-atfr-gold/60" />
+                      Fiches cartes
+                    </h2>
+                    <Link to="/clan/maps" className="flex items-center gap-1 text-xs text-atfr-gold/60 hover:text-atfr-gold transition-colors">
+                      Voir toutes <ArrowRight size={11} />
+                    </Link>
+                  </div>
+                  <div className="space-y-2">
+                    {allMaps.map((m) => (
+                      <div key={m.slug} className="rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 px-3 py-2.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-atfr-bone">{m.name}</p>
+                          <PriorityBadge priority={m.priority} />
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {m.modes.map((mode) => <ModeBadge key={mode} mode={mode} />)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </>
+          );
+        }}
+      </ClanContentBoundary>
     </div>
   );
 }
