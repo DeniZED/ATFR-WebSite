@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Gift, X, LogOut, Palette, Shield } from 'lucide-react';
 import type { PlayerIdentityHook } from '@/features/identity/usePlayerIdentity';
 import { useAuth } from '@/hooks/useAuth';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import { useClanMembership } from '@/features/clan/ClanMembershipContext';
 import { env } from '@/lib/env';
 import { usePlayerProfile } from '@/features/geoguesser/usePlayerProfile';
@@ -32,6 +33,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const { user } = useAuth();
   const { isMember, clanTag } = useClanMembership();
+  const dialogRef = useModalA11y<HTMLDivElement>({ onClose, enabled: open });
 
   // Fetch geoguesser scores to compute level accurately
   const scores = usePlayerModuleScores({
@@ -64,6 +66,11 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
           {/* Panel */}
           <motion.div
             key="panel"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Profil Académie"
+            tabIndex={-1}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -99,6 +106,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                 <button
                   type="button"
                   onClick={onClose}
+                  aria-label="Fermer"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-gold/20 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/50 transition-colors"
                 >
                   <X size={15} />

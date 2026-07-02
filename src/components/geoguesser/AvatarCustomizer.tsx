@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, Gift, Lock, Palette, Shield, Tag, X } from 'lucide-react';
-import { Badge, Button, Card, CardBody } from '@/components/ui';
+import { Badge, Button, Card, CardBody, ModalShell } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   UNLOCKS,
@@ -72,7 +72,11 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
   const nextReward = getNextReward(levelInfo.level);
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <ModalShell
+      label="Personnaliser l'insigne"
+      onClose={onClose}
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+    >
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-0 shrink-0">
@@ -456,6 +460,6 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
           </Button>
         </div>
       </Card>
-    </div>
+    </ModalShell>
   );
 }

@@ -52,6 +52,7 @@ import {
   type LeaderboardEntry,
 } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import {
   formatDistance,
   scoreTier,
@@ -194,6 +195,10 @@ export default function Geoguesser() {
   const [activeTrainingMode, setActiveTrainingMode] = useState(false);
   const [showStatsPanel, setShowStatsPanel] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const statsPanelRef = useModalA11y<HTMLDivElement>({
+    onClose: () => setShowStatsPanel(false),
+    enabled: showStatsPanel,
+  });
   const playerProfile = usePlayerProfile(identity, playerScores.data);
 
   const current = pool[index];
@@ -540,6 +545,11 @@ export default function Geoguesser() {
                   onClick={() => setShowStatsPanel(false)}
                 />
                 <motion.div
+                  ref={statsPanelRef}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Mes stats"
+                  tabIndex={-1}
                   initial={{ x: '100%' }}
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
@@ -551,6 +561,7 @@ export default function Geoguesser() {
                     <button
                       type="button"
                       onClick={() => setShowStatsPanel(false)}
+                      aria-label="Fermer"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-atfr-gold/20 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/50 transition-colors"
                     >
                       <X size={15} />

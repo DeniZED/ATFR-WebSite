@@ -18,7 +18,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 3. **✅ P0-3** Garde-fou roster vide avant `syncClanRoster()` — correction défensive ciblée, risque faible, évite un incident de données potentiellement lourd à corriger après coup. **CORRIGÉ.**
 4. **✅ P0-1** Score Geoguesser/quiz falsifiable — décision produit tranchée (Option A, recalcul serveur complet). **CORRIGÉ en deux passes** : volet Geoguesser (sessions serveur-autoritaires + 3 fonctions Netlify + test de parité de scoring) puis volet quiz (vue sans `is_correct`, sessions serveur, analytics assainies) + verrouillage de `submit-score.mts` pour ces deux modules.
 5. **P0-2** Contenu clan-hub exposé via bundle public — **nécessite une décision produit** (migration du contenu vers Supabase + RLS) ; à valider également, effort de migration de contenu non négligeable. *Non traité — hors périmètre de cette vague.*
-6. **P0-6** Modales accessibles (`role="dialog"`, piège de focus, `Echap`) — à traiter après validation d'un composant `Modal` partagé (évite de corriger 3-4 fois la même chose séparément). *Non traité — dépend du Lot 3.*
+6. **✅ P0-6** Modales accessibles (`role="dialog"`, piège de focus, `Echap`) — **CORRIGÉ** via un hook partagé `useModalA11y` (pile de dialogues pour gérer l'empilement, piège de focus Tab/Maj+Tab, fermeture Echap, restauration du focus) + composant `ModalShell` pour les cas simples, appliqués aux 3 overlays non conformes (`AvatarCustomizer`, `AcademyProfilePanel`, panneau « Mes stats » de Geoguesser). Le `ConfirmDialog` du Lot 3 (item 1) pourra se construire sur `ModalShell`.
 
 *Estimation* : items 1-3 sont des correctifs de quelques heures chacun, sans dépendance — **livrés**. Items 4-5 nécessitent une phase de conception avant développement (à cadrer séparément). Item 6 dépend d'une décision de factorisation (lien avec Lot 3).
 
@@ -42,7 +42,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Lot 3 — Nettoyage et refactor de modules ciblés
 *Objectif : réduire la duplication et le couplage logique métier/UI identifiés comme cause racine de plusieurs findings.*
 
-1. **P2-2** Factoriser le pattern modale/confirmation/pied de formulaire utilisé par les 8 pages admin CRUD + remplacer les 19 `window.confirm()` par un composant `ConfirmDialog` cohérent avec le design system — **prérequis naturel pour P0-6** (modales accessibles), donc à mener conjointement.
+1. **P2-2** Factoriser le pattern modale/confirmation/pied de formulaire utilisé par les 8 pages admin CRUD + remplacer les 19 `window.confirm()` par un composant `ConfirmDialog` cohérent avec le design system — P0-6 étant désormais corrigé, `ConfirmDialog` peut se construire directement sur le `ModalShell`/`useModalA11y` partagé.
 2. **P1-4** Centraliser la règle d'éligibilité recrutement (actuellement dupliquée 3 fois) dans `features/recruitment/logic.ts`.
 3. **P1-5** Extraire progressivement la logique métier des 11 emplacements UI identifiés (`AcademyBadge`, `GeoguesseurStats`, `HrTopPerformers`, `ClanMovementsTab`, fonctions inline de `Geoguesser.tsx`) vers des modules `features/*/logic.ts` purs et testables, en suivant le pattern déjà correct de `features/rh/activity.ts`.
 4. **P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` (formule critique, actuellement zéro couverture).
@@ -80,7 +80,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Dépendances entre lots
 
 ```
-Lot 1 (P0)  ──┬──> Lot 3 (item 1, modale) ──> complète P0-6
+Lot 1 (P0)  ──┬──> Lot 3 (item 1, modale) : P0-6 corrigé (useModalA11y/ModalShell), ConfirmDialog peut s'appuyer dessus
               └──> Lot 4 (item 2, Geoguesser.tsx) : décision P0-1 tranchée, volet Geoguesser livré — peut démarrer
 
 Lot 2 ──> indépendant, peut démarrer immédiatement en parallèle du Lot 1
