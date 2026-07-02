@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-02 (6)** : **P1-8** (tactile FloatingMapPicker), **P2-5** (recharts lazy) et **P2-9** (script `gen:types`) livrés.
+>
 > **Mise à jour 2026-07-02 (5)** : **P1-4** (éligibilité recrutement centralisée dans `features/recruitment/logic.ts` + tests) et **P2-2 volet confirmation** (`useConfirm`/`ConfirmProvider` accessibles, 22 `confirm()` natifs remplacés) livrés.
 >
 > **Mise à jour 2026-07-02 (4)** : **P1-1** (npm audit fix — react-router/ws/js-yaml/@babel/core/brace-expansion patchés, restent des remontées dev-only vite/vitest) et **P1-3** (anti-doublons candidatures via index uniques partiels + verrouillage optimiste sur la revue, migration `0047`) livrés.
@@ -63,13 +65,13 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Lot 4 — Performance, accessibilité approfondie, SEO, tests
 *Objectif : consolider les axes transverses une fois les fondations stabilisées par les lots 1-3.*
 
-1. **P2-5** Lazy-load ciblé du chunk `recharts`/`PieChart` au niveau sous-composant.
+1. **✅ P2-5** Lazy-load ciblé du chunk `recharts`/`PieChart` au niveau sous-composant — **CORRIGÉ** (`CwEventCharts` extrait + `React.lazy`, `HrTrendChart`/`HrStatusBreakdown` lazy sur le dashboard admin).
 2. **P2-1** Découpage de `Geoguesser.tsx` (désormais ~3300+ lignes après l'intégration serveur-autoritaire P0-1) en sous-composants/hooks — peut démarrer, le volet Geoguesser de P0-1 étant livré.
 3. **P2-8** Introduire une gestion de métadonnées par route (`react-helmet-async`) sur les pages publiques à enjeu de partage (`Recruitment.tsx`, `Events.tsx`).
-4. **P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` (pan/zoom Geoguesser sur mobile).
+4. **✅ P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` — **CORRIGÉ** (pan 1 doigt, pinch-zoom 2 doigts, `touch-action: none`).
 5. **✅ P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`) — **CORRIGÉ** (pattern `**/*.{ts,tsx,mts}` + globals Node, zéro remontée sur l'existant).
 6. **✅ P1-1** Appliquer `npm audit fix` (sans `--force`) — **CORRIGÉ** (react-router 6.30.4, ws 8.21.0, js-yaml 4.3.0, @babel/core, brace-expansion ; lint/typecheck/tests/build au vert, test manuel routing + realtime recommandé au déploiement).
-7. **P2-9** Ajouter un script `gen:types` au `package.json`.
+7. **✅ P2-9** Ajouter un script `gen:types` au `package.json` — **CORRIGÉ** (sortie gitignorée `database.gen.ts`, à comparer au `database.ts` manuel).
 8. Élargir la couverture de tests au-delà des fichiers actuels (`_player-token.test.ts`, `geoguesser-scoring-parity.test.ts`, `scoring.test.ts`) — prioriser les fonctions de session quiz/geoguesser et la logique métier extraite au Lot 3.
 
 ---

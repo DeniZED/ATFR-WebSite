@@ -71,6 +71,13 @@ export function FloatingMapPicker({
     hasMoved: boolean;
   }>({ active: false, startMouseX: 0, startMouseY: 0, startOffsetX: 0, startOffsetY: 0, hasMoved: false });
 
+  // Pinch tracking (P1-8, tactile) — même principe que dragRef.
+  const pinchRef = useRef<{ active: boolean; startDist: number; startZoom: number }>({
+    active: false,
+    startDist: 0,
+    startZoom: 1,
+  });
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return maps;
@@ -190,6 +197,115 @@ export function FloatingMapPicker({
     };
   }, []);
 
+  // ---- Tactile : pan à 1 doigt, pinch-zoom à 2 doigts (P1-8) ----
+  // Le tap (sans mouvement) place le pin via le click synthétisé par le
+  // navigateur : handlePlaceClick s'applique tel quel, et son garde
+  // `hasMoved` absorbe le click fantôme émis après un pan/pinch.
+  useEffect(() => {
+    const el = placeRef.current;
+    if (!el) return;
+
+    function startPanFromTouch(t: globalThis.Touch) {
+      dragRef.current = {
+        active: true,
+        startMouseX: t.clientX,
+        startMouseY: t.clientY,
+        startOffsetX: viewRef.current.offsetX,
+        startOffsetY: viewRef.current.offsetY,
+        hasMoved: dragRef.current.hasMoved,
+      };
+    }
+
+    function handleTouchStart(e: TouchEvent) {
+      // Laisse les boutons de zoom gérer leurs propres taps.
+      if ((e.target as HTMLElement).closest('button')) return;
+      if (e.touches.length === 1) {
+        dragRef.current.hasMoved = false;
+        pinchRef.current.active = false;
+        startPanFromTouch(e.touches[0]);
+      } else if (e.touches.length === 2) {
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        pinchRef.current = {
+          active: true,
+          startDist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+          startZoom: viewRef.current.zoom,
+        };
+        dragRef.current.active = false;
+        // Un pinch ne doit jamais déboucher sur un placement de pin.
+        dragRef.current.hasMoved = true;
+      }
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+      const rect = el!.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      if (pinchRef.current.active && e.touches.length === 2) {
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+        if (pinchRef.current.startDist === 0) return;
+        const newZoom = Math.max(
+          1,
+          Math.min(6, pinchRef.current.startZoom * (dist / pinchRef.current.startDist)),
+        );
+        // Zoom ancré sur le point médian des deux doigts.
+        const midX = (a.clientX + b.clientX) / 2 - rect.left;
+        const midY = (a.clientY + b.clientY) / 2 - rect.top;
+        const { zoom, offsetX, offsetY } = viewRef.current;
+        const contentX = (midX - offsetX) / zoom;
+        const contentY = (midY - offsetY) / zoom;
+        const rawOffsetX = midX - contentX * newZoom;
+        const rawOffsetY = midY - contentY * newZoom;
+        viewRef.current = {
+          zoom: newZoom,
+          ...clampOffset(rawOffsetX, rawOffsetY, newZoom, rect.width, rect.height),
+        };
+        forceViewUpdate();
+        return;
+      }
+
+      const dr = dragRef.current;
+      if (!dr.active || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = t.clientX - dr.startMouseX;
+      const dy = t.clientY - dr.startMouseY;
+      if (!dr.hasMoved && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      e.preventDefault();
+      dr.hasMoved = true;
+      const { zoom } = viewRef.current;
+      viewRef.current = {
+        zoom,
+        ...clampOffset(dr.startOffsetX + dx, dr.startOffsetY + dy, zoom, rect.width, rect.height),
+      };
+      forceViewUpdate();
+    }
+
+    function handleTouchEnd(e: TouchEvent) {
+      if (e.touches.length === 0) {
+        dragRef.current.active = false;
+        pinchRef.current.active = false;
+      } else if (e.touches.length === 1 && pinchRef.current.active) {
+        // 2 doigts → 1 : on repart en pan depuis le doigt restant,
+        // sans réautoriser le placement (hasMoved reste à true).
+        pinchRef.current.active = false;
+        startPanFromTouch(e.touches[0]);
+      }
+    }
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd);
+    el.addEventListener('touchcancel', handleTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+      el.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [selectedMap?.id]);
+
   function handlePlaceClick(e: MouseEvent<HTMLDivElement>) {
     // Don't place a pin if the user was dragging.
     if (dragRef.current.hasMoved) {
@@ -286,7 +402,7 @@ export function FloatingMapPicker({
             onClick={handlePlaceClick}
             onMouseDown={handleMouseDown}
             className={cn(
-              'relative aspect-square w-full bg-atfr-ink select-none overflow-hidden',
+              'relative aspect-square w-full bg-atfr-ink select-none overflow-hidden touch-none',
               isZoomed ? 'cursor-grab active:cursor-grabbing' : onPlace ? 'cursor-crosshair' : 'cursor-default',
             )}
           >
