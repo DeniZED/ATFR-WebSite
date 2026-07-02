@@ -57,6 +57,7 @@ const AdminGeoShots = lazy(() => import('@/pages/admin/AdminGeoShots'));
 const AdminGeoShotEdit = lazy(() => import('@/pages/admin/AdminGeoShotEdit'));
 const AdminGeoShotsBulk = lazy(() => import('@/pages/admin/AdminGeoShotsBulk'));
 const AdminClanPages = lazy(() => import('@/pages/admin/AdminClanPages'));
+const AdminClanContent = lazy(() => import('@/pages/admin/AdminClanContent'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminAcademie = lazy(() => import('@/pages/admin/AdminAcademie'));
@@ -208,7 +209,10 @@ export const router = createBrowserRouter([
           },
           {
             element: <RequireModuleAccess moduleKey="pages-clan" />,
-            children: [{ path: 'pages-clan', element: <AdminClanPages /> }],
+            children: [
+              { path: 'pages-clan', element: <AdminClanPages /> },
+              { path: 'pages-clan/contenu', element: <AdminClanContent /> },
+            ],
           },
           {
             element: <RequireModuleAccess moduleKey="utilisateurs" />,

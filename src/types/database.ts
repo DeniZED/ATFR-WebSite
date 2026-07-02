@@ -82,6 +82,14 @@ export interface AllowedClan {
   clan_tag: string;
 }
 
+export type ClanContentKey =
+  | 'doctrine'
+  | 'links'
+  | 'maps'
+  | 'roles'
+  | 'strategies'
+  | 'tanks';
+
 export interface TrackedClanEntry {
   clan_id: number;
   clan_tag: string | null;
@@ -1189,6 +1197,38 @@ export interface Database {
         };
         Relationships: [];
       };
+      clan_page_content: {
+        Row: {
+          page_slug: string;
+          content_key: ClanContentKey;
+          payload: Record<string, unknown>;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          page_slug: string;
+          content_key: ClanContentKey;
+          payload: Record<string, unknown>;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          page_slug?: string;
+          content_key?: ClanContentKey;
+          payload?: Record<string, unknown>;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'clan_page_content_page_slug_fkey';
+            columns: ['page_slug'];
+            isOneToOne: false;
+            referencedRelation: 'clan_pages';
+            referencedColumns: ['slug'];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           user_id: string;
@@ -2026,6 +2066,8 @@ export type PlayerStatusHistoryRow =
 
 export type ClanPageRow = Database['public']['Tables']['clan_pages']['Row'];
 export type ClanPageInsert = Database['public']['Tables']['clan_pages']['Insert'];
+export type ClanPageContentRow =
+  Database['public']['Tables']['clan_page_content']['Row'];
 
 export type DiscordBotGuildConfigRow =
   Database['public']['Tables']['discord_bot_guild_configs']['Row'];

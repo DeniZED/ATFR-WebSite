@@ -9,6 +9,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 > **Mise à jour 2026-07-02** : le volet quiz est **livré** à son tour : migration `0045_quiz_server_sessions.sql` (vue `quiz_answers_public` sans `is_correct`, table `quiz_game_sessions`, RLS analytics durci), 3 fonctions Netlify (`quiz-start-session.mts`, `quiz-submit-answer.mts`, `quiz-finish-session.mts`), intégration `GuideBots.tsx`, et verrouillage de `submit-score.mts` pour les slugs serveur-autoritaires. **P0-1 est entièrement corrigé.**
 >
 > **Mise à jour 2026-07-02 (2)** : P0-6 (modales accessibles) puis P0-2 (contenu clan-hub) ont été livrés à leur tour — voir détails ✅ ci-dessous. **Tous les findings P0 de l'audit sont désormais corrigés.**
+>
+> **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 
 ---
 
@@ -19,10 +21,10 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 2. **✅ P0-5** Rendre `MinimapClickPlacer` accessible au clavier — correction ciblée, risque faible. **CORRIGÉ** (flèches + Entrée/Espace, `role="button"`, `aria-label`).
 3. **✅ P0-3** Garde-fou roster vide avant `syncClanRoster()` — correction défensive ciblée, risque faible, évite un incident de données potentiellement lourd à corriger après coup. **CORRIGÉ.**
 4. **✅ P0-1** Score Geoguesser/quiz falsifiable — décision produit tranchée (Option A, recalcul serveur complet). **CORRIGÉ en deux passes** : volet Geoguesser (sessions serveur-autoritaires + 3 fonctions Netlify + test de parité de scoring) puis volet quiz (vue sans `is_correct`, sessions serveur, analytics assainies) + verrouillage de `submit-score.mts` pour ces deux modules.
-5. **✅ P0-2** Contenu clan-hub exposé via bundle public — décision produit validée, **CORRIGÉ** : contenu migré dans `clan_page_content` (migration `0046`, seed snapshot, fichiers `src/data/clan/*.ts` supprimés), servi exclusivement par la fonction Netlify `clan-content.mts` après vérification serveur du `player_token` HMAC et du `clan_id` réel (API WG) contre `clan_pages.allowed_clans`. Édition admin : possible dès maintenant via Supabase Studio (policies éditeur en place) ; une page admin d'édition est à cadrer (voir `PLAN_ACTION_PRIORISE.md`, P0-2 « Suite »).
+5. **✅ P0-2** Contenu clan-hub exposé via bundle public — décision produit validée, **CORRIGÉ** : contenu migré dans `clan_page_content` (migration `0046`, seed snapshot, fichiers `src/data/clan/*.ts` supprimés), servi exclusivement par la fonction Netlify `clan-content.mts` après vérification serveur du `player_token` HMAC et du `clan_id` réel (API WG) contre `clan_pages.allowed_clans`. Édition admin : ✅ page `/admin/pages-clan/contenu` livrée (édition JSON par section avec validation).
 6. **✅ P0-6** Modales accessibles (`role="dialog"`, piège de focus, `Echap`) — **CORRIGÉ** via un hook partagé `useModalA11y` (pile de dialogues pour gérer l'empilement, piège de focus Tab/Maj+Tab, fermeture Echap, restauration du focus) + composant `ModalShell` pour les cas simples, appliqués aux 3 overlays non conformes (`AvatarCustomizer`, `AcademyProfilePanel`, panneau « Mes stats » de Geoguesser). Le `ConfirmDialog` du Lot 3 (item 1) pourra se construire sur `ModalShell`.
 
-*Estimation* : items 1-3 sont des correctifs de quelques heures chacun, sans dépendance — **livrés**. Items 4-5 nécessitent une phase de conception avant développement (à cadrer séparément). Item 6 dépend d'une décision de factorisation (lien avec Lot 3).
+*Estimation* : **lot entièrement livré** (PR #140 à #144).
 
 ---
 
@@ -47,7 +49,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 1. **P2-2** Factoriser le pattern modale/confirmation/pied de formulaire utilisé par les 8 pages admin CRUD + remplacer les 19 `window.confirm()` par un composant `ConfirmDialog` cohérent avec le design system — P0-6 étant désormais corrigé, `ConfirmDialog` peut se construire directement sur le `ModalShell`/`useModalA11y` partagé.
 2. **P1-4** Centraliser la règle d'éligibilité recrutement (actuellement dupliquée 3 fois) dans `features/recruitment/logic.ts`.
 3. **P1-5** Extraire progressivement la logique métier des 11 emplacements UI identifiés (`AcademyBadge`, `GeoguesseurStats`, `HrTopPerformers`, `ClanMovementsTab`, fonctions inline de `Geoguesser.tsx`) vers des modules `features/*/logic.ts` purs et testables, en suivant le pattern déjà correct de `features/rh/activity.ts`.
-4. **P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` (formule critique, actuellement zéro couverture).
+4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.
 5. **P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **uniquement après validation explicite**, conformément à la consigne de ne supprimer aucun fichier sans accord préalable.
 
 *Estimation* : lot le plus long en effort cumulé (plusieurs semaines selon les ressources), mais peut être découpé fichier par fichier sans bloquer les livraisons. Recommandé de traiter item 2-3 avant tout ajustement futur des seuils de recrutement, pour éviter d'ajouter une 4e divergence.
@@ -61,7 +63,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 2. **P2-1** Découpage de `Geoguesser.tsx` (désormais ~3300+ lignes après l'intégration serveur-autoritaire P0-1) en sous-composants/hooks — peut démarrer, le volet Geoguesser de P0-1 étant livré.
 3. **P2-8** Introduire une gestion de métadonnées par route (`react-helmet-async`) sur les pages publiques à enjeu de partage (`Recruitment.tsx`, `Events.tsx`).
 4. **P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` (pan/zoom Geoguesser sur mobile).
-5. **P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`).
+5. **✅ P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`) — **CORRIGÉ** (pattern `**/*.{ts,tsx,mts}` + globals Node, zéro remontée sur l'existant).
 6. **P1-1** Appliquer `npm audit fix` (sans `--force`) pour `react-router-dom`/`ws`/`js-yaml`/`brace-expansion`/`@babel/core`, avec test de non-régression sur le routing et les abonnements realtime Supabase.
 7. **P2-9** Ajouter un script `gen:types` au `package.json`.
 8. Élargir la couverture de tests au-delà des fichiers actuels (`_player-token.test.ts`, `geoguesser-scoring-parity.test.ts`, `scoring.test.ts`) — prioriser les fonctions de session quiz/geoguesser et la logique métier extraite au Lot 3.
