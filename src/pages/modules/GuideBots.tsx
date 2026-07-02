@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,14 +21,10 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
-  useCreateQuizSession,
-  useFinishQuizSession,
-  useLogQuizAnswer,
   usePublicQuiz,
   useQuizCategories,
-  type QuestionWithAnswers,
+  type QuestionWithPublicAnswers,
 } from '@/features/quiz/queries';
-import { useSubmitScore } from '@/features/leaderboard/queries';
 import { usePlayerIdentity } from '@/features/identity/usePlayerIdentity';
 import { LeaderboardPanel } from '@/components/quiz/LeaderboardPanel';
 import { DIFFICULTY_LABELS } from '@/types/database';
@@ -42,6 +38,8 @@ interface AnsweredRecord {
   questionId: string;
   answerId: string | null;
   isCorrect: boolean;
+  /** Révélé par le serveur après soumission (quiz-submit-answer). */
+  correctAnswerId: string | null;
 }
 
 export default function GuideBots() {
@@ -54,16 +52,15 @@ export default function GuideBots() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionsForSession, setQuestionsForSession] = useState<
-    QuestionWithAnswers[]
+    QuestionWithPublicAnswers[]
   >([]);
   const [index, setIndex] = useState(0);
   const [answered, setAnswered] = useState<AnsweredRecord[]>([]);
-  const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [answerError, setAnswerError] = useState<string | null>(null);
 
-  const createSession = useCreateQuizSession();
-  const logAnswer = useLogQuizAnswer();
-  const finishSession = useFinishQuizSession();
-  const submitScore = useSubmitScore();
   const identity = usePlayerIdentity();
 
   const totalQuestions = questionsForSession.length;
@@ -73,54 +70,101 @@ export default function GuideBots() {
     [answered],
   );
 
-  // Reset selection when moving to a new question.
-  useEffect(() => {
-    setSelectedAnswerId(null);
-  }, [index]);
-
+  // Le score et la bonne réponse sont désormais serveur-autoritaires : la
+  // partie est pilotée par quiz-start-session / quiz-submit-answer /
+  // quiz-finish-session, et is_correct n'est jamais présent côté client
+  // avant soumission.
   async function startQuiz() {
-    if (!quiz.data || quiz.data.length === 0) return;
-    const list =
-      mode === 'random'
-        ? shuffle([...quiz.data])
-        : [...quiz.data].sort((a, b) => a.sort_order - b.sort_order);
-    setQuestionsForSession(list);
-    setAnswered([]);
-    setIndex(0);
-
-    let sid: string | null = null;
+    if (!quiz.data || quiz.data.length === 0 || isStarting) return;
+    setIsStarting(true);
+    setStartError(null);
     try {
-      sid = await createSession.mutateAsync({
-        mode: categoryId ? 'category' : 'test',
-        categoryId,
-        total: list.length,
+      const res = await fetch('/.netlify/functions/quiz-start-session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          category_id: categoryId,
+          player_anon_id: identity.id,
+          player_nickname: identity.nickname,
+          player_token: identity.playerToken,
+        }),
       });
-    } catch {
-      // Analytics failures must not block the quiz — fall back to local
-      // play and skip server-side logging.
-      sid = null;
+      const json = (await res.json().catch(() => ({}))) as {
+        session_id?: string;
+        question_ids?: string[];
+        error?: string;
+      };
+      if (!res.ok || !json.session_id || !json.question_ids) {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      const byId = new Map(quiz.data.map((q) => [q.id, q]));
+      const list = json.question_ids
+        .map((id) => byId.get(id))
+        .filter((q): q is QuestionWithPublicAnswers => !!q);
+      if (list.length !== json.question_ids.length) {
+        // Le serveur a tiré des questions absentes du cache local (publication
+        // récente) : on recharge plutôt que de jouer une partie incohérente.
+        throw new Error(
+          'La liste des questions a changé — recharge la page et réessaie.',
+        );
+      }
+      setQuestionsForSession(list);
+      setAnswered([]);
+      setIndex(0);
+      setAnswerError(null);
+      setSessionId(json.session_id);
+      setStage('playing');
+    } catch (e) {
+      setStartError(
+        e instanceof Error ? e.message : 'Impossible de démarrer le quiz.',
+      );
+    } finally {
+      setIsStarting(false);
     }
-    setSessionId(sid);
-    setStage('playing');
   }
 
-  function answerQuestion(answerId: string) {
-    if (!current) return;
-    if (selectedAnswerId) return; // already answered for this question
-    const correct = current.answers.find((a) => a.is_correct);
-    const isCorrect = !!correct && correct.id === answerId;
-    setSelectedAnswerId(answerId);
-    setAnswered((prev) => [
-      ...prev,
-      { questionId: current.id, answerId, isCorrect },
-    ]);
-    if (sessionId) {
-      logAnswer.mutate({
-        sessionId,
-        questionId: current.id,
-        answerId,
-        isCorrect,
+  async function answerQuestion(answerId: string) {
+    if (!current || !sessionId || isSubmitting) return;
+    if (answered.some((a) => a.questionId === current.id)) return; // review only
+    const questionId = current.id;
+    setIsSubmitting(true);
+    setAnswerError(null);
+    try {
+      const res = await fetch('/.netlify/functions/quiz-submit-answer', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          question_id: questionId,
+          answer_id: answerId,
+        }),
       });
+      const json = (await res.json().catch(() => ({}))) as {
+        is_correct?: boolean;
+        correct_answer_id?: string | null;
+        error?: string;
+      };
+      if (!res.ok || typeof json.is_correct !== 'boolean') {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      setAnswered((prev) => [
+        ...prev,
+        {
+          questionId,
+          answerId,
+          isCorrect: json.is_correct === true,
+          correctAnswerId: json.correct_answer_id ?? null,
+        },
+      ]);
+    } catch (e) {
+      setAnswerError(
+        e instanceof Error
+          ? e.message
+          : 'Erreur lors de la validation de la réponse.',
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -129,31 +173,17 @@ export default function GuideBots() {
       setIndex((i) => i + 1);
       return;
     }
-    // End of quiz.
-    const finalScore = answered.filter((a) => a.isCorrect).length;
+    // End of quiz — le serveur agrège les réponses vérifiées et pousse
+    // lui-même le score dans le leaderboard (best-effort côté client).
     if (sessionId) {
       try {
-        await finishSession.mutateAsync({ sessionId, score: finalScore });
-      } catch {
-        // Ignored — display the result regardless.
-      }
-    }
-    // Push to the leaderboard if we have a nickname. Failures are
-    // non-blocking — the result screen is shown either way.
-    if (identity.nickname && totalQuestions > 0) {
-      try {
-        await submitScore.mutateAsync({
-          module_slug: MODULE_SLUG,
-          submode: categoryId ? `cat:${categoryId}` : 'default',
-          player_anon_id: identity.id,
-          player_nickname: identity.nickname,
-          player_token: identity.playerToken,
-          score: finalScore,
-          max_score: totalQuestions,
-          meta: { mode },
+        await fetch('/.netlify/functions/quiz-finish-session', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
         });
       } catch {
-        // Leaderboard best-effort.
+        // Ignored — display the result regardless.
       }
     }
     setStage('result');
@@ -169,7 +199,9 @@ export default function GuideBots() {
     setQuestionsForSession([]);
     setAnswered([]);
     setIndex(0);
-    setSelectedAnswerId(null);
+    setStartError(null);
+    setAnswerError(null);
+    setIsSubmitting(false);
   }
 
   // ------------------------------------------------------------------
@@ -258,17 +290,21 @@ export default function GuideBots() {
                   size="lg"
                   className="w-full"
                   onClick={startQuiz}
-                  disabled={
-                    createSession.isPending || !identity.nickname
-                  }
+                  disabled={isStarting || !identity.nickname}
                   trailingIcon={<ArrowRight size={16} />}
                 >
                   {!identity.nickname
                     ? 'Choisis d’abord un pseudo'
-                    : createSession.isPending
+                    : isStarting
                       ? 'Préparation…'
                       : 'Commencer le test'}
                 </Button>
+
+                {startError && (
+                  <Alert tone="danger" title="Impossible de démarrer">
+                    {startError}
+                  </Alert>
+                )}
               </CardBody>
             </Card>
           )}
@@ -283,8 +319,8 @@ export default function GuideBots() {
   }
 
   if (stage === 'playing' && current) {
-    const correct = current.answers.find((a) => a.is_correct);
-    const showFeedback = !!selectedAnswerId;
+    const record = answered.find((a) => a.questionId === current.id);
+    const showFeedback = !!record;
 
     return (
       <Section
@@ -337,8 +373,8 @@ export default function GuideBots() {
 
                     <div className="space-y-2">
                       {current.answers.map((a, i) => {
-                        const isSelected = selectedAnswerId === a.id;
-                        const isCorrect = correct?.id === a.id;
+                        const isSelected = record?.answerId === a.id;
+                        const isCorrect = record?.correctAnswerId === a.id;
                         return (
                           <AnswerButton
                             key={a.id}
@@ -354,11 +390,17 @@ export default function GuideBots() {
                                     : 'idle'
                             }
                             onClick={() => answerQuestion(a.id)}
-                            disabled={showFeedback}
+                            disabled={showFeedback || isSubmitting}
                           />
                         );
                       })}
                     </div>
+
+                    {answerError && !showFeedback && (
+                      <Alert tone="danger" title="Réponse non enregistrée">
+                        {answerError}
+                      </Alert>
+                    )}
 
                     {showFeedback && current.explanation && (
                       <motion.div
@@ -458,8 +500,19 @@ export default function GuideBots() {
         {/* Récap des questions ratées */}
         {(() => {
           const failed = answered
-            .map((a, i) => ({ record: a, q: questionsForSession[i] }))
-            .filter(({ record }) => !record.isCorrect);
+            .filter((record) => !record.isCorrect)
+            .map((record) => ({
+              record,
+              q: questionsForSession.find((q) => q.id === record.questionId),
+            }))
+            .filter(
+              (
+                x,
+              ): x is {
+                record: AnsweredRecord;
+                q: QuestionWithPublicAnswers;
+              } => !!x.q,
+            );
           if (failed.length === 0) return null;
           return (
             <div className="mt-8">
@@ -467,8 +520,10 @@ export default function GuideBots() {
                 À revoir
               </p>
               <div className="space-y-3">
-                {failed.map(({ q }) => {
-                  const right = q.answers.find((a) => a.is_correct);
+                {failed.map(({ record, q }) => {
+                  const right = record.correctAnswerId
+                    ? q.answers.find((a) => a.id === record.correctAnswerId)
+                    : undefined;
                   return (
                     <Card key={q.id}>
                       <CardBody className="p-5">
@@ -505,14 +560,6 @@ export default function GuideBots() {
 // ---------------------------------------------------------------------------
 // Helpers & sub-components
 // ---------------------------------------------------------------------------
-
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 
 interface ScoreTier {
   title: string;
