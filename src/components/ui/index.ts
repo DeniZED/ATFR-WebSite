@@ -2,6 +2,7 @@ export { Alert } from './Alert';
 export { Badge } from './Badge';
 export { Button } from './Button';
 export { Card, CardBody, CardFooter, CardHeader, CardTitle } from './Card';
+export { ConfirmProvider } from './ConfirmProvider';
 export { Input, Textarea } from './Input';
 export { ModalShell } from './ModalShell';
 export { Section } from './Section';

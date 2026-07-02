@@ -17,10 +17,12 @@ import {
   useDeleteClanPage,
   useUpsertClanPage,
 } from '@/features/clan/pageQueries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminClanPages() {
   const list = useClanPages();
   const remove = useDeleteClanPage();
+  const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<ClanPageRow | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -120,8 +122,14 @@ export default function AdminClanPages() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm(`Supprimer la page « ${p.title} » ?`))
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: `Supprimer la page « ${p.title} » ?`,
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
                         remove.mutate(p.slug);
                     }}
                     disabled={remove.isPending}

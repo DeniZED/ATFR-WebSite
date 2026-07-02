@@ -1,17 +1,10 @@
 import { ExternalLink } from 'lucide-react';
 import { Alert, Badge, Card, CardBody, Spinner } from '@/components/ui';
 import { wn8Color, wn8Label } from '@/lib/tomato-api';
+import { meetsRecruitmentThresholds } from '@/features/recruitment/logic';
 import type { usePlayerLookup } from '@/features/stats/queries';
 
 type LookupResult = NonNullable<ReturnType<typeof usePlayerLookup>['data']>;
-type LookupStats = NonNullable<LookupResult['stats']>;
-
-function meetsRecruitmentThresholds(stats: LookupStats): boolean {
-  return (
-    (stats.wn8 ?? 0) >= stats.recruitmentThresholds.minWn8 &&
-    stats.battles >= stats.recruitmentThresholds.minBattles
-  );
-}
 
 export function PlayerLookupCard({
   loading,
@@ -73,8 +66,10 @@ export function PlayerLookupCard({
         </div>
 
         {stats && (stats.recruitmentThresholds.minWn8 > 0 || stats.recruitmentThresholds.minBattles > 0) && (
-          <Badge variant={meetsRecruitmentThresholds(stats) ? 'success' : 'danger'}>
-            {meetsRecruitmentThresholds(stats) ? 'Au-dessus des seuils requis' : 'Sous les seuils requis'}{' '}
+          <Badge variant={meetsRecruitmentThresholds(stats, stats.recruitmentThresholds) ? 'success' : 'danger'}>
+            {meetsRecruitmentThresholds(stats, stats.recruitmentThresholds)
+              ? 'Au-dessus des seuils requis'
+              : 'Sous les seuils requis'}{' '}
             (WN8 ≥ {stats.recruitmentThresholds.minWn8}, batailles ≥ {stats.recruitmentThresholds.minBattles})
           </Badge>
         )}

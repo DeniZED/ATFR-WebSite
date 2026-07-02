@@ -25,6 +25,7 @@ import {
   ROLE_LABELS,
   type UserRole,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const ALL_ROLES: UserRole[] = ['super_admin', 'admin', 'moderator', 'editor'];
 
@@ -38,6 +39,7 @@ export default function AdminUsers() {
   const users = useAdminUsers();
   const assign = useAssignRole();
   const remove = useRemoveRole();
+  const confirmDialog = useConfirm();
   const setModuleAccess = useSetModuleAccess();
 
   if (roleLoading) {
@@ -155,9 +157,15 @@ export default function AdminUsers() {
                           size="sm"
                           variant="danger"
                           leadingIcon={<Trash2 size={14} />}
-                          onClick={() => {
+                          onClick={async () => {
                             if (lastSuperAdmin) return;
-                            if (confirm(`Retirer le rôle ${ROLE_LABELS[u.role!]} à ${u.email} ?`)) {
+                            if (
+                              await confirmDialog({
+                                message: `Retirer le rôle ${ROLE_LABELS[u.role!]} à ${u.email} ?`,
+                                tone: 'danger',
+                                confirmLabel: 'Retirer',
+                              })
+                            ) {
                               remove.mutate(u.user_id);
                             }
                           }}

@@ -15,10 +15,12 @@ import {
   useHighlights,
   useUpsertHighlight,
 } from '@/features/content/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminHighlights() {
   const list = useHighlights();
   const remove = useDeleteHighlight();
+  const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -103,8 +105,15 @@ export default function AdminHighlights() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer ?')) remove.mutate(h.id);
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: 'Supprimer ce highlight ?',
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
+                        remove.mutate(h.id);
                     }}
                     disabled={remove.isPending}
                   >

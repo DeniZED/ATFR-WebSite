@@ -35,6 +35,7 @@ import {
   DIFFICULTY_LABELS,
   type QuizDifficulty,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type StatusFilter = 'all' | 'published' | 'draft';
 type DifficultyFilter = QuizDifficulty | 'all';
@@ -64,6 +65,7 @@ export default function AdminGeoShots() {
     mapId: mapFilter === 'all' ? undefined : mapFilter,
   });
   const remove = useDeleteShot();
+  const confirmDialog = useConfirm();
   const dup = useDuplicateShot();
   const resetShotStats = useResetShotStats();
 
@@ -106,10 +108,12 @@ export default function AdminGeoShots() {
 
   async function resetStatsForShot(shot: ShotWithMap) {
     if (
-      !confirm(
-        `Réinitialiser les stats du screenshot "${shot.map?.name ?? shot.id}" ? ` +
+      !(await confirmDialog({
+        message:
+          `Réinitialiser les stats du screenshot « ${shot.map?.name ?? shot.id} » ? ` +
           'Les compteurs repassent à 0 et la difficulté redevient Facile.',
-      )
+        confirmLabel: 'Réinitialiser',
+      }))
     ) {
       return;
     }
@@ -363,8 +367,14 @@ export default function AdminGeoShots() {
                       size="sm"
                       variant="danger"
                       leadingIcon={<Trash2 size={14} />}
-                      onClick={() => {
-                        if (confirm('Supprimer ce screenshot ?')) {
+                      onClick={async () => {
+                        if (
+                          await confirmDialog({
+                            message: 'Supprimer ce screenshot ?',
+                            tone: 'danger',
+                            confirmLabel: 'Supprimer',
+                          })
+                        ) {
                           remove.mutate(shot.id);
                         }
                       }}

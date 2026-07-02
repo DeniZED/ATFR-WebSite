@@ -14,11 +14,13 @@ import {
   useResetAllShotStats,
   useUpdateGeoSettings,
 } from '@/features/geoguesser/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminGeoSettings() {
   const settings = useGeoSettings();
   const update = useUpdateGeoSettings();
   const resetAllStats = useResetAllShotStats();
+  const confirmDialog = useConfirm();
 
   const [roundTime, setRoundTime] = useState<number>(45);
   const [wrongMap, setWrongMap] = useState<number>(2000);
@@ -80,9 +82,12 @@ export default function AdminGeoSettings() {
 
   async function resetAllGeoguesserStats() {
     if (
-      !confirm(
-        'Réinitialiser toutes les stats GeoGuesseur ? Tous les compteurs repassent à 0 et toutes les difficultés redeviennent Facile.',
-      )
+      !(await confirmDialog({
+        message:
+          'Réinitialiser toutes les stats GeoGuesseur ? Tous les compteurs repassent à 0 et toutes les difficultés redeviennent Facile.',
+        tone: 'danger',
+        confirmLabel: 'Tout réinitialiser',
+      }))
     ) {
       return;
     }

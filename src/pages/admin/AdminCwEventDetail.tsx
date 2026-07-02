@@ -10,6 +10,7 @@ import {
   useSetRegistrationLu,
   type CwEventDetail as CwEventDetailData,
 } from '@/features/cw/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 function formatDay(day: { day: string; label: string | null }) {
   return day.label ?? new Date(day.day).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -49,6 +50,7 @@ export default function AdminCwEventDetail() {
 function LuPanel({ event }: { event: CwEventDetailData }) {
   const setLu = useSetCwLus();
   const deleteLu = useDeleteCwLu();
+  const confirmDialog = useConfirm();
   const [name, setName] = useState('');
 
   function addLu() {
@@ -67,8 +69,15 @@ function LuPanel({ event }: { event: CwEventDetailData }) {
               <Shield size={11} strokeWidth={2} />
               {lu.name}
               <button
-                onClick={() => {
-                  if (confirm(`Supprimer ${lu.name} ?`)) deleteLu.mutate({ luId: lu.id, eventId: event.id });
+                onClick={async () => {
+                  if (
+                    await confirmDialog({
+                      message: `Supprimer ${lu.name} ?`,
+                      tone: 'danger',
+                      confirmLabel: 'Supprimer',
+                    })
+                  )
+                    deleteLu.mutate({ luId: lu.id, eventId: event.id });
                 }}
                 className="text-atfr-fog hover:text-atfr-danger transition-colors"
                 aria-label="Supprimer"

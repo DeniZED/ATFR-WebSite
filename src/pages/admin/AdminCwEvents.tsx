@@ -9,10 +9,12 @@ import {
   type CwEventStatus,
   type CwEventType,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminCwEvents() {
   const list = useCwEvents();
   const remove = useDeleteCwEvent();
+  const confirmDialog = useConfirm();
   const upsert = useUpsertCwEvent();
 
   const [editing, setEditing] = useState<string | null>(null);
@@ -89,8 +91,15 @@ export default function AdminCwEvents() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer cette campagne ?')) remove.mutate(e.id);
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: 'Supprimer cette campagne ?',
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
+                        remove.mutate(e.id);
                     }}
                     disabled={remove.isPending}
                   >

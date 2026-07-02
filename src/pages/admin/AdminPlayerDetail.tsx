@@ -42,6 +42,7 @@ import {
 } from '@/features/rh/queries';
 import { tomatoProfileUrl } from '@/lib/tomato-api';
 import type { PlayerHrStatus, StaffNoteType } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type PeriodPreset = '7' | '14' | '30' | '90';
 
@@ -100,6 +101,7 @@ export default function AdminPlayerDetail() {
   const saveDiscord = useUpsertDiscordLink();
   const saveTrackingSettings = useSavePlayerTrackingSettings();
   const deleteDiscord = useDeleteDiscordLink();
+  const confirmDialog = useConfirm();
   const addNote = useAddStaffNote();
 
   const [saved, setSaved] = useState(false);
@@ -536,8 +538,14 @@ export default function AdminPlayerDetail() {
                 <Button
                   variant="danger"
                   leadingIcon={<Trash2 size={14} />}
-                  onClick={() => {
-                    if (confirm('Supprimer cette liaison Discord ?')) {
+                  onClick={async () => {
+                    if (
+                      await confirmDialog({
+                        message: 'Supprimer cette liaison Discord ?',
+                        tone: 'danger',
+                        confirmLabel: 'Supprimer',
+                      })
+                    ) {
                       deleteDiscord.mutate(link.id);
                     }
                   }}

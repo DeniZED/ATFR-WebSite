@@ -28,6 +28,7 @@ import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
+import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
 import { ROLE_LABELS } from '@/types/database';
 
 interface NavItem {
@@ -73,6 +74,7 @@ export function AdminLayout() {
   const visibleNav = nav.filter((item) => !item.moduleKey || canAccess(item.moduleKey));
 
   return (
+    <ConfirmProvider>
     <div className="min-h-screen bg-atfr-ink">
       {open && (
         <div
@@ -165,5 +167,6 @@ export function AdminLayout() {
         </main>
       </div>
     </div>
+    </ConfirmProvider>
   );
 }

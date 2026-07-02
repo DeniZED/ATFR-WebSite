@@ -19,11 +19,13 @@ import {
 } from '@/features/events/queries';
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
 import type { EventType } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminEvents() {
   const list = useAllEvents();
   const upsert = useUpsertEvent();
   const remove = useDeleteEvent();
+  const confirmDialog = useConfirm();
 
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -101,8 +103,15 @@ export default function AdminEvents() {
                     size="sm"
                     variant="danger"
                     leadingIcon={<Trash2 size={14} />}
-                    onClick={() => {
-                      if (confirm('Supprimer ?')) remove.mutate(e.id);
+                    onClick={async () => {
+                      if (
+                        await confirmDialog({
+                          message: 'Supprimer cet événement ?',
+                          tone: 'danger',
+                          confirmLabel: 'Supprimer',
+                        })
+                      )
+                        remove.mutate(e.id);
                     }}
                     disabled={remove.isPending}
                   >

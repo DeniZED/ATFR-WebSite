@@ -31,6 +31,7 @@ import {
   DIFFICULTY_LABELS,
   type QuizDifficulty,
 } from '@/types/database';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type StatusFilter = 'all' | 'published' | 'draft';
 type DifficultyFilter = QuizDifficulty | 'all';
@@ -39,6 +40,7 @@ export default function AdminQuizList() {
   const list = useQuizQuestions();
   const cats = useQuizCategories();
   const remove = useDeleteQuizQuestion();
+  const confirmDialog = useConfirm();
   const dup = useDuplicateQuizQuestion();
 
   const [search, setSearch] = useState('');
@@ -237,8 +239,14 @@ export default function AdminQuizList() {
                       size="sm"
                       variant="danger"
                       leadingIcon={<Trash2 size={14} />}
-                      onClick={() => {
-                        if (confirm(`Supprimer "${row.title}" ?`)) {
+                      onClick={async () => {
+                        if (
+                          await confirmDialog({
+                            message: `Supprimer « ${row.title} » ?`,
+                            tone: 'danger',
+                            confirmLabel: 'Supprimer',
+                          })
+                        ) {
                           remove.mutate(row.id);
                         }
                       }}

@@ -16,6 +16,7 @@ import {
   useResetLeaderboard,
   useScoreCount,
 } from '@/features/leaderboard/queries';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface DraftRow {
   is_published: boolean;
@@ -288,12 +289,16 @@ export default function AdminModules() {
 function LeaderboardResetRow({ slug }: { slug: string }) {
   const count = useScoreCount(slug);
   const reset = useResetLeaderboard();
+  const confirmDialog = useConfirm();
 
   async function onReset() {
     if (
-      !confirm(
-        `Vider le classement de ce module ? Tous les scores enregistrés seront supprimés (irréversible).`,
-      )
+      !(await confirmDialog({
+        message:
+          'Vider le classement de ce module ? Tous les scores enregistrés seront supprimés (irréversible).',
+        tone: 'danger',
+        confirmLabel: 'Vider le classement',
+      }))
     )
       return;
     await reset.mutateAsync(slug);
