@@ -2,51 +2,25 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, Clock3, Swords } from 'lucide-react';
 import { Card, CardBody, Badge } from '@/components/ui';
-import { formatDuration, type PlayerActivitySummary } from '@/features/rh/activity';
+import type { PlayerActivitySummary } from '@/features/rh/activity';
+// Règles de classement extraites dans features/rh/topPerformers.ts (P1-5).
+import {
+  computeTopPerformers,
+  type TopPerformerRanking,
+} from '@/features/rh/topPerformers';
 
-interface Ranking {
-  label: string;
-  icon: React.ReactNode;
-  rows: Array<{ summary: PlayerActivitySummary; value: string }>;
-}
+const RANKING_ICONS: Record<TopPerformerRanking['key'], React.ReactNode> = {
+  score: <Award size={16} />,
+  battles: <Swords size={16} />,
+  voice: <Clock3 size={16} />,
+};
 
 export function HrTopPerformers({
   players,
 }: {
   players: PlayerActivitySummary[];
 }) {
-  const rankings = useMemo<Ranking[]>(() => {
-    const active = players.filter((s) => s.player.status !== 'former');
-
-    const byScore = [...active]
-      .sort((a, b) => b.score.value - a.score.value)
-      .slice(0, 5)
-      .map((summary) => ({ summary, value: `${summary.score.value}` }));
-
-    const byBattles = [...active]
-      .filter((s) => (s.battleDelta ?? 0) > 0)
-      .sort((a, b) => (b.battleDelta ?? 0) - (a.battleDelta ?? 0))
-      .slice(0, 5)
-      .map((summary) => ({
-        summary,
-        value: `${summary.battleDelta} bataille(s)`,
-      }));
-
-    const byVoice = [...active]
-      .filter((s) => s.voiceSeconds > 0)
-      .sort((a, b) => b.voiceSeconds - a.voiceSeconds)
-      .slice(0, 5)
-      .map((summary) => ({
-        summary,
-        value: formatDuration(summary.voiceSeconds),
-      }));
-
-    return [
-      { label: 'Meilleur score d’activité', icon: <Award size={16} />, rows: byScore },
-      { label: 'Plus de batailles', icon: <Swords size={16} />, rows: byBattles },
-      { label: 'Plus de vocal', icon: <Clock3 size={16} />, rows: byVoice },
-    ];
-  }, [players]);
+  const rankings = useMemo(() => computeTopPerformers(players), [players]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -54,7 +28,7 @@ export function HrTopPerformers({
         <Card key={ranking.label}>
           <CardBody className="p-5">
             <div className="flex items-center gap-2 mb-3 text-atfr-gold">
-              {ranking.icon}
+              {RANKING_ICONS[ranking.key]}
               <h3 className="font-display text-base text-atfr-bone">
                 {ranking.label}
               </h3>

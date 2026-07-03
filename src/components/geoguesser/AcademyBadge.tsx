@@ -8,6 +8,16 @@ import {
   resolveColor,
   type LevelInfo,
 } from '@/features/geoguesser/playerProfile';
+import {
+  TIER_DEFAULT_ACCENT,
+  darken,
+  getMetallicType,
+  getStarCount,
+  getTier,
+  lighten,
+  specularExponent,
+  toRoman,
+} from '@/features/geoguesser/badge';
 
 // ─── ViewBox ──────────────────────────────────────────────────────────────────
 const VW = 160;
@@ -28,76 +38,8 @@ interface AcademyBadgeProps {
   className?: string;
 }
 
-type Tier = 1 | 2 | 3 | 4 | 5;
-
-function getTier(level: number): Tier {
-  if (level <= 3) return 1;
-  if (level <= 6) return 2;
-  if (level <= 9) return 3;
-  if (level <= 12) return 4;
-  return 5;
-}
-
-function getStarCount(level: number): number {
-  if (level <= 3) return 0;
-  if (level <= 5) return 1;
-  if (level <= 7) return 2;
-  if (level <= 10) return 3;
-  if (level <= 12) return 4;
-  return 5;
-}
-
-// ─── Roman numerals ───────────────────────────────────────────────────────────
-const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
-function toRoman(n: number): string { return ROMAN[n - 1] ?? String(n); }
-
-// ─── Colour helpers ───────────────────────────────────────────────────────────
-function lighten(hex: string, f: number): string {
-  const n = parseInt(hex.replace('#', ''), 16);
-  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  return `#${[
-    Math.min(255, Math.round(r + (255 - r) * f)),
-    Math.min(255, Math.round(g + (255 - g) * f)),
-    Math.min(255, Math.round(b + (255 - b) * f)),
-  ].map(v => v.toString(16).padStart(2, '0')).join('')}`;
-}
-function darken(hex: string, f: number): string {
-  const n = parseInt(hex.replace('#', ''), 16);
-  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  return `#${[
-    Math.round(r * (1 - f)),
-    Math.round(g * (1 - f)),
-    Math.round(b * (1 - f)),
-  ].map(v => v.toString(16).padStart(2, '0')).join('')}`;
-}
-
-// Metallic type from color id — drives specular parameters
-type MetallicType = 'gold' | 'silver' | 'bronze' | 'iron' | null;
-function getMetallicType(primaryId: string, accentId: string | null): MetallicType {
-  const ids = [primaryId, accentId].filter(Boolean).join(' ');
-  if (/col-gold|col-bronze|acc-gold|acc-brass|acc-copper|acc-iridescent/.test(ids)) return 'gold';
-  if (/col-silver|col-chrome|acc-silver|acc-platinum|acc-ivory/.test(ids)) return 'silver';
-  if (/col-iron/.test(ids)) return 'iron';
-  if (/col-prestige|col-void/.test(ids)) return 'iron';
-  return null;
-}
-
-function specularExponent(mt: MetallicType, tier: Tier): number {
-  if (mt === 'silver') return 80;
-  if (mt === 'gold')   return 48;
-  if (mt === 'bronze') return 36;
-  if (mt === 'iron')   return 22;
-  return tier >= 4 ? 28 : 18;
-}
-
-// Default accent per tier (used when no accent selected)
-const TIER_DEFAULT_ACCENT: Record<Tier, string> = {
-  1: '#9AAA88',
-  2: '#8899AA',
-  3: '#C9A227',
-  4: '#C9A227',
-  5: '#D4AF37',
-};
+// Logique tiers/étoiles/couleurs extraite dans features/geoguesser/badge.ts
+// (P1-5) — ce fichier ne garde que le rendu SVG.
 
 // ─── WoT octagonal shield ────────────────────────────────────────────────────
 // Derived from the official World of Tanks SVG (viewBox 0 0 24 43).
