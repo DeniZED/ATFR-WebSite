@@ -42,7 +42,7 @@ export function ModuleGate({ moduleTitle, moduleDescription }: Props) {
                 Se connecter avec Wargaming
               </Button>
             ) : isLoading ? (
-              <div className="text-sm text-atfr-fog/60 py-2">
+              <div className="text-sm text-atfr-fog/85 py-2">
                 Vérification de l'appartenance au clan…
               </div>
             ) : !isMember ? (

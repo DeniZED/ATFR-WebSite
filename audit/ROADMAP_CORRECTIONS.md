@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-03** : **P1-6** (contraste WCAG AA — 107 opacités `text-atfr-fog` relevées à `/85` sur tout `src/`) livré.
+>
 > **Mise à jour 2026-07-02 (6)** : **P1-8** (tactile FloatingMapPicker), **P2-5** (recharts lazy) et **P2-9** (script `gen:types`) livrés.
 >
 > **Mise à jour 2026-07-02 (5)** : **P1-4** (éligibilité recrutement centralisée dans `features/recruitment/logic.ts` + tests) et **P2-2 volet confirmation** (`useConfirm`/`ConfirmProvider` accessibles, 22 `confirm()` natifs remplacés) livrés.
@@ -43,7 +45,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 4. **✅ P1-12** Corriger `hidden sm:inline` → `sr-only sm:not-sr-only` dans `AvatarCustomizer.tsx`. **CORRIGÉ.**
 5. **✅ P1-13** Aligner `Select.tsx` sur `Input.tsx` pour `aria-invalid`/`aria-describedby`. **CORRIGÉ.**
 6. **✅ P2-7** Ajouter les `<h1>` manquants (`Members.tsx`, `Recruitment.tsx`), corriger les sauts de niveau de titre sur `Home.tsx`. **CORRIGÉ** — `Members.tsx`/`Recruitment.tsx` utilisent désormais `<Section as="h1">` (nouvelle prop additive, par défaut toujours `h2`) ; vérification de `Home.tsx` : la hiérarchie h1→h2→h3 était en fait déjà intacte via le composant `Section` partagé, aucun saut réel constaté.
-7. **P1-6** Relever les opacités `text-atfr-fog` insuffisantes (94 occurrences) — à traiter par lot de pages plutôt qu'en une fois, en commençant par la zone clan-hub (la plus utilisée quotidiennement). *Non traité — hors périmètre de cette vague.*
+7. **✅ P1-6** Relever les opacités `text-atfr-fog` insuffisantes — **CORRIGÉ** (107 occurrences `/25`-`/75` → `/85` sur tout `src/`, zone clan-hub incluse ; passage AA vérifié par calcul de contraste sur les fonds du site).
 
 *Estimation* : chaque item est de l'ordre de quelques heures, aucune dépendance entre eux, peuvent être répartis entre plusieurs personnes/sessions. Items 1-6 **livrés** ; item 7 reste à planifier séparément.
 

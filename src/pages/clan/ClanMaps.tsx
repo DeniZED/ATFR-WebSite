@@ -14,13 +14,13 @@ import { AlertTriangle, MessageSquareQuote, Lightbulb } from 'lucide-react';
 function SpawnBlock({ label, positions }: { label: string; positions: SpawnPosition[] }) {
   return (
     <div className="rounded-lg border border-atfr-gold/10 bg-atfr-graphite/20 p-3">
-      <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">Spawn {label}</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">Spawn {label}</p>
       <div className="space-y-2">
         {positions.map((p) => (
           <div key={p.name}>
             <span className="text-xs font-medium text-atfr-bone">{p.name}</span>
-            <span className="text-xs text-atfr-fog/60"> — {p.role}</span>
-            {p.notes && <p className="text-xs text-atfr-fog/50 mt-0.5">{p.notes}</p>}
+            <span className="text-xs text-atfr-fog/85"> — {p.role}</span>
+            {p.notes && <p className="text-xs text-atfr-fog/85 mt-0.5">{p.notes}</p>}
           </div>
         ))}
       </div>
@@ -35,7 +35,7 @@ function MapCard({ map }: { map: MapEntry }) {
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <h2 className="font-display text-xl text-atfr-bone">{map.name}</h2>
           <PriorityBadge priority={map.priority} />
-          <span className="text-xs border border-atfr-fog/20 text-atfr-fog/60 rounded px-1.5 py-0.5">{map.map_type}</span>
+          <span className="text-xs border border-atfr-fog/20 text-atfr-fog/85 rounded px-1.5 py-0.5">{map.map_type}</span>
         </div>
         <div className="flex flex-wrap gap-1">
           {map.modes.map((m) => <ModeBadge key={m} mode={m} />)}
@@ -50,7 +50,7 @@ function MapCard({ map }: { map: MapEntry }) {
 
       {/* Chars recommandés */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">Chars recommandés</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">Chars recommandés</p>
         <div className="flex flex-wrap gap-1.5">
           {map.recommended_tanks.map((t) => (
             <span key={t} className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 px-2 py-0.5 text-xs text-atfr-bone">{t}</span>

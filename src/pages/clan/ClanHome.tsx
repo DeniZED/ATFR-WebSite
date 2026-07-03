@@ -65,7 +65,7 @@ export default function ClanHome() {
                     {stats.map(({ label, value }) => (
                       <div key={label} className="rounded-lg bg-atfr-ink/40 border border-atfr-gold/10 px-3 py-2.5 text-center">
                         <p className="font-display text-2xl text-atfr-gold">{value}</p>
-                        <p className="text-[11px] text-atfr-fog/60 mt-0.5">{label}</p>
+                        <p className="text-[11px] text-atfr-fog/85 mt-0.5">{label}</p>
                       </div>
                     ))}
                   </div>
@@ -74,7 +74,7 @@ export default function ClanHome() {
 
               {/* Raccourcis */}
               <div>
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-3">Sections</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-3">Sections</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                   {SHORTCUTS.map(({ to, icon: Icon, label, description, color }) => (
                     <Link
@@ -86,7 +86,7 @@ export default function ClanHome() {
                         <Icon size={16} strokeWidth={1.5} />
                       </div>
                       <p className="text-sm font-medium text-atfr-bone group-hover:text-atfr-gold transition-colors">{label}</p>
-                      <p className="text-xs text-atfr-fog/50 mt-0.5">{description}</p>
+                      <p className="text-xs text-atfr-fog/85 mt-0.5">{description}</p>
                     </Link>
                   ))}
                 </div>
@@ -95,7 +95,7 @@ export default function ClanHome() {
               {/* Chars prioritaires */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                  <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85">
                     <Star size={11} className="text-atfr-gold/60" />
                     Chars prioritaires CW
                   </h2>
@@ -132,7 +132,7 @@ export default function ClanHome() {
                 {/* Strats */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85">
                       <Swords size={11} className="text-atfr-gold/60" />
                       Tactiques
                     </h2>
@@ -146,7 +146,7 @@ export default function ClanHome() {
                         <Swords size={12} className="text-atfr-gold/40 shrink-0 mt-0.5" strokeWidth={1.5} />
                         <div>
                           <p className="text-sm font-medium text-atfr-bone">{s.title}</p>
-                          <p className="text-xs text-atfr-fog/50 mt-0.5 line-clamp-1">{s.summary}</p>
+                          <p className="text-xs text-atfr-fog/85 mt-0.5 line-clamp-1">{s.summary}</p>
                         </div>
                       </div>
                     ))}
@@ -156,7 +156,7 @@ export default function ClanHome() {
                 {/* Cartes */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+                    <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85">
                       <Map size={11} className="text-atfr-gold/60" />
                       Fiches cartes
                     </h2>

@@ -41,7 +41,7 @@ export function AcademyNavbar() {
         <div className="flex items-center gap-4">
           <Link
             to="/"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs text-atfr-fog/60 hover:text-atfr-fog transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs text-atfr-fog/85 hover:text-atfr-fog transition-colors"
             title="Retour au site du clan"
           >
             <ArrowLeft size={12} />
@@ -209,7 +209,7 @@ export function AcademyNavbar() {
                 <WgProfileBubble />
                 <Link
                   to="/"
-                  className="flex items-center gap-1.5 text-sm text-atfr-fog/50 hover:text-atfr-fog transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-atfr-fog/85 hover:text-atfr-fog transition-colors"
                 >
                   <ArrowLeft size={12} />
                   Retour au clan

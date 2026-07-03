@@ -152,7 +152,7 @@ export function Navbar() {
                 </NavLink>
               ))}
               {user && (
-                <Link to="/admin" className="px-3 py-2 text-sm text-atfr-fog/60 hover:text-atfr-bone transition-colors">
+                <Link to="/admin" className="px-3 py-2 text-sm text-atfr-fog/85 hover:text-atfr-bone transition-colors">
                   Administration
                 </Link>
               )}

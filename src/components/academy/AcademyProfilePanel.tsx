@@ -96,7 +96,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-fog/20 px-2.5 py-1.5 text-xs text-atfr-fog/70 hover:text-atfr-bone hover:border-atfr-fog/50 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-atfr-fog/20 px-2.5 py-1.5 text-xs text-atfr-fog/85 hover:text-atfr-bone hover:border-atfr-fog/50 transition-colors"
                     title="Déconnexion WG"
                   >
                     <LogOut size={12} />
@@ -165,7 +165,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   <span className="font-semibold text-atfr-gold">
                     Niv. {profile.levelInfo.level} — {profile.levelInfo.title}
                   </span>
-                  <span className="text-xs text-atfr-fog/60">
+                  <span className="text-xs text-atfr-fog/85">
                     {profile.levelInfo.xp.toLocaleString('fr')} XP
                   </span>
                 </div>
@@ -178,7 +178,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   />
                 </div>
                 {!profile.levelInfo.isMax && (
-                  <p className="text-[10px] text-atfr-fog/50 text-right">
+                  <p className="text-[10px] text-atfr-fog/85 text-right">
                     +{profile.levelInfo.xpToNext.toLocaleString('fr')} XP → Niv. {profile.levelInfo.level + 1}
                   </p>
                 )}
@@ -188,7 +188,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
                   return next ? (
                     <div className="flex items-start gap-1.5 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10 px-2.5 py-1.5 mt-0.5">
                       <Gift size={11} className="text-atfr-gold/60 mt-0.5 shrink-0" />
-                      <p className="text-[10px] text-atfr-fog/60 leading-tight">
+                      <p className="text-[10px] text-atfr-fog/85 leading-tight">
                         <span className="text-atfr-gold/80 font-medium">Niv. {next.level} :</span>{' '}
                         {next.unlocks.map((u) => u.label).join(', ')}
                       </p>
@@ -211,7 +211,7 @@ export function AcademyProfilePanel({ open, onClose, identity }: Props) {
             {/* ── Module stats ── */}
             <div className="flex-1 px-5 py-5 space-y-6">
               {ACADEMY_MODULE_CONTRIBUTIONS.length === 0 ? (
-                <p className="text-xs text-atfr-fog/50 italic">Aucun module disponible.</p>
+                <p className="text-xs text-atfr-fog/85 italic">Aucun module disponible.</p>
               ) : (
                 ACADEMY_MODULE_CONTRIBUTIONS.map(({ slug, label, StatsComponent }) => (
                   <section key={slug}>

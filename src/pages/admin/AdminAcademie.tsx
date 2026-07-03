@@ -86,7 +86,7 @@ export default function AdminAcademie() {
         <div className="overflow-x-auto rounded-xl border border-atfr-gold/10">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-atfr-gold/10 bg-atfr-carbon/60 text-atfr-fog/70 text-xs uppercase tracking-wider">
+              <tr className="border-b border-atfr-gold/10 bg-atfr-carbon/60 text-atfr-fog/85 text-xs uppercase tracking-wider">
                 <th className="px-4 py-3 text-left">#</th>
                 <th className="px-4 py-3 text-left">Joueur</th>
                 <th className="px-4 py-3 text-left">Niveau</th>
@@ -99,16 +99,16 @@ export default function AdminAcademie() {
             <tbody className="divide-y divide-atfr-gold/5">
               {players.map((p, i) => (
                 <tr key={p.accountId} className="bg-atfr-carbon/30 hover:bg-atfr-graphite/30 transition-colors">
-                  <td className="px-4 py-3 text-atfr-fog/50 font-mono">{i + 1}</td>
+                  <td className="px-4 py-3 text-atfr-fog/85 font-mono">{i + 1}</td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-atfr-bone">{p.nickname}</p>
-                    <p className="text-[10px] text-atfr-fog/50 font-mono">{p.accountId}</p>
+                    <p className="text-[10px] text-atfr-fog/85 font-mono">{p.accountId}</p>
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-atfr-gold/10 border border-atfr-gold/30 px-2 py-0.5 text-[11px] font-semibold text-atfr-gold">
                       Niv. {p.level}
                     </span>
-                    <p className="text-[10px] text-atfr-fog/60 mt-0.5">{p.title}</p>
+                    <p className="text-[10px] text-atfr-fog/85 mt-0.5">{p.title}</p>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-atfr-bone">
                     {p.totalXp.toLocaleString('fr')}
@@ -117,13 +117,13 @@ export default function AdminAcademie() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {p.modules.map((m) => (
-                        <span key={m} className="text-[10px] bg-atfr-graphite/50 border border-atfr-gold/15 rounded px-1.5 py-0.5 text-atfr-fog/70">
+                        <span key={m} className="text-[10px] bg-atfr-graphite/50 border border-atfr-gold/15 rounded px-1.5 py-0.5 text-atfr-fog/85">
                           {m.replace('wot-', '')}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-atfr-fog/60 text-xs">
+                  <td className="px-4 py-3 text-atfr-fog/85 text-xs">
                     {new Date(p.lastPlayed).toLocaleDateString('fr', {
                       day: '2-digit', month: 'short', year: 'numeric',
                     })}

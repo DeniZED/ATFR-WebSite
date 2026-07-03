@@ -224,7 +224,7 @@ export default function AdminUsers() {
                               />
                               {mod.label}
                               {grantedByRole && (
-                                <span className="text-[10px] uppercase tracking-wide text-atfr-fog/60">
+                                <span className="text-[10px] uppercase tracking-wide text-atfr-fog/85">
                                   (rôle)
                                 </span>
                               )}

@@ -156,7 +156,7 @@ export function MinimapClickPlacer({
           ? 'Point placé — clique ailleurs pour repositionner.'
           : 'Clique sur la minimap pour placer la position du screenshot.'}
         {ghostPoints && ghostPoints.length > 0 && (
-          <span className="text-atfr-fog/70">
+          <span className="text-atfr-fog/85">
             · {ghostPoints.length} screenshot(s) déjà placé(s) sur cette map
           </span>
         )}

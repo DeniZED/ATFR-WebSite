@@ -1006,7 +1006,7 @@ export default function Geoguesser() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-atfr-fog/60">#{i + 1}</span>
+                        <span className="text-xs font-semibold text-atfr-fog/85">#{i + 1}</span>
                         <span className="text-sm font-semibold text-atfr-bone truncate">
                           {r.shot.map?.name ?? '?'}
                         </span>
@@ -1752,7 +1752,7 @@ function GameModeSelector({
               dailyActive
                 ? 'border-atfr-gold/60 bg-atfr-gold/20 text-atfr-gold shadow-sm shadow-atfr-gold/20'
                 : dailyDone
-                  ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/40'
+                  ? 'border-atfr-gold/10 bg-atfr-ink/30 text-atfr-fog/85'
                   : 'border-atfr-gold/20 bg-atfr-ink/60 text-atfr-fog group-hover:border-atfr-gold/40 group-hover:text-atfr-bone',
             )}
           >
@@ -1770,7 +1770,7 @@ function GameModeSelector({
               </span>
               <Badge variant="gold" className="text-xs">{formatChallengeDate(challengeKey)}</Badge>
             </div>
-            <p className={cn('text-xs leading-relaxed', dailyDone && !dailyActive ? 'text-atfr-fog/50' : 'text-atfr-fog')}>
+            <p className={cn('text-xs leading-relaxed', dailyDone && !dailyActive ? 'text-atfr-fog/85' : 'text-atfr-fog')}>
               {modeSettings.dailyRounds} manches · même pool pour tout le clan · classement commun
             </p>
           </div>
@@ -1782,7 +1782,7 @@ function GameModeSelector({
 
       {/* ── Modes entraînement ── */}
       <div>
-        <p className="text-[10px] uppercase tracking-[0.25em] text-atfr-fog/60 mb-2 px-0.5">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-atfr-fog/85 mb-2 px-0.5">
           Entraînement
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -1860,7 +1860,7 @@ function TrainingModeButton({
       </div>
       <p className="text-sm font-semibold leading-tight text-atfr-bone">{title}</p>
       <p className="text-[10px] text-atfr-fog mt-1 leading-snug">{detail}</p>
-      <p className="text-[9px] text-atfr-fog/60 mt-0.5 leading-snug uppercase tracking-wide">{subDetail}</p>
+      <p className="text-[9px] text-atfr-fog/85 mt-0.5 leading-snug uppercase tracking-wide">{subDetail}</p>
     </button>
   );
 }
@@ -1944,7 +1944,7 @@ function DifficultyPicker({
               <span className="block text-[10px] text-atfr-fog/80 leading-relaxed">
                 {option.detail}
               </span>
-              <span className="mt-1.5 block text-[10px] text-atfr-fog/50">
+              <span className="mt-1.5 block text-[10px] text-atfr-fog/85">
                 {disabled
                   ? `Manque ${disabledDetail}`
                   : `${status.mapCount} maps · ${status.shotCount} screens`}
@@ -2010,7 +2010,7 @@ function SetupSummaryPanel({
         <button
           type="button"
           onClick={() => setShowInfo((p) => !p)}
-          className="text-atfr-fog/50 hover:text-atfr-gold transition-colors"
+          className="text-atfr-fog/85 hover:text-atfr-gold transition-colors"
           title="Voir les règles de scoring"
         >
           <Info size={14} />
@@ -2078,7 +2078,7 @@ function SetupSummaryPanel({
                 Mode entraînement
               </span>
             </div>
-            <p className="text-xs text-atfr-fog/60 mt-0.5">
+            <p className="text-xs text-atfr-fog/85 mt-0.5">
               Score non soumis au classement — joue sans pression
             </p>
           </div>
@@ -2193,18 +2193,18 @@ function RoundStatusBar({
         <div className="flex items-center gap-1.5">
           <Flame
             size={13}
-            className={stats.currentStreak > 0 ? 'text-atfr-warning' : 'text-atfr-fog/30'}
+            className={stats.currentStreak > 0 ? 'text-atfr-warning' : 'text-atfr-fog/85'}
           />
           <span className={cn(
             'text-xs tabular-nums font-medium',
-            stats.currentStreak > 0 ? 'text-atfr-bone' : 'text-atfr-fog/40',
+            stats.currentStreak > 0 ? 'text-atfr-bone' : 'text-atfr-fog/85',
           )}>
             ×{stats.currentStreak}
           </span>
         </div>
         {/* Score courant */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] uppercase tracking-widest text-atfr-fog/60">Score</span>
+          <span className="text-[9px] uppercase tracking-widest text-atfr-fog/85">Score</span>
           <span className="font-display text-base text-atfr-gold tabular-nums">
             {formatDistance(totalScore)}
           </span>
@@ -2266,14 +2266,14 @@ function RoundActionDock({
                       ? 'bg-atfr-success/20 text-atfr-success border border-atfr-success/30'
                       : step === n
                         ? 'bg-atfr-gold/20 text-atfr-gold border border-atfr-gold/40'
-                        : 'bg-atfr-graphite/40 text-atfr-fog/40 border border-atfr-gold/10',
+                        : 'bg-atfr-graphite/40 text-atfr-fog/85 border border-atfr-gold/10',
                   )}
                 >
                   {step > n ? <CheckCircle2 size={9} /> : <span>{n}</span>}
                   {label}
                 </span>
               ))}
-              <span className="text-[10px] text-atfr-fog/50 tabular-nums ml-1">
+              <span className="text-[10px] text-atfr-fog/85 tabular-nums ml-1">
                 {secondsLeft}s
               </span>
             </div>
@@ -2414,7 +2414,7 @@ function PersonalStatsPanel({
           <Badge variant="gold">{levelInfo.title}</Badge>
         </div>
         {titleUnlock && (
-          <p className="text-[11px] text-atfr-fog/60 italic mb-1.5">{titleUnlock.label}</p>
+          <p className="text-[11px] text-atfr-fog/85 italic mb-1.5">{titleUnlock.label}</p>
         )}
         <div className="h-1.5 rounded-full bg-atfr-ink/70 overflow-hidden mb-1">
           <div
@@ -2546,7 +2546,7 @@ function PersonalStatsPanel({
                       <Badge variant={getModeBadgeVariant(mode.mode)} className="text-[10px]">
                         {formatGenericModeLabel(mode.mode)}
                       </Badge>
-                      <span className="text-[10px] text-atfr-fog/60">{mode.games}p</span>
+                      <span className="text-[10px] text-atfr-fog/85">{mode.games}p</span>
                     </div>
                     <p className="text-xs text-atfr-fog">
                       Moy. <span className="text-atfr-bone">{formatDistance(mode.avgScoreM)}</span>
@@ -2586,7 +2586,7 @@ function PersonalStatsPanel({
                     {formatScoreModeLabel(score.mode, score.dailyKey)}
                   </Badge>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-atfr-fog/70">
+                    <p className="text-xs text-atfr-fog/85">
                       {formatScoreDate(score.createdAt)}
                       {score.mapAccuracyPct != null ? ` · ${score.mapAccuracyPct}% maps` : ''}
                     </p>
@@ -2645,7 +2645,7 @@ function PersonalStatTile({
       <p className="font-display text-xl text-atfr-bone mt-1 truncate">
         {value}
       </p>
-      <p className="text-[10px] text-atfr-fog/70 mt-1 truncate">{detail}</p>
+      <p className="text-[10px] text-atfr-fog/85 mt-1 truncate">{detail}</p>
     </div>
   );
 }
@@ -2847,7 +2847,7 @@ function GeoguesserLeaderboardRow({
               />
             )}
           </p>
-          <p className="text-[10px] text-atfr-fog/70 mt-0.5">
+          <p className="text-[10px] text-atfr-fog/85 mt-0.5">
             {dailyKey ? `Défi ${formatChallengeDate(dailyKey)} · ` : ''}
             {formatScoreDate(entry.created_at)}
           </p>
@@ -2901,7 +2901,7 @@ function GeoguesserLeaderboardRow({
 function LeaderboardMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-atfr-ink/50 px-2 py-2">
-      <p className="text-[9px] uppercase tracking-[0.14em] text-atfr-fog/70 mb-0.5">
+      <p className="text-[9px] uppercase tracking-[0.14em] text-atfr-fog/85 mb-0.5">
         {label}
       </p>
       <p className="text-sm font-semibold text-atfr-bone tabular-nums">{value}</p>
@@ -3020,7 +3020,7 @@ function ProgressBar({
                 'text-[9px] tabular-nums',
                 r
                   ? r.correctMap ? 'text-atfr-success/80' : 'text-atfr-danger/80'
-                  : isCurrent ? 'text-atfr-gold font-semibold' : 'text-atfr-fog/30',
+                  : isCurrent ? 'text-atfr-gold font-semibold' : 'text-atfr-fog/85',
               )}>
                 {i + 1}
               </span>

@@ -42,9 +42,9 @@ export default function ClanLiens() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-sm text-atfr-bone group-hover:text-atfr-gold transition-colors">{link.title}</p>
-                    <ExternalLink size={13} className="text-atfr-fog/30 group-hover:text-atfr-gold/60 shrink-0 mt-0.5 transition-colors" />
+                    <ExternalLink size={13} className="text-atfr-fog/85 group-hover:text-atfr-gold/60 shrink-0 mt-0.5 transition-colors" />
                   </div>
-                  <p className="text-xs text-atfr-fog/70">{link.description}</p>
+                  <p className="text-xs text-atfr-fog/85">{link.description}</p>
                   <TagList tags={link.tags} />
                 </a>
               ))}

@@ -9,7 +9,7 @@ interface Props {
 
 export function ValidatedBy({ by, at, className }: Props) {
   return (
-    <span className={cn('inline-flex items-center gap-1.5 text-xs text-atfr-fog/60', className)}>
+    <span className={cn('inline-flex items-center gap-1.5 text-xs text-atfr-fog/85', className)}>
       <ShieldCheck size={12} strokeWidth={1.6} className="text-atfr-gold/50" />
       Validé par {by} · {at}
     </span>
