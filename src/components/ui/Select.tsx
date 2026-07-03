@@ -34,7 +34,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         >
           {children}
         </select>
-        {hint && !error && <p id={selectId ? `${selectId}-hint` : undefined} className="text-xs text-atfr-fog/70">{hint}</p>}
+        {hint && !error && <p id={selectId ? `${selectId}-hint` : undefined} className="text-xs text-atfr-fog/85">{hint}</p>}
         {error && <p id={selectId ? `${selectId}-error` : undefined} className="text-xs text-atfr-danger">{error}</p>}
       </div>
     );

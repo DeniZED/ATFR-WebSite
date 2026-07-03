@@ -69,7 +69,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-atfr-gold/10">
-        <div className="container py-4 text-xs text-atfr-fog/60">
+        <div className="container py-4 text-xs text-atfr-fog/85">
           <p>© {new Date().getFullYear()} {env.clanTag}. Fan site non affilié à Wargaming.net.</p>
         </div>
       </div>

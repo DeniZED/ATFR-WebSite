@@ -86,13 +86,13 @@ function TankCard({ tank }: { tank: TankEntry }) {
             <span className="text-sm">{NATION_FLAG[tank.nation] ?? '🏳️'}</span>
             <span className="font-display text-lg text-atfr-bone leading-tight">{tank.name}</span>
             <ClassBadge cls={tank.class} />
-            <span className="text-xs font-mono text-atfr-fog/40">Tier X</span>
+            <span className="text-xs font-mono text-atfr-fog/85">Tier X</span>
             <PriorityBadge priority={tank.clan_priority} />
           </div>
-          <p className="text-xs text-atfr-fog/60 truncate">{tank.role_in_battle}</p>
+          <p className="text-xs text-atfr-fog/85 truncate">{tank.role_in_battle}</p>
         </div>
 
-        <div className="shrink-0 text-atfr-fog/30">
+        <div className="shrink-0 text-atfr-fog/85">
           {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
@@ -103,7 +103,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
 
           {/* Résumé */}
           <p className="text-sm text-atfr-fog leading-relaxed">{tank.summary}</p>
-          <p className="text-xs text-atfr-fog/50 italic">{tank.gameplay_type}</p>
+          <p className="text-xs text-atfr-fog/85 italic">{tank.gameplay_type}</p>
 
           {/* Modes */}
           <div className="flex flex-wrap gap-1.5">
@@ -113,7 +113,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
           <div className="grid sm:grid-cols-2 gap-5">
             {/* Équipement */}
             <div>
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-3">
                 <Wrench size={11} /> Équipement recommandé
               </p>
               <ul className="space-y-2">
@@ -127,7 +127,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
                     </span>
                     <div className="min-w-0">
                       <span className="text-sm text-atfr-bone">{eq.name}</span>
-                      {eq.reason && <p className="text-xs text-atfr-fog/50 mt-0.5">{eq.reason}</p>}
+                      {eq.reason && <p className="text-xs text-atfr-fog/85 mt-0.5">{eq.reason}</p>}
                     </div>
                   </li>
                 ))}
@@ -135,9 +135,9 @@ function TankCard({ tank }: { tank: TankEntry }) {
 
               {tank.alt_equipments && (
                 <div className="mt-3 pt-3 border-t border-atfr-gold/10">
-                  <p className="text-xs text-atfr-fog/40 mb-2">Alternative</p>
+                  <p className="text-xs text-atfr-fog/85 mb-2">Alternative</p>
                   {tank.alt_equipments.map((eq, i) => (
-                    <div key={i} className="text-xs text-atfr-fog/60">{i + 1}. {eq.name}</div>
+                    <div key={i} className="text-xs text-atfr-fog/85">{i + 1}. {eq.name}</div>
                   ))}
                 </div>
               )}
@@ -145,7 +145,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
 
             {/* Compétences équipage */}
             <div>
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-3">
                 <Users size={11} /> Compétences équipage
               </p>
               <div className="space-y-1.5">
@@ -194,7 +194,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
           {/* Consommables + munitions */}
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">
                 <MessageSquare size={10} className="inline mr-1" />Consommables
               </p>
               <div className="space-y-1">
@@ -208,7 +208,7 @@ function TankCard({ tank }: { tank: TankEntry }) {
             </div>
             {tank.ammo_setup && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">
                   <AlertTriangle size={10} className="inline mr-1" />Munitions
                 </p>
                 <p className="text-xs text-atfr-fog">{tank.ammo_setup}</p>

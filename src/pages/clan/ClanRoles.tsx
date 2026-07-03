@@ -25,7 +25,7 @@ function RoleCard({ role }: { role: RoleEntry }) {
       <div className="grid sm:grid-cols-2 gap-4">
         {/* Priorités */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2 flex items-center gap-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2 flex items-center gap-1">
             <ArrowRight size={11} /> Priorités
           </p>
           <ul className="space-y-1">
@@ -55,21 +55,21 @@ function RoleCard({ role }: { role: RoleEntry }) {
 
       <div className="grid sm:grid-cols-3 gap-3">
         <div className="rounded-lg bg-atfr-graphite/40 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/40 mb-1 flex items-center gap-1"><MapPin size={10} />Position</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/85 mb-1 flex items-center gap-1"><MapPin size={10} />Position</p>
           <p className="text-xs text-atfr-fog">{role.positioning}</p>
         </div>
         <div className="rounded-lg bg-atfr-graphite/40 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/40 mb-1 flex items-center gap-1"><Heart size={10} />HP</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/85 mb-1 flex items-center gap-1"><Heart size={10} />HP</p>
           <p className="text-xs text-atfr-fog">{role.hp_management}</p>
         </div>
         <div className="rounded-lg bg-atfr-graphite/40 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/40 mb-1 flex items-center gap-1"><Clock size={10} />Timing</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-atfr-fog/85 mb-1 flex items-center gap-1"><Clock size={10} />Timing</p>
           <p className="text-xs text-atfr-fog">{role.timing}</p>
         </div>
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">Chars recommandés</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">Chars recommandés</p>
         <div className="flex flex-wrap gap-1.5">
           {role.example_tanks.map((t) => (
             <span key={t} className="rounded-md border border-atfr-gold/15 bg-atfr-graphite/40 px-2 py-0.5 text-xs text-atfr-bone">{t}</span>

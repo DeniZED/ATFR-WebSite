@@ -478,7 +478,7 @@ export function FloatingMapPicker({
                   'flex h-7 w-7 items-center justify-center rounded-lg border bg-atfr-ink/90 backdrop-blur transition-colors',
                   isZoomed
                     ? 'border-atfr-gold/30 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/60'
-                    : 'border-atfr-gold/10 text-atfr-fog/25 cursor-default',
+                    : 'border-atfr-gold/10 text-atfr-fog/85 cursor-default',
                 )}
                 title="Zoom −"
                 aria-label="Zoom arrière"
@@ -539,13 +539,13 @@ export function FloatingMapPicker({
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="text-atfr-fog/60 hover:text-atfr-bone transition-colors"
+                className="text-atfr-fog/85 hover:text-atfr-bone transition-colors"
                 aria-label="Effacer"
               >
                 <X size={13} />
               </button>
             )}
-            <span className="text-[10px] text-atfr-fog/50 tabular-nums ml-1">
+            <span className="text-[10px] text-atfr-fog/85 tabular-nums ml-1">
               {filtered.length}
             </span>
           </div>
@@ -576,7 +576,7 @@ export function FloatingMapPicker({
                     />
                   ) : (
                     <div className="h-full w-full bg-atfr-graphite flex items-center justify-center">
-                      <MapIcon size={18} className="text-atfr-fog/30" />
+                      <MapIcon size={18} className="text-atfr-fog/85" />
                     </div>
                   )}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-atfr-ink/95 via-atfr-ink/50 to-transparent px-1.5 pb-1.5 pt-3">
@@ -612,7 +612,7 @@ export function FloatingMapPicker({
           <p className="text-xs text-atfr-bone">
             {open ? 'Fermer le sélecteur' : 'Survole ou clique'}
           </p>
-          <p className="text-[9px] text-atfr-fog/60 mt-0.5">
+          <p className="text-[9px] text-atfr-fog/85 mt-0.5">
             {maps.length} maps disponibles
           </p>
         </div>

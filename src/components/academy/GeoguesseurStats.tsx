@@ -86,12 +86,12 @@ export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
   );
 
   if (scores.isLoading) {
-    return <p className="text-xs text-atfr-fog/60 py-2">Chargement…</p>;
+    return <p className="text-xs text-atfr-fog/85 py-2">Chargement…</p>;
   }
 
   if (!stats || stats.total === 0) {
     return (
-      <p className="text-xs text-atfr-fog/60 py-2 italic">
+      <p className="text-xs text-atfr-fog/85 py-2 italic">
         Aucune partie jouée — lance-toi !
       </p>
     );
@@ -117,7 +117,7 @@ export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
 
       {/* Per-mode breakdown */}
       <div>
-        <p className="text-[10px] uppercase tracking-widest text-atfr-fog/50 mb-2">Par mode</p>
+        <p className="text-[10px] uppercase tracking-widest text-atfr-fog/85 mb-2">Par mode</p>
         <div className="flex flex-wrap gap-2">
           {modeOrder.map((mode) => {
             const count = stats.byMode[mode] ?? 0;
@@ -129,7 +129,7 @@ export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
               >
                 <Clock size={10} className="text-atfr-gold/60" />
                 <span className="text-atfr-bone font-medium">{count}</span>
-                <span className="text-atfr-fog/60">{MODE_LABEL[mode]}</span>
+                <span className="text-atfr-fog/85">{MODE_LABEL[mode]}</span>
               </span>
             );
           })}
@@ -147,7 +147,7 @@ function StatBox({ icon, label, value, sub }: { icon: React.ReactNode; label: st
         <span className="text-[10px] uppercase tracking-wider">{label}</span>
       </div>
       <p className="font-display text-lg text-atfr-bone leading-none">{value}</p>
-      <p className="text-[10px] text-atfr-fog/50 mt-0.5">{sub}</p>
+      <p className="text-[10px] text-atfr-fog/85 mt-0.5">{sub}</p>
     </div>
   );
 }

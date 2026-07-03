@@ -115,7 +115,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                 <Badge variant="gold">{levelInfo.title}</Badge>
               </div>
               {draft.titleId && (
-                <p className="text-xs text-atfr-fog/70 mb-2 italic">
+                <p className="text-xs text-atfr-fog/85 mb-2 italic">
                   {UNLOCKS.find((u) => u.id === draft.titleId)?.label}
                 </p>
               )}
@@ -139,7 +139,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
               {nextReward && (
                 <div className="flex items-start gap-1.5 mt-1.5 rounded-lg bg-atfr-ink/50 border border-atfr-gold/10 px-2.5 py-1.5">
                   <Gift size={11} className="text-atfr-gold/60 mt-0.5 shrink-0" />
-                  <p className="text-[10px] text-atfr-fog/60 leading-tight">
+                  <p className="text-[10px] text-atfr-fog/85 leading-tight">
                     <span className="text-atfr-gold/80 font-medium">Niv. {nextReward.level} :</span>{' '}
                     {nextReward.unlocks.map((u) => u.label).join(', ')}
                   </p>
@@ -173,7 +173,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
               {/* Couleur primaire */}
               <div>
-                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Couleur principale</p>
+                <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Couleur principale</p>
                 <div className="grid grid-cols-8 gap-2">
                   {PRIMARY_COLORS.map((color) => {
                     const isLocked = color.levelRequired > playerLevel;
@@ -201,7 +201,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
               {/* Couleur accent */}
               <div>
-                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Accent (Niv. 4+)</p>
+                <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Accent (Niv. 4+)</p>
                 <div className="grid grid-cols-8 gap-2">
                   <button
                     onClick={() => selectAccent(null)}
@@ -211,7 +211,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                       draft.accentColorId === null && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
                     )}
                   >
-                    <X size={10} className="text-atfr-fog/60" />
+                    <X size={10} className="text-atfr-fog/85" />
                   </button>
                   {ACCENT_COLORS.map((color) => {
                     const isLocked = color.levelRequired > playerLevel;
@@ -239,7 +239,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
               {/* Couleur du chiffre */}
               <div>
-                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Couleur du chiffre</p>
+                <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Couleur du chiffre</p>
                 <div className="grid grid-cols-8 gap-2">
                   <button
                     onClick={() => selectNumeralColor(null)}
@@ -249,7 +249,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                       draft.numeralColorId === null && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
                     )}
                   >
-                    <X size={10} className="text-atfr-fog/60" />
+                    <X size={10} className="text-atfr-fog/85" />
                   </button>
                   {ALL_COLORS.map((color) => {
                     const isLocked = color.levelRequired > playerLevel;
@@ -277,7 +277,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
               {/* Style de bordure */}
               <div>
-                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Style de bordure</p>
+                <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Style de bordure</p>
                 <div className="flex gap-2 flex-wrap">
                   {BORDER_STYLES.map((style) => (
                     <button
@@ -298,7 +298,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
 
               {/* Motif de fond */}
               <div>
-                <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Motif de fond</p>
+                <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Motif de fond</p>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => selectPattern(null)}
@@ -352,16 +352,16 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                             : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
                       )}
                     >
-                      {isLocked && <div className="absolute top-2 right-2 text-atfr-fog/40"><Lock size={10} /></div>}
+                      {isLocked && <div className="absolute top-2 right-2 text-atfr-fog/85"><Lock size={10} /></div>}
                       {selected && !isLocked && <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />}
                       <div>
                         <p className="text-xs font-medium text-atfr-bone mt-1.5 leading-tight">{item.label}</p>
                         {item.description && (
-                          <p className="text-[10px] text-atfr-fog/60 mt-0.5 leading-tight">{item.description}</p>
+                          <p className="text-[10px] text-atfr-fog/85 mt-0.5 leading-tight">{item.description}</p>
                         )}
                       </div>
                       {isLocked && (
-                        <p className="text-[9px] text-atfr-fog/40 uppercase tracking-widest mt-1">
+                        <p className="text-[9px] text-atfr-fog/85 uppercase tracking-widest mt-1">
                           Niv. {item.levelRequired}
                         </p>
                       )}
@@ -373,7 +373,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
               {/* Couleur de l'emblème */}
               {draft.emblemId && (
                 <div>
-                  <p className="text-[10px] text-atfr-fog/60 uppercase tracking-widest mb-2">Couleur de l'emblème</p>
+                  <p className="text-[10px] text-atfr-fog/85 uppercase tracking-widest mb-2">Couleur de l'emblème</p>
                   <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => selectEmblemColor(null)}
@@ -383,7 +383,7 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                         draft.emblemColorId === null && 'ring-2 ring-atfr-gold ring-offset-2 ring-offset-atfr-ink scale-110',
                       )}
                     >
-                      <X size={10} className="text-atfr-fog/60" />
+                      <X size={10} className="text-atfr-fog/85" />
                     </button>
                     {ALL_COLORS.map((color) => {
                       const isLocked = color.levelRequired > playerLevel;
@@ -432,13 +432,13 @@ export function AvatarCustomizer({ config, levelInfo, onSave, onClose }: AvatarC
                           : 'border-atfr-gold/15 bg-atfr-graphite/30 hover:border-atfr-gold/30 hover:bg-atfr-graphite/50',
                     )}
                   >
-                    {isLocked && <div className="absolute top-2 right-2 text-atfr-fog/40"><Lock size={10} /></div>}
+                    {isLocked && <div className="absolute top-2 right-2 text-atfr-fog/85"><Lock size={10} /></div>}
                     {selected && !isLocked && <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-atfr-gold" />}
                     <div>
                       <p className="text-xs font-medium text-atfr-bone mt-1.5 leading-tight">{item.label}</p>
                     </div>
                     {isLocked && (
-                      <p className="text-[9px] text-atfr-fog/40 uppercase tracking-widest mt-1">
+                      <p className="text-[9px] text-atfr-fog/85 uppercase tracking-widest mt-1">
                         Niv. {item.levelRequired}
                       </p>
                     )}

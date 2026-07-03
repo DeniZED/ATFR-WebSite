@@ -77,7 +77,7 @@ export function AcademyFooter() {
       </div>
 
       <div className="border-t border-atfr-gold/10">
-        <div className="container py-4 text-xs text-atfr-fog/60 flex items-center justify-between">
+        <div className="container py-4 text-xs text-atfr-fog/85 flex items-center justify-between">
           <p>© {new Date().getFullYear()} ATFR Academy — Initiative du clan {env.clanTag}. Non affilié à Wargaming.net.</p>
         </div>
       </div>

@@ -78,7 +78,7 @@ function AcademyHero() {
                   <LogIn size={15} />
                   Connexion avec Wargaming
                 </button>
-                <span className="text-xs text-atfr-fog/60">
+                <span className="text-xs text-atfr-fog/85">
                   Pour sauvegarder tes scores et accéder au classement
                 </span>
               </motion.div>

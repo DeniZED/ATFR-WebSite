@@ -24,7 +24,7 @@ function StratCard({ strat }: { strat: StrategyEntry }) {
 
       {/* Règles */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2">Règles</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2">Règles</p>
         <ul className="space-y-1.5">
           {strat.rules.map((r, i) => (
             <li key={i} className="text-xs text-atfr-fog flex items-start gap-2">
@@ -57,7 +57,7 @@ function StratCard({ strat }: { strat: StrategyEntry }) {
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/40 mb-2 flex items-center gap-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-atfr-fog/85 mb-2 flex items-center gap-1">
             <User size={11} /> Actions joueur
           </p>
           <ul className="space-y-1">

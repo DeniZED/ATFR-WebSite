@@ -38,7 +38,7 @@ export function ClanLayout() {
     <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row">
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-56 shrink-0 border-r border-atfr-gold/10 bg-atfr-ink/60 py-6 px-3 gap-1">
-        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-widest text-atfr-fog/40">
+        <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-widest text-atfr-fog/85">
           Centre tactique
         </p>
         {NAV.map((item) => (
