@@ -1,76 +1,15 @@
 import { useMemo } from 'react';
 import { Map, Target, Zap, Trophy, Clock } from 'lucide-react';
 import type { PlayerIdentity } from '@/features/identity/usePlayerIdentity';
-import {
-  usePlayerModuleScores,
-  type LeaderboardEntry,
-} from '@/features/leaderboard/queries';
+import { usePlayerModuleScores } from '@/features/leaderboard/queries';
 import { registerAcademyModule } from '@/features/academy/moduleContributions';
-
-// ── Tiny stat helpers ────────────────────────────────────────────────────
-function getMeta(meta: unknown, key: string): number | null {
-  if (meta && typeof meta === 'object') {
-    const v = (meta as Record<string, unknown>)[key];
-    return typeof v === 'number' ? v : null;
-  }
-  return null;
-}
-function getMetaStr(meta: unknown, key: string): string | null {
-  if (meta && typeof meta === 'object') {
-    const v = (meta as Record<string, unknown>)[key];
-    return typeof v === 'string' ? v : null;
-  }
-  return null;
-}
-
-type GameMode = 'daily' | 'random' | 'sprint' | 'blind';
-const MODE_LABEL: Record<GameMode, string> = {
-  daily: 'Quotidien',
-  random: 'Aléatoire',
-  sprint: 'Sprint',
-  blind: 'Aveugle',
-};
-
-function parseMode(entry: LeaderboardEntry): GameMode {
-  const raw = getMetaStr(entry.meta, 'game_mode') ?? '';
-  return (['daily', 'random', 'sprint', 'blind'] as const).includes(raw as GameMode)
-    ? (raw as GameMode)
-    : 'random';
-}
-
-function formatDist(m: number): string {
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
-}
-
-function summarise(entries: LeaderboardEntry[]) {
-  if (!entries.length) return null;
-  const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  let bestDist = Infinity;
-  let totalAccuracy = 0;
-  let accuracyCount = 0;
-  let bestStreak = 0;
-  const byMode: Record<string, number> = {};
-
-  for (const e of entries) {
-    const dist = getMeta(e.meta, 'distance_m') ?? Math.max(0, e.max_score - e.score);
-    if (dist < bestDist) bestDist = dist;
-    const acc = getMeta(e.meta, 'map_accuracy_pct');
-    if (acc != null) { totalAccuracy += acc; accuracyCount++; }
-    const streak = getMeta(e.meta, 'best_streak') ?? 0;
-    if (streak > bestStreak) bestStreak = streak;
-    const mode = parseMode(e);
-    byMode[mode] = (byMode[mode] ?? 0) + 1;
-  }
-
-  return {
-    total: entries.length,
-    last7: entries.filter((e) => new Date(e.created_at).getTime() >= week).length,
-    bestDist: Number.isFinite(bestDist) ? bestDist : null,
-    avgAccuracy: accuracyCount > 0 ? Math.round(totalAccuracy / accuracyCount) : null,
-    bestStreak,
-    byMode,
-  };
-}
+// Agrégation extraite dans features/geoguesser/personalStats.ts (P1-5).
+import {
+  MODE_LABEL,
+  formatDist,
+  summariseGeoScores,
+  type GeoGameMode,
+} from '@/features/geoguesser/personalStats';
 
 // ── Component ─────────────────────────────────────────────────────────────
 export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
@@ -81,7 +20,7 @@ export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
   });
 
   const stats = useMemo(
-    () => summarise(scores.data ?? []),
+    () => summariseGeoScores(scores.data ?? []),
     [scores.data],
   );
 
@@ -97,7 +36,7 @@ export function GeoguesseurStats({ identity }: { identity: PlayerIdentity }) {
     );
   }
 
-  const modeOrder: GameMode[] = ['daily', 'random', 'sprint', 'blind'];
+  const modeOrder: GeoGameMode[] = ['daily', 'random', 'sprint', 'blind'];
 
   return (
     <div className="space-y-4">

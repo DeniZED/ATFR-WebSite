@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-03 (2)** : **P1-5 tranche 1** livrée — logique métier extraite de `AcademyBadge`, `GeoguesseurStats` et `HrTopPerformers` vers `features/*/` avec 16 tests.
+>
 > **Mise à jour 2026-07-03** : **P1-6** (contraste WCAG AA — 107 opacités `text-atfr-fog` relevées à `/85` sur tout `src/`) livré.
 >
 > **Mise à jour 2026-07-02 (6)** : **P1-8** (tactile FloatingMapPicker), **P2-5** (recharts lazy) et **P2-9** (script `gen:types`) livrés.
@@ -56,7 +58,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 
 1. **⚠️ P2-2** Factoriser le pattern modale/confirmation/pied de formulaire des 8 pages admin CRUD + remplacer les `window.confirm()` — **volet confirmation CORRIGÉ** : `useConfirm`/`ConfirmProvider` construits sur `ModalShell`, 22 `confirm()` natifs remplacés dans 18 pages admin. La factorisation des formulaires CRUD reste ouverte.
 2. **✅ P1-4** Centraliser la règle d'éligibilité recrutement — **CORRIGÉ** (`features/recruitment/logic.ts` + tests, consommé par `PlayerLookupCard` et `ClanMovementsTab`).
-3. **P1-5** Extraire progressivement la logique métier des 11 emplacements UI identifiés (`AcademyBadge`, `GeoguesseurStats`, `HrTopPerformers`, `ClanMovementsTab`, fonctions inline de `Geoguesser.tsx`) vers des modules `features/*/logic.ts` purs et testables, en suivant le pattern déjà correct de `features/rh/activity.ts`.
+3. **⚠️ P1-5** Extraire la logique métier des 11 emplacements UI — **tranche 1 CORRIGÉE** (`badge.ts`, `personalStats.ts`, `topPerformers.ts`, avec tests ; + items déjà couverts par P1-4/P0-1). Restent : harmonisation des 2 systèmes de tier (décision produit) et fonctions locales de `Geoguesser.tsx` (à traiter avec P2-1).
 4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.
 5. **P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **uniquement après validation explicite**, conformément à la consigne de ne supprimer aucun fichier sans accord préalable.
 
