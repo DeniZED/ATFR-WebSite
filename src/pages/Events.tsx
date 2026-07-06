@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 import { Badge, Card, CardBody, Section, Spinner } from '@/components/ui';
 import { useEvents } from '@/features/events/queries';
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
+import { PageMeta } from '@/components/seo/PageMeta';
 
 export default function Events() {
   const { data, isLoading, error } = useEvents();
@@ -14,6 +15,10 @@ export default function Events() {
       title="Prochains événements"
       description="Entraînements, tournois, soirées clan. Les événements publics sont visibles ici ; les sessions internes sont disponibles via l'admin."
     >
+      <PageMeta
+        title="Événements"
+        description="Agenda du clan ATFR : entraînements, tournois et soirées clan à venir."
+      />
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner label="Chargement…" />

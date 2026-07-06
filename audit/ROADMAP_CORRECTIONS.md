@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-04** : **P2-3** (Toaster unifié) et **P2-8** (métadonnées SEO par route) livrés.
+>
 > **Mise à jour 2026-07-03 (3)** : suite aux remontées « Security Definer View » du Security Advisor Supabase sur `geoguesser_shots_public`/`quiz_answers_public`, migration `0048` : vues passées en `security_invoker = true`, policies anon d'origine re-créées et **verrou au niveau colonne** (anon ne peut plus lire `x_pct`/`y_pct` ni `is_correct` même en requêtant les tables directement). Comportement client inchangé.
 >
 > **Mise à jour 2026-07-03 (2)** : **P1-5 tranche 1** livrée — logique métier extraite de `AcademyBadge`, `GeoguesseurStats` et `HrTopPerformers` vers `features/*/` avec 16 tests.
@@ -73,7 +75,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 
 1. **✅ P2-5** Lazy-load ciblé du chunk `recharts`/`PieChart` au niveau sous-composant — **CORRIGÉ** (`CwEventCharts` extrait + `React.lazy`, `HrTrendChart`/`HrStatusBreakdown` lazy sur le dashboard admin).
 2. **P2-1** Découpage de `Geoguesser.tsx` (désormais ~3300+ lignes après l'intégration serveur-autoritaire P0-1) en sous-composants/hooks — peut démarrer, le volet Geoguesser de P0-1 étant livré.
-3. **P2-8** Introduire une gestion de métadonnées par route (`react-helmet-async`) sur les pages publiques à enjeu de partage (`Recruitment.tsx`, `Events.tsx`).
+3. **✅ P2-8** Introduire une gestion de métadonnées par route — **CORRIGÉ** (`react-helmet-async` + `PageMeta` sur Accueil/Recrutement/Événements/Membres).
 4. **✅ P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` — **CORRIGÉ** (pan 1 doigt, pinch-zoom 2 doigts, `touch-action: none`).
 5. **✅ P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`) — **CORRIGÉ** (pattern `**/*.{ts,tsx,mts}` + globals Node, zéro remontée sur l'existant).
 6. **✅ P1-1** Appliquer `npm audit fix` (sans `--force`) — **CORRIGÉ** (react-router 6.30.4, ws 8.21.0, js-yaml 4.3.0, @babel/core, brace-expansion ; lint/typecheck/tests/build au vert, test manuel routing + realtime recommandé au déploiement).
@@ -86,7 +88,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 *Objectif : chantiers structurants nécessitant arbitrage produit, pas de bug à corriger mais des choix d'architecture.*
 
 1. **P1-11** Unifier les seuils WN8 site/bot (package partagé ou source unique exposée en API) — implique de coordonner deux déploiements indépendants (site Netlify + bot VPS/PM2).
-2. **P2-3** Introduire un système de toast/notification unifié, à généraliser progressivement sur toutes les pages admin.
+2. **✅ P2-3** Introduire un système de toast/notification unifié — **CORRIGÉ** (`useToast`/`ToastProvider`, adoption pilote éditeur de contenu clan, généralisation progressive).
 3. **P3-2** Factory commune pour les ~101 hooks React Query.
 4. **P3-3 / P3-4** Harmonisation de l'organisation des dossiers `features/*` et déduplication des types `PlayerStats*`.
 5. **P2-6** Réévaluer le besoin d'instantanéité de la révocation d'accès clan-hub (realtime vs. cache court) — dépend d'un arbitrage produit sur la criticité de ce délai.

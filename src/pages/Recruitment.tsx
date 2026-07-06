@@ -23,6 +23,7 @@ import { usePlayerLookup } from '@/features/stats/queries';
 import { useSubmitApplication } from '@/features/applications/queries';
 import { AvailabilityPicker } from '@/components/recruitment/AvailabilityPicker';
 import { PlayerLookupCard } from '@/components/recruitment/PlayerLookupCard';
+import { PageMeta } from '@/components/seo/PageMeta';
 
 const steps = [
   { id: 1, label: 'Identité' },
@@ -121,6 +122,10 @@ export default function Recruitment() {
       as="h1"
       description="Formulaire en 3 étapes. Vos stats publiques sont vérifiées en direct via l'API Wargaming et tomato.gg pour faciliter la review."
     >
+      <PageMeta
+        title="Recrutement"
+        description="Postule pour rejoindre ATFR : formulaire en 3 étapes avec vérification automatique de tes stats World of Tanks."
+      />
       <div className="max-w-3xl mx-auto">
         <ol className="flex items-center justify-center gap-4 mb-10">
           {steps.map((s, idx) => (

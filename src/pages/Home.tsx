@@ -10,10 +10,15 @@ import { Achievements } from '@/components/sections/Achievements';
 import { Testimonials } from '@/components/sections/Testimonials';
 import { DiscordCommunity } from '@/components/sections/DiscordCommunity';
 import { JoinCta } from '@/components/sections/JoinCta';
+import { PageMeta } from '@/components/seo/PageMeta';
 
 export default function Home() {
   return (
     <>
+      <PageMeta
+        title="Clan World of Tanks francophone"
+        description="ATFR — clan World of Tanks francophone : Clan Wars, académie, entraide et bonne ambiance. Rejoins-nous !"
+      />
       <Hero />
       <LiveStats />
       <WhyJoin />

@@ -4,6 +4,7 @@ import { Badge, Card, CardBody, Input, Section, Spinner } from '@/components/ui'
 import { useClanInfo } from '@/features/clan/queries';
 import { ROLE_PRIORITY, ROLE_TRANSLATIONS } from '@/lib/constants';
 import { tomatoProfileUrl } from '@/lib/tomato-api';
+import { PageMeta } from '@/components/seo/PageMeta';
 
 export default function Members() {
   const { data: clan, isLoading, error } = useClanInfo();
@@ -29,6 +30,10 @@ export default function Members() {
       as="h1"
       description="Liste synchronisée depuis l'API Wargaming. Cliquez sur un joueur pour ouvrir son profil tomato.gg."
     >
+      <PageMeta
+        title="Membres"
+        description="Le roster du clan ATFR, synchronisé en direct depuis l'API Wargaming."
+      />
       <div className="mb-8 max-w-sm mx-auto">
         <div className="relative">
           <Search
