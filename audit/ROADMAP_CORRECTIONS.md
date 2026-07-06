@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-03 (3)** : suite aux remontées « Security Definer View » du Security Advisor Supabase sur `geoguesser_shots_public`/`quiz_answers_public`, migration `0048` : vues passées en `security_invoker = true`, policies anon d'origine re-créées et **verrou au niveau colonne** (anon ne peut plus lire `x_pct`/`y_pct` ni `is_correct` même en requêtant les tables directement). Comportement client inchangé.
+>
 > **Mise à jour 2026-07-03 (2)** : **P1-5 tranche 1** livrée — logique métier extraite de `AcademyBadge`, `GeoguesseurStats` et `HrTopPerformers` vers `features/*/` avec 16 tests.
 >
 > **Mise à jour 2026-07-03** : **P1-6** (contraste WCAG AA — 107 opacités `text-atfr-fog` relevées à `/85` sur tout `src/`) livré.
