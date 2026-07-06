@@ -93,7 +93,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 2. **✅ P2-3** Introduire un système de toast/notification unifié — **CORRIGÉ** (`useToast`/`ToastProvider`, adoption pilote éditeur de contenu clan, généralisation progressive).
 3. **P3-2** Factory commune pour les ~101 hooks React Query.
 4. **P3-3 / P3-4** Harmonisation de l'organisation des dossiers `features/*` et déduplication des types `PlayerStats*`.
-5. **P2-6** Réévaluer le besoin d'instantanéité de la révocation d'accès clan-hub (realtime vs. cache court) — dépend d'un arbitrage produit sur la criticité de ce délai.
+5. **✅ P2-6** Révocation d'accès clan-hub — **CORRIGÉ** (cache UI 5 min → 60 s ; le contenu lui-même est de toute façon re-vérifié côté serveur à chaque requête depuis P0-2).
 
 ---
 
