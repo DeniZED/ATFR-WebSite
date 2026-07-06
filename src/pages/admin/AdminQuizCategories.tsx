@@ -16,6 +16,7 @@ import {
   useUpsertQuizCategory,
 } from '@/features/quiz/queries';
 import { useConfirm } from '@/hooks/useConfirm';
+import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminQuizCategories() {
   const list = useQuizCategories();
@@ -200,14 +201,7 @@ function CategoryForm({
             value={sortOrder}
             onChange={(e) => setSortOrder(Number(e.target.value))}
           />
-          <div className="md:col-span-2 flex justify-end gap-2">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={upsert.isPending}>
-              {upsert.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </Button>
-          </div>
+          <FormActions className="md:col-span-2" onCancel={onClose} pending={upsert.isPending} />
         </form>
       </CardBody>
     </Card>

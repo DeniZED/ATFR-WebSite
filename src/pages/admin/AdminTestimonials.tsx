@@ -16,6 +16,7 @@ import {
   useUpsertTestimonial,
 } from '@/features/content/queries';
 import { useConfirm } from '@/hooks/useConfirm';
+import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminTestimonials() {
   const list = useTestimonials();
@@ -205,14 +206,7 @@ function TestimonialForm({
             />
             Visible publiquement
           </label>
-          <div className="md:col-span-2 flex gap-2 justify-end">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={upsert.isPending}>
-              {upsert.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </Button>
-          </div>
+          <FormActions className="md:col-span-2" onCancel={onClose} pending={upsert.isPending} />
         </form>
       </CardBody>
     </Card>
