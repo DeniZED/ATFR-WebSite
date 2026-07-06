@@ -14,6 +14,7 @@ import {
   useAdminClanPageContent,
   useUpdateClanPageContent,
 } from '@/features/clan/pageQueries';
+import { useToast } from '@/hooks/useToast';
 
 const CONTENT_LABELS: Record<ClanContentKey, string> = {
   doctrine: 'Doctrine',
@@ -127,6 +128,7 @@ function ContentEditor({
   onClose: () => void;
 }) {
   const update = useUpdateClanPageContent();
+  const toast = useToast();
   const [text, setText] = useState(() => JSON.stringify(row.payload, null, 2));
   const [error, setError] = useState<string | null>(null);
 
@@ -151,6 +153,7 @@ function ContentEditor({
         content_key: row.content_key,
         payload: parsed as Record<string, unknown>,
       });
+      toast(`${CONTENT_LABELS[row.content_key] ?? row.content_key} enregistré.`);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Échec de l’enregistrement.');
