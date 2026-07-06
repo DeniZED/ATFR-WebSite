@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-04 (2)** : **P2-2 terminé** — pied de formulaire partagé `FormActions` adopté par les 8 formulaires CRUD admin.
+>
 > **Mise à jour 2026-07-04** : **P2-3** (Toaster unifié) et **P2-8** (métadonnées SEO par route) livrés.
 >
 > **Mise à jour 2026-07-03 (3)** : suite aux remontées « Security Definer View » du Security Advisor Supabase sur `geoguesser_shots_public`/`quiz_answers_public`, migration `0048` : vues passées en `security_invoker = true`, policies anon d'origine re-créées et **verrou au niveau colonne** (anon ne peut plus lire `x_pct`/`y_pct` ni `is_correct` même en requêtant les tables directement). Comportement client inchangé.
@@ -60,7 +62,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Lot 3 — Nettoyage et refactor de modules ciblés
 *Objectif : réduire la duplication et le couplage logique métier/UI identifiés comme cause racine de plusieurs findings.*
 
-1. **⚠️ P2-2** Factoriser le pattern modale/confirmation/pied de formulaire des 8 pages admin CRUD + remplacer les `window.confirm()` — **volet confirmation CORRIGÉ** : `useConfirm`/`ConfirmProvider` construits sur `ModalShell`, 22 `confirm()` natifs remplacés dans 18 pages admin. La factorisation des formulaires CRUD reste ouverte.
+1. **✅ P2-2** Factoriser le pattern modale/confirmation/pied de formulaire des 8 pages admin CRUD — **CORRIGÉ** : `useConfirm`/`ConfirmProvider` (22 `confirm()` remplacés) + composant `FormActions` partagé pour les 8 pieds de formulaire CRUD.
 2. **✅ P1-4** Centraliser la règle d'éligibilité recrutement — **CORRIGÉ** (`features/recruitment/logic.ts` + tests, consommé par `PlayerLookupCard` et `ClanMovementsTab`).
 3. **⚠️ P1-5** Extraire la logique métier des 11 emplacements UI — **tranche 1 CORRIGÉE** (`badge.ts`, `personalStats.ts`, `topPerformers.ts`, avec tests ; + items déjà couverts par P1-4/P0-1). Restent : harmonisation des 2 systèmes de tier (décision produit) et fonctions locales de `Geoguesser.tsx` (à traiter avec P2-1).
 4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.

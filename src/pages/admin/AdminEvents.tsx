@@ -20,6 +20,7 @@ import {
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
 import type { EventType } from '@/types/database';
 import { useConfirm } from '@/hooks/useConfirm';
+import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminEvents() {
   const list = useAllEvents();
@@ -228,14 +229,7 @@ function EventForm({
             Visible publiquement
           </label>
 
-          <div className="flex gap-2 md:col-span-2 justify-end">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={upsert.isPending}>
-              {upsert.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </Button>
-          </div>
+          <FormActions className="md:col-span-2" onCancel={onClose} pending={upsert.isPending} />
         </form>
       </CardBody>
     </Card>

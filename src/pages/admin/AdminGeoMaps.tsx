@@ -37,6 +37,7 @@ import {
   type QuizDifficulty,
 } from '@/types/database';
 import { useConfirm } from '@/hooks/useConfirm';
+import { FormActions } from '@/components/ui/FormActions';
 
 type MapRow = Database['public']['Tables']['wot_maps']['Row'];
 
@@ -740,14 +741,7 @@ function MapForm({
             label={isActive ? 'Active' : 'Désactivée'}
           />
         </div>
-        <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button type="submit" disabled={upsert.isPending}>
-            {upsert.isPending ? 'Enregistrement…' : 'Enregistrer'}
-          </Button>
-        </div>
+        <FormActions className="md:col-span-2 mt-2" onCancel={onClose} pending={upsert.isPending} />
       </form>
     </CardBody>
   );
