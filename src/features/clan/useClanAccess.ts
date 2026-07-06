@@ -31,7 +31,11 @@ export function useClanAccess(slug: string): ClanAccessResult {
     queryKey: ['player_clan', identity.accountId],
     enabled: identity.isVerified && !!identity.accountId,
     queryFn: () => getPlayerClan(identity.accountId!),
-    staleTime: 5 * 60_000,
+    // P2-6 : 60 s au lieu de 5 min — un joueur exclu du clan perd l'accès
+    // au clan-hub à la navigation suivante, sans coût realtime. La vraie
+    // barrière reste côté serveur (clan-content vérifie le clan à chaque
+    // requête).
+    staleTime: 60_000,
   });
 
   if (!identity.isVerified) {
