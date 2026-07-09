@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-09 (3)** : **P3-4** corrigé — le contrat de `/.netlify/functions/player-stats` vit désormais dans `src/types/playerStats.ts`, importé type-only par la fonction et par `tomato-api.ts` ; le bot Discord garde une copie miroir annotée (son `rootDir` interdit l'import hors arbre sans toucher au build VPS).
+>
 > **Mise à jour 2026-07-09 (2)** : généralisation du toaster P2-3 — `ToastProvider` remonté à la racine de l'app et `MutationCache` global React Query : toute mutation en échec affiche désormais un toast d'erreur traduit (fini les suppressions/toggles silencieusement échoués), sauf `meta.silentError` pour les ~20 mutations dont la page affiche déjà l'erreur en ligne ; les mutations CRUD déclarent leur confirmation via `meta.successToast` (~40 messages français).
 >
 > **Mise à jour 2026-07-09** : **P2-1 tranche 2** livrée — les sous-composants de `Geoguesser.tsx` (sélecteur de mode, panneaux résultat/stats/leaderboard, tutoriel, barres de progression, etc.) sont extraits vers `components/geoguesser/panels.tsx` et la logique de stats de résultats vers `features/geoguesser/resultStats.ts`. La page passe de 3 007 à ~1 090 lignes (composant principal + orchestration de session). Refactor pur, comportement identique. **P2-1 est corrigé** ; un éventuel découpage supplémentaire du composant principal (hooks de jeu) reste optionnel.
@@ -98,7 +100,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 1. **P1-11** Unifier les seuils WN8 site/bot (package partagé ou source unique exposée en API) — implique de coordonner deux déploiements indépendants (site Netlify + bot VPS/PM2).
 2. **✅ P2-3** Introduire un système de toast/notification unifié — **CORRIGÉ** (`useToast`/`ToastProvider`, adoption pilote éditeur de contenu clan, généralisation progressive).
 3. **P3-2** Factory commune pour les ~101 hooks React Query.
-4. **P3-3 / P3-4** Harmonisation de l'organisation des dossiers `features/*` et déduplication des types `PlayerStats*`.
+4. **P3-3 / ✅ P3-4** Harmonisation de l'organisation des dossiers `features/*` (restant) ; déduplication des types `PlayerStats*` — **CORRIGÉE** (contrat unique `src/types/playerStats.ts` partagé site/fonction ; copie miroir annotée côté bot, contrainte `rootDir`).
 5. **✅ P2-6** Révocation d'accès clan-hub — **CORRIGÉ** (cache UI 5 min → 60 s ; le contenu lui-même est de toute façon re-vérifié côté serveur à chaque requête depuis P0-2).
 
 ---

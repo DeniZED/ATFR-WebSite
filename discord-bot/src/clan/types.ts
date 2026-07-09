@@ -34,6 +34,10 @@ export interface GuildClanConfig {
   notify_leaves_only: boolean;
 }
 
+// Copie miroir du contrat de `/.netlify/functions/player-stats`, dont la
+// source de vérité est `src/types/playerStats.ts` à la racine du repo (P3-4).
+// Le tsconfig du bot (`rootDir: "src"`) ne peut pas importer hors de son
+// arbre : toute évolution du contrat doit être répercutée ici à la main.
 export interface PlayerRecentStats {
   battles: number | null;
   winRate: number | null;
