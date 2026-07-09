@@ -29,6 +29,7 @@ export function useSiteContent() {
 export function useUpdateSiteContent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Contenu enregistré.' },
     mutationFn: async (rows: Array<{ key: string; value: string }>) => {
       const { error } = await supabase
         .from('site_content')
@@ -60,6 +61,7 @@ export function useHighlights(opts: { visibleOnly?: boolean } = {}) {
 export function useUpsertHighlight() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Moment fort enregistré.' },
     mutationFn: async (row: HighlightInsert & { id?: string }) => {
       if (row.id) {
         const { error } = await supabase
@@ -79,6 +81,7 @@ export function useUpsertHighlight() {
 export function useDeleteHighlight() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Moment fort supprimé.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('highlights').delete().eq('id', id);
       if (error) throw error;
@@ -108,6 +111,7 @@ export function useAchievements(opts: { visibleOnly?: boolean } = {}) {
 export function useUpsertAchievement() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Trophée enregistré.' },
     mutationFn: async (row: AchievementInsert & { id?: string }) => {
       if (row.id) {
         const { error } = await supabase
@@ -127,6 +131,7 @@ export function useUpsertAchievement() {
 export function useDeleteAchievement() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Trophée supprimé.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('achievements')
@@ -159,6 +164,7 @@ export function useTestimonials(opts: { visibleOnly?: boolean } = {}) {
 export function useUpsertTestimonial() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Témoignage enregistré.' },
     mutationFn: async (row: TestimonialInsert & { id?: string }) => {
       if (row.id) {
         const { error } = await supabase
@@ -178,6 +184,7 @@ export function useUpsertTestimonial() {
 export function useDeleteTestimonial() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Témoignage supprimé.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('testimonials')

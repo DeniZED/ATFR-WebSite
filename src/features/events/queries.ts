@@ -42,6 +42,7 @@ export function useAllEvents() {
 export function useUpsertEvent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Événement enregistré.', silentError: true },
     mutationFn: async (input: Database['public']['Tables']['events']['Insert'] & { id?: string }) => {
       if (input.id) {
         const { data, error } = await supabase
@@ -70,6 +71,7 @@ export function useUpsertEvent() {
 export function useDeleteEvent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Événement supprimé.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('events').delete().eq('id', id);
       if (error) throw error;

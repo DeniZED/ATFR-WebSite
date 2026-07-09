@@ -30,6 +30,7 @@ export type RecruitmentSettingsPatch = Partial<
 export function useUpdateRecruitmentSettings() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Paramètres de recrutement enregistrés.', silentError: true },
     mutationFn: async (patch: RecruitmentSettingsPatch) => {
       const { data, error } = await supabase
         .from('recruitment_settings')

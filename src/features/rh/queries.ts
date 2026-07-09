@@ -317,6 +317,7 @@ export function useHrPlayerDetail(
 export function useCreatePlayer() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Joueur créé.', silentError: true },
     mutationFn: async (input: PlayerInsert) => {
       const { data, error } = await supabase
         .from('players')
@@ -336,6 +337,7 @@ export function useCreatePlayer() {
 export function useSavePlayer() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Fiche joueur enregistrée.', silentError: true },
     mutationFn: async ({
       id,
       patch,
@@ -378,6 +380,7 @@ export function useSavePlayer() {
 export function useUpsertDiscordLink() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Lien Discord enregistré.', silentError: true },
     mutationFn: async (input: SaveDiscordLinkInput) => {
       const basePayload = {
         discord_user_id: input.discordUserId.trim(),
@@ -409,6 +412,7 @@ export function useUpsertDiscordLink() {
 export function useDeleteDiscordLink() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Lien Discord supprimé.', silentError: true },
     mutationFn: async (linkId: string) => {
       const { error } = await supabase
         .from('player_discord_links')
@@ -423,6 +427,7 @@ export function useDeleteDiscordLink() {
 export function useAddStaffNote() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Note ajoutée.', silentError: true },
     mutationFn: async (input: AddStaffNoteInput) => {
       const payload: StaffNoteInsert = {
         player_id: input.playerId,
@@ -440,6 +445,7 @@ export function useAddStaffNote() {
 export function useSavePlayerTrackingSettings() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Réglages de suivi enregistrés.', silentError: true },
     mutationFn: async ({
       playerId,
       patch,
@@ -501,6 +507,7 @@ export function useImportMembersToPlayers() {
 export function useAutoLinkDiscordMembers() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (input: AutoLinkDiscordInput = {}): Promise<number> => {
       const members = input.members ?? [];
       if (members.length > 0) {
@@ -544,6 +551,7 @@ export function useAutoLinkDiscordMembers() {
 export function useRecomputePlayerStatuses() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (): Promise<number> => {
       const { data, error } = await supabase.rpc('recompute_player_hr_statuses');
       if (error) {
@@ -572,6 +580,7 @@ export interface SnapshotResult {
 export function useSnapshotPlayerActivity() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (): Promise<SnapshotResult> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -603,6 +612,7 @@ export function useSnapshotPlayerActivity() {
 export function useSyncAllDiscordMembers() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (
       input: SyncAllDiscordInput = {},
     ): Promise<DiscordFullSyncResult> => {

@@ -37,6 +37,7 @@ export function useMembersHistory() {
 export function useUpsertMember() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Membre enregistré.' },
     mutationFn: async (input: Database['public']['Tables']['members']['Insert']) => {
       const { error } = await supabase.from('members').upsert(input);
       if (error) throw error;

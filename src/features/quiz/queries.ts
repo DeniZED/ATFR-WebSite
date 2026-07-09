@@ -45,6 +45,7 @@ export function useQuizCategories() {
 export function useUpsertQuizCategory() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Catégorie enregistrée.' },
     mutationFn: async (input: CategoryInsert) => {
       const { error } = await supabase
         .from('quiz_categories')
@@ -58,6 +59,7 @@ export function useUpsertQuizCategory() {
 export function useDeleteQuizCategory() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Catégorie supprimée.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('quiz_categories')
@@ -132,6 +134,7 @@ export interface QuestionPayload {
 export function useSaveQuizQuestion() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Question enregistrée.', silentError: true },
     mutationFn: async (payload: QuestionPayload): Promise<string> => {
       const { question, answers } = payload;
       let questionId = question.id;
@@ -181,6 +184,7 @@ export function useSaveQuizQuestion() {
 export function useDeleteQuizQuestion() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Question supprimée.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('quiz_questions')
@@ -195,6 +199,7 @@ export function useDeleteQuizQuestion() {
 export function useDuplicateQuizQuestion() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Question dupliquée.' },
     mutationFn: async (id: string): Promise<string> => {
       const { data: src, error } = await supabase
         .from('quiz_questions')
