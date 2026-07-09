@@ -116,7 +116,7 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 | P3-1 | Code mort : `RequireMember.tsx` (zéro import), export `TimeSlotId` inutilisé | `src/components/layout/RequireMember.tsx` | Faible | Faible |
 | P3-2 | ~101 hooks React Query sans factory commune | `src/features/*/queries.ts` | Moyen | Faible (long terme) |
 | P3-3 | Incohérence d'organisation (`schema.ts`/`types.ts` dans 2/17 features seulement) | `src/features/*` | Moyen | Faible |
-| P3-4 | Types `PlayerStats*` redéfinis indépendamment (site/bot/fonction) | Multi-fichiers | Moyen | Faible |
+| ✅ P3-4 | Types `PlayerStats*` redéfinis indépendamment (site/bot/fonction) — **CORRIGÉ** : contrat unique dans `src/types/playerStats.ts` (`PlayerStatsPayload` + `PlayerRecentStats`), importé type-only par `player-stats.mts` (effacé au bundling) et par `tomato-api.ts` (`PlayerExtendedStats = PlayerStatsPayload & { profileUrl }`). Le bot Discord garde une copie miroir annotée : son tsconfig (`rootDir: "src"`) ne peut pas importer hors de son arbre sans changer le build VPS | Multi-fichiers | Moyen | Faible |
 
 ---
 

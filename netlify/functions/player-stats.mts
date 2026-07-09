@@ -5,6 +5,11 @@ import {
   computeRecruitmentScore,
   type RecruitmentSettings,
 } from './_recruitment-score.js';
+// Contrat de réponse partagé avec le site (import type-only, effacé au
+// bundling — la fonction reste autonome à l'exécution).
+import type { PlayerStatsPayload } from '../../src/types/playerStats.js';
+
+export type { PlayerStatsPayload };
 
 const APP_ID = process.env.WOT_APPLICATION_ID || process.env.VITE_WOT_APPLICATION_ID;
 const TOMATO_API_KEY = process.env.TOMATO_API_KEY;
@@ -172,29 +177,6 @@ async function fetchRecruitmentSettings(): Promise<RecruitmentSettings> {
   } catch {
     return DEFAULT_RECRUITMENT_SETTINGS;
   }
-}
-
-export interface PlayerStatsPayload {
-  accountId: number;
-  nickname: string;
-  winRate: number | null;
-  battles: number;
-  damagePerBattle: number | null;
-  wn8: number | null;
-  wnx: number | null;
-  avgTier: number | null;
-  tier10Count: number;
-  globalRating: number;
-  lastBattleTime: number;
-  recent: {
-    battles: number | null;
-    winRate: number | null;
-    wn8: number | null;
-    wnx: number | null;
-    avgTier: number | null;
-  } | null;
-  recruitmentScore: number | null;
-  recruitmentThresholds: { minWn8: number; minBattles: number };
 }
 
 async function buildPayloads(accountIds: number[]): Promise<Map<number, PlayerStatsPayload>> {

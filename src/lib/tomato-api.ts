@@ -1,33 +1,14 @@
 // Player stats accessor — WN8/winrate/avgTier come from tomato.gg's
 // bulk-stats API, fetched server-side in `netlify/functions/player-stats.mts`
 // (battles/damage/tier10 count come from the Wargaming API). Never computed
-// client-side.
+// client-side. The wire contract lives in `src/types/playerStats.ts`.
 
-export interface PlayerRecentStats {
-  battles: number | null;
-  winRate: number | null;
-  wn8: number | null;
-  wnx: number | null;
-  avgTier: number | null;
-}
+import type { PlayerStatsPayload, PlayerRecentStats } from '@/types/playerStats';
 
-export interface PlayerExtendedStats {
-  accountId: number;
-  nickname: string;
-  wn8: number | null;
-  wnx: number | null;
-  winRate: number | null;
-  battles: number;
-  damagePerBattle: number | null;
-  avgTier: number | null;
-  tier10Count: number;
-  globalRating: number;
-  lastBattleTime: number;
-  recent: PlayerRecentStats | null;
-  recruitmentScore: number | null;
-  recruitmentThresholds: { minWn8: number; minBattles: number };
-  profileUrl: string;
-}
+export type { PlayerRecentStats };
+
+/** Payload de la fonction player-stats + décoration client (lien tomato.gg). */
+export type PlayerExtendedStats = PlayerStatsPayload & { profileUrl: string };
 
 export function tomatoProfileUrl(nickname: string): string {
   return `https://tomato.gg/stats/EU/${encodeURIComponent(nickname)}`;
