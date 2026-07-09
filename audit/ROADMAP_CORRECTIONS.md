@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-05** : **P2-6** livré (révocation clan-hub 60 s) et **P2-1 tranche 1** livrée — 270 lignes de logique pure de `Geoguesser.tsx` extraites vers `features/geoguesser/mode.ts` (réglages par mode, disponibilité par difficulté, libellés, submode leaderboard), ce qui solde le reliquat « fonctions locales » de P1-5. Tranches suivantes : extraction des sous-composants.
+>
 > **Mise à jour 2026-07-04 (2)** : **P2-2 terminé** — pied de formulaire partagé `FormActions` adopté par les 8 formulaires CRUD admin.
 >
 > **Mise à jour 2026-07-04** : **P2-3** (Toaster unifié) et **P2-8** (métadonnées SEO par route) livrés.
