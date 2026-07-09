@@ -24,6 +24,7 @@ export function useApplications(status?: ApplicationStatus) {
 
 export function useSubmitApplication() {
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (input: ApplicationInsert) => {
       const { data, error } = await supabase
         .from('applications')
@@ -60,6 +61,7 @@ export function useSubmitApplication() {
 export function useUpdateApplicationStatus() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Statut de la candidature mis à jour.', silentError: true },
     mutationFn: async ({
       id,
       status,
@@ -101,6 +103,7 @@ export function useUpdateApplicationStatus() {
 export function useDeleteApplication() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Candidature supprimée.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('applications').delete().eq('id', id);
       if (error) throw error;

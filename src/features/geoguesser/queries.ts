@@ -39,6 +39,7 @@ export function useGeoMaps(opts: { activeOnly?: boolean } = {}) {
 export function useUpsertMap() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Carte enregistrée.' },
     mutationFn: async (input: MapInsert) => {
       const { error } = await supabase
         .from('wot_maps')
@@ -52,6 +53,7 @@ export function useUpsertMap() {
 export function useBulkUpsertMaps() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (maps: MapInsert[]) => {
       if (maps.length === 0) return { inserted: 0 };
       const { error } = await supabase
@@ -67,6 +69,7 @@ export function useBulkUpsertMaps() {
 export function useDeleteMap() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Carte supprimée.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('wot_maps').delete().eq('id', id);
       if (error) throw error;
@@ -148,6 +151,7 @@ export function useGeoShot(id: string | null) {
 export function useUpsertShot() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Screenshot enregistré.', silentError: true },
     mutationFn: async (input: ShotInsert): Promise<string> => {
       if (input.id) {
         const { error } = await supabase
@@ -172,6 +176,7 @@ export function useUpsertShot() {
 export function useDeleteShot() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Screenshot supprimé.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('geoguesser_shots')
@@ -186,6 +191,7 @@ export function useDeleteShot() {
 export function useDuplicateShot() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Screenshot dupliqué.' },
     mutationFn: async (id: string): Promise<string> => {
       const { data: src, error } = await supabase
         .from('geoguesser_shots')
@@ -285,6 +291,7 @@ export function useGeoSettings() {
 export function useUpdateGeoSettings() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (patch: SettingsUpdate) => {
       const { error } = await supabase
         .from('geoguesser_settings')
@@ -300,6 +307,7 @@ export function useUpdateGeoSettings() {
 export function useResetShotStats() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (shotId: string): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_shot_stats',
@@ -319,6 +327,7 @@ export function useResetShotStats() {
 export function useResetMapShotStats() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (mapId: string): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_map_stats',
@@ -338,6 +347,7 @@ export function useResetMapShotStats() {
 export function useResetAllShotStats() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_all_stats',

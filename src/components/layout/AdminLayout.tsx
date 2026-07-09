@@ -29,7 +29,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
 import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
-import { ToastProvider } from '@/components/ui/ToastProvider';
 import { ROLE_LABELS } from '@/types/database';
 
 interface NavItem {
@@ -76,7 +75,6 @@ export function AdminLayout() {
 
   return (
     <ConfirmProvider>
-    <ToastProvider>
     <div className="min-h-screen bg-atfr-ink">
       {open && (
         <div
@@ -169,7 +167,6 @@ export function AdminLayout() {
         </main>
       </div>
     </div>
-    </ToastProvider>
     </ConfirmProvider>
   );
 }

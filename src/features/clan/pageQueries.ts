@@ -47,6 +47,7 @@ export function useClanPage(slug: string) {
 export function useUpsertClanPage() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Page clan enregistrée.' },
     mutationFn: async (row: ClanPageInsert & { _isNew?: boolean }) => {
       const { _isNew, ...payload } = row;
       payload.updated_at = new Date().toISOString();
@@ -68,6 +69,7 @@ export function useUpsertClanPage() {
 export function useDeleteClanPage() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Page clan supprimée.' },
     mutationFn: async (slug: string) => {
       const { error } = await supabase
         .from('clan_pages')
@@ -103,6 +105,7 @@ export function useAdminClanPageContent() {
 export function useUpdateClanPageContent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { silentError: true },
     mutationFn: async (input: {
       page_slug: string;
       content_key: ClanContentKey;

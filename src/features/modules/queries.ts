@@ -73,6 +73,7 @@ export function useAdminModules() {
 export function useUpsertModule() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Module enregistré.', silentError: true },
     mutationFn: async (input: Database['public']['Tables']['learning_modules']['Insert']) => {
       const { error } = await supabase
         .from('learning_modules')

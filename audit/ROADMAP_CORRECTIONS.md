@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-09 (2)** : généralisation du toaster P2-3 — `ToastProvider` remonté à la racine de l'app et `MutationCache` global React Query : toute mutation en échec affiche désormais un toast d'erreur traduit (fini les suppressions/toggles silencieusement échoués), sauf `meta.silentError` pour les ~20 mutations dont la page affiche déjà l'erreur en ligne ; les mutations CRUD déclarent leur confirmation via `meta.successToast` (~40 messages français).
+>
 > **Mise à jour 2026-07-09** : **P2-1 tranche 2** livrée — les sous-composants de `Geoguesser.tsx` (sélecteur de mode, panneaux résultat/stats/leaderboard, tutoriel, barres de progression, etc.) sont extraits vers `components/geoguesser/panels.tsx` et la logique de stats de résultats vers `features/geoguesser/resultStats.ts`. La page passe de 3 007 à ~1 090 lignes (composant principal + orchestration de session). Refactor pur, comportement identique. **P2-1 est corrigé** ; un éventuel découpage supplémentaire du composant principal (hooks de jeu) reste optionnel.
 >
 > **Mise à jour 2026-07-05** : **P2-6** livré (révocation clan-hub 60 s) et **P2-1 tranche 1** livrée — 270 lignes de logique pure de `Geoguesser.tsx` extraites vers `features/geoguesser/mode.ts` (réglages par mode, disponibilité par difficulté, libellés, submode leaderboard), ce qui solde le reliquat « fonctions locales » de P1-5. Tranches suivantes : extraction des sous-composants.

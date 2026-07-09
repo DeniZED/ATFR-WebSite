@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
@@ -7,6 +7,7 @@ import {
   type ToastOptions,
   type ToastTone,
 } from '@/hooks/useToast';
+import { setToastListener } from '@/lib/toast-bus';
 
 interface ToastItem {
   id: number;
@@ -50,6 +51,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     },
     [dismiss],
   );
+
+  // Expose le toaster au code hors-React (MutationCache global, etc.).
+  useEffect(() => {
+    setToastListener(toast);
+    return () => setToastListener(null);
+  }, [toast]);
 
   return (
     <ToastContext.Provider value={toast}>

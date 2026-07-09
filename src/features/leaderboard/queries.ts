@@ -100,6 +100,7 @@ export function useScoreCount(moduleSlug: string) {
 export function useResetLeaderboard() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Classement réinitialisé.' },
     mutationFn: async (moduleSlug: string) => {
       const { error } = await supabase
         .from('module_scores')

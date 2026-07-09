@@ -26,6 +26,7 @@ export function useAdminUsers() {
 export function useAssignRole() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Rôle attribué.' },
     mutationFn: async (args: { userId: string; role: UserRole }) => {
       const { error } = await supabase
         .from('user_roles')
@@ -45,6 +46,7 @@ export function useAssignRole() {
 export function useSetModuleAccess() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Accès aux modules enregistrés.' },
     mutationFn: async (args: {
       userId: string;
       moduleAccess: string[];
@@ -69,6 +71,7 @@ export function useSetModuleAccess() {
 export function useRemoveRole() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Rôle retiré.' },
     mutationFn: async (userId: string) => {
       const { error } = await supabase
         .from('user_roles')

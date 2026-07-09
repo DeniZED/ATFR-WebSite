@@ -87,6 +87,7 @@ export function useCwEvent(eventId: string | undefined) {
 export function useUpsertCwEvent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Campagne enregistrée.', silentError: true },
     mutationFn: async (
       input: Database['public']['Tables']['cw_events']['Insert'] & { id?: string },
     ) => {
@@ -135,6 +136,7 @@ async function regenerateEventDays(eventId: string, startsAt: string, endsAt: st
 export function useSetCwEventStatus() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Statut de la campagne mis à jour.' },
     mutationFn: async ({ id, status }: { id: string; status: CwEventStatus }) => {
       const { error } = await supabase.from('cw_events').update({ status }).eq('id', id);
       if (error) throw error;
@@ -149,6 +151,7 @@ export function useSetCwEventStatus() {
 export function useDeleteCwEvent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Campagne supprimée.' },
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('cw_events').delete().eq('id', id);
       if (error) throw error;
@@ -160,6 +163,7 @@ export function useDeleteCwEvent() {
 export function useRegisterToCwEvent() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Inscription enregistrée.' },
     mutationFn: async (input: {
       eventId: string;
       accountId: number | null;
@@ -205,6 +209,7 @@ export function useRegisterToCwEvent() {
 export function useSetCwLus() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'LU enregistrée.' },
     mutationFn: async ({ eventId, lu }: { eventId: string; lu: { id?: string; name: string } }) => {
       if (lu.id) {
         const { error } = await supabase.from('cw_lus').update({ name: lu.name }).eq('id', lu.id);
@@ -221,6 +226,7 @@ export function useSetCwLus() {
 export function useDeleteCwLu() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'LU supprimée.' },
     mutationFn: async ({ luId }: { luId: string; eventId: string }) => {
       const { error } = await supabase.from('cw_lus').delete().eq('id', luId);
       if (error) throw error;
@@ -237,6 +243,7 @@ export function useDeleteCwLu() {
 export function useSetRegistrationLu() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Affectation LU enregistrée.' },
     mutationFn: async (input: {
       eventId: string;
       registrationId: string;
@@ -265,6 +272,7 @@ export function useSetRegistrationLu() {
 export function useSetLuDayResult() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Résultat enregistré.' },
     mutationFn: async (input: { eventId: string; eventDayId: string; luId: string; wins: number; losses: number }) => {
       const { error } = await supabase
         .from('cw_lu_day_results')

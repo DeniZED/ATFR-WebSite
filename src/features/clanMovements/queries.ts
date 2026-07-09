@@ -32,6 +32,7 @@ export interface UpdateMovementContactStatusInput {
 export function useUpdateMovementContactStatus() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Statut de contact mis à jour.' },
     mutationFn: async ({ movementId, contactStatus }: UpdateMovementContactStatusInput) => {
       const { error } = await supabase
         .from('clan_member_movements')
@@ -46,6 +47,7 @@ export function useUpdateMovementContactStatus() {
 export function useCreateProspectFromMovement() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { successToast: 'Prospect créé dans le suivi RH.' },
     mutationFn: async (movement: ClanMemberMovementRow): Promise<PlayerRow> => {
       const existing = await supabase
         .from('players')
