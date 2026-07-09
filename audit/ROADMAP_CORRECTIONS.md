@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-09** : **P2-1 tranche 2** livrée — les sous-composants de `Geoguesser.tsx` (sélecteur de mode, panneaux résultat/stats/leaderboard, tutoriel, barres de progression, etc.) sont extraits vers `components/geoguesser/panels.tsx` et la logique de stats de résultats vers `features/geoguesser/resultStats.ts`. La page passe de 3 007 à ~1 090 lignes (composant principal + orchestration de session). Refactor pur, comportement identique. **P2-1 est corrigé** ; un éventuel découpage supplémentaire du composant principal (hooks de jeu) reste optionnel.
+>
 > **Mise à jour 2026-07-05** : **P2-6** livré (révocation clan-hub 60 s) et **P2-1 tranche 1** livrée — 270 lignes de logique pure de `Geoguesser.tsx` extraites vers `features/geoguesser/mode.ts` (réglages par mode, disponibilité par difficulté, libellés, submode leaderboard), ce qui solde le reliquat « fonctions locales » de P1-5. Tranches suivantes : extraction des sous-composants.
 >
 > **Mise à jour 2026-07-04 (2)** : **P2-2 terminé** — pied de formulaire partagé `FormActions` adopté par les 8 formulaires CRUD admin.
@@ -66,7 +68,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 
 1. **✅ P2-2** Factoriser le pattern modale/confirmation/pied de formulaire des 8 pages admin CRUD — **CORRIGÉ** : `useConfirm`/`ConfirmProvider` (22 `confirm()` remplacés) + composant `FormActions` partagé pour les 8 pieds de formulaire CRUD.
 2. **✅ P1-4** Centraliser la règle d'éligibilité recrutement — **CORRIGÉ** (`features/recruitment/logic.ts` + tests, consommé par `PlayerLookupCard` et `ClanMovementsTab`).
-3. **⚠️ P1-5** Extraire la logique métier des 11 emplacements UI — **tranche 1 CORRIGÉE** (`badge.ts`, `personalStats.ts`, `topPerformers.ts`, avec tests ; + items déjà couverts par P1-4/P0-1). Restent : harmonisation des 2 systèmes de tier (décision produit) et fonctions locales de `Geoguesser.tsx` (à traiter avec P2-1).
+3. **✅ P1-5** Extraire la logique métier des 11 emplacements UI — **CORRIGÉ** (`badge.ts`, `personalStats.ts`, `topPerformers.ts` avec tests ; `mode.ts` + `resultStats.ts` via P2-1 ; + items déjà couverts par P1-4/P0-1). Reste uniquement l'harmonisation des 2 systèmes de tier (décision produit/gameplay, hors périmètre technique).
 4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.
 5. **P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **uniquement après validation explicite**, conformément à la consigne de ne supprimer aucun fichier sans accord préalable.
 
@@ -78,7 +80,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 *Objectif : consolider les axes transverses une fois les fondations stabilisées par les lots 1-3.*
 
 1. **✅ P2-5** Lazy-load ciblé du chunk `recharts`/`PieChart` au niveau sous-composant — **CORRIGÉ** (`CwEventCharts` extrait + `React.lazy`, `HrTrendChart`/`HrStatusBreakdown` lazy sur le dashboard admin).
-2. **P2-1** Découpage de `Geoguesser.tsx` (désormais ~3300+ lignes après l'intégration serveur-autoritaire P0-1) en sous-composants/hooks — peut démarrer, le volet Geoguesser de P0-1 étant livré.
+2. **✅ P2-1** Découpage de `Geoguesser.tsx` en sous-composants/hooks — **CORRIGÉ** en 2 tranches : tranche 1 = logique de modes vers `features/geoguesser/mode.ts` (~270 lignes) ; tranche 2 = sous-composants vers `components/geoguesser/panels.tsx` (~1 590 lignes) et stats de résultats vers `features/geoguesser/resultStats.ts` (~410 lignes). La page passe de 3 007 à ~1 090 lignes.
 3. **✅ P2-8** Introduire une gestion de métadonnées par route — **CORRIGÉ** (`react-helmet-async` + `PageMeta` sur Accueil/Recrutement/Événements/Membres).
 4. **✅ P1-8** Ajouter le support tactile à `FloatingMapPicker.tsx` — **CORRIGÉ** (pan 1 doigt, pinch-zoom 2 doigts, `touch-action: none`).
 5. **✅ P1-2** Étendre la configuration ESLint aux fichiers `.mts` (`netlify/functions/`) — **CORRIGÉ** (pattern `**/*.{ts,tsx,mts}` + globals Node, zéro remontée sur l'existant).
