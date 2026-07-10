@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Check, ExternalLink, Trash2, X } from 'lucide-react';
@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardBody,
+  Input,
   Select,
   Spinner,
 } from '@/components/ui';
@@ -17,6 +18,7 @@ import {
   useUpdateApplicationStatus,
 } from '@/features/applications/queries';
 import { useRole } from '@/hooks/useRole';
+import { matchesSearch } from '@/lib/text-search';
 import { tomatoProfileUrl, wn8Color } from '@/lib/tomato-api';
 import type { ApplicationStatus } from '@/types/database';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -40,11 +42,20 @@ const STATUS_VARIANT: Record<
 
 export default function AdminApplications() {
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('pending');
+  const [search, setSearch] = useState('');
   const list = useApplications(filter === 'all' ? undefined : filter);
   const update = useUpdateApplicationStatus();
   const remove = useDeleteApplication();
   const confirmDialog = useConfirm();
   const { isAdmin } = useRole();
+
+  const filtered = useMemo(
+    () =>
+      (list.data ?? []).filter((app) =>
+        matchesSearch(search, app.player_name, app.discord_tag, app.target_clan),
+      ),
+    [list.data, search],
+  );
 
   return (
     <div className="space-y-6">
@@ -55,6 +66,14 @@ export default function AdminApplications() {
           </p>
           <h1 className="font-display text-3xl text-atfr-bone">Candidatures</h1>
         </div>
+        <div className="flex items-end gap-2 flex-wrap">
+          <Input
+            label="Recherche"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pseudo, Discord ou clan…"
+            className="w-56"
+          />
         <div className="w-48">
           <Select
             value={filter}
@@ -66,6 +85,7 @@ export default function AdminApplications() {
             <option value="rejected">Refusées</option>
             <option value="archived">Archivées</option>
           </Select>
+        </div>
         </div>
       </div>
 
@@ -87,9 +107,13 @@ export default function AdminApplications() {
         </div>
       ) : list.isError ? null : !list.data || list.data.length === 0 ? (
         <p className="text-center text-atfr-fog py-10">Aucune candidature.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-atfr-fog py-10">
+          Aucune candidature ne correspond à « {search} ».
+        </p>
       ) : (
         <div className="grid gap-4">
-          {list.data.map((app) => (
+          {filtered.map((app) => (
             <Card key={app.id}>
               <CardBody className="p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">

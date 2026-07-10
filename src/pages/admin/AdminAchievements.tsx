@@ -15,12 +15,15 @@ import {
   useDeleteAchievement,
   useUpsertAchievement,
 } from '@/features/content/queries';
+import { ReorderButtons } from '@/components/admin/ReorderButtons';
+import { planReorder, useReorderRows } from '@/features/reorder';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminAchievements() {
   const list = useAchievements();
   const remove = useDeleteAchievement();
+  const reorder = useReorderRows('achievements', ['achievements']);
   const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -63,9 +66,18 @@ export default function AdminAchievements() {
         <p className="text-center text-atfr-fog py-10">Aucun trophée.</p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((a) => (
+          {list.data.map((a, index) => (
             <Card key={a.id}>
               <CardBody className="p-5 flex items-start gap-4 flex-wrap">
+                <ReorderButtons
+                  canUp={index > 0}
+                  canDown={index < list.data!.length - 1}
+                  disabled={reorder.isPending}
+                  onMove={(direction) => {
+                    const updates = planReorder(list.data!, index, direction);
+                    if (updates) reorder.mutate(updates);
+                  }}
+                />
                 {a.image_url && (
                   <img
                     src={a.image_url}

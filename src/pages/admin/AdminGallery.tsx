@@ -17,6 +17,7 @@ import {
   useUploadMedia,
 } from '@/features/media/queries';
 import type { Database, MediaKind } from '@/types/database';
+import { matchesSearch } from '@/lib/text-search';
 import { useConfirm } from '@/hooks/useConfirm';
 
 type MediaRow = Database['public']['Tables']['media_assets']['Row'];
@@ -26,6 +27,7 @@ export default function AdminGallery() {
   const [filter, setFilter] = useState<MediaKind | 'all'>('all');
   const [visibilityFilter, setVisibilityFilter] =
     useState<VisibilityFilter>('all');
+  const [search, setSearch] = useState('');
   const { data, isLoading, isError, error } = useMediaAssets();
   const upload = useUploadMedia();
   const update = useUpdateMedia();
@@ -41,7 +43,11 @@ export default function AdminGallery() {
         : visibilityFilter === 'gallery'
           ? a.is_gallery_visible
           : !a.is_gallery_visible;
-    return kindOk && visibilityOk;
+    return (
+      kindOk &&
+      visibilityOk &&
+      matchesSearch(search, a.caption, a.path, ...(a.tags ?? []))
+    );
   });
 
   async function copy(url: string) {
@@ -122,9 +128,17 @@ export default function AdminGallery() {
             </button>
           ))}
         </div>
+        <Input
+          label="Recherche"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Légende, tag ou nom de fichier…"
+          className="max-w-sm"
+        />
         <p className="text-xs text-atfr-fog">
           {visibleCount} média(s) visible(s) dans la galerie publique sur{' '}
-          {data?.length ?? 0} au total.
+          {data?.length ?? 0} au total
+          {search.trim() ? ` — ${filtered.length} résultat(s)` : ''}.
         </p>
       </div>
 

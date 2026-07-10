@@ -10,17 +10,20 @@ import {
   Textarea,
 } from '@/components/ui';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import { ReorderButtons } from '@/components/admin/ReorderButtons';
 import {
   useDeleteHighlight,
   useHighlights,
   useUpsertHighlight,
 } from '@/features/content/queries';
+import { planReorder, useReorderRows } from '@/features/reorder';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminHighlights() {
   const list = useHighlights();
   const remove = useDeleteHighlight();
+  const reorder = useReorderRows('highlights', ['highlights']);
   const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -66,9 +69,18 @@ export default function AdminHighlights() {
         <p className="text-center text-atfr-fog py-10">Aucun moment fort.</p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((h) => (
+          {list.data.map((h, index) => (
             <Card key={h.id}>
               <CardBody className="p-5 flex items-start gap-4 flex-wrap">
+                <ReorderButtons
+                  canUp={index > 0}
+                  canDown={index < list.data!.length - 1}
+                  disabled={reorder.isPending}
+                  onMove={(direction) => {
+                    const updates = planReorder(list.data!, index, direction);
+                    if (updates) reorder.mutate(updates);
+                  }}
+                />
                 {h.image_url && (
                   <img
                     src={h.image_url}

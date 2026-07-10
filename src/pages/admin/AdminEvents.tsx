@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import {
@@ -18,6 +18,7 @@ import {
   useUpsertEvent,
 } from '@/features/events/queries';
 import { EVENT_TYPE_LABELS } from '@/lib/constants';
+import { matchesSearch } from '@/lib/text-search';
 import type { EventType } from '@/types/database';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
@@ -30,6 +31,15 @@ export default function AdminEvents() {
 
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(
+    () =>
+      (list.data ?? []).filter((e) =>
+        matchesSearch(search, e.title, e.description, EVENT_TYPE_LABELS[e.type]),
+      ),
+    [list.data, search],
+  );
 
   return (
     <div className="space-y-6">
@@ -61,15 +71,29 @@ export default function AdminEvents() {
         />
       )}
 
+      {!list.isLoading && (list.data?.length ?? 0) > 3 && (
+        <Input
+          label="Recherche"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Titre, description ou type…"
+          className="max-w-sm"
+        />
+      )}
+
       {list.isLoading ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
       ) : !list.data || list.data.length === 0 ? (
         <p className="text-center text-atfr-fog py-10">Aucun événement.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-atfr-fog py-10">
+          Aucun événement ne correspond à « {search} ».
+        </p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((e) => (
+          {filtered.map((e) => (
             <Card key={e.id}>
               <CardBody className="p-5 flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
