@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Card, CardBody, Select, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, Input, Select, Spinner } from '@/components/ui';
 import { useClanInfo } from '@/features/clan/queries';
 import { useMembers, useMembersHistory } from '@/features/members/queries';
 import { ROLE_PRIORITY, ROLE_TRANSLATIONS } from '@/lib/constants';
 import { tomatoProfileUrl } from '@/lib/tomato-api';
+import { matchesSearch } from '@/lib/text-search';
 import { supabase } from '@/lib/supabase';
 import { formatDate, formatDateTime } from '@/features/rh/activity';
 import type { Database } from '@/types/database';
@@ -87,6 +88,7 @@ export default function AdminMembers() {
   const history = useMembersHistory();
   const sync = useSyncMembers();
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
+  const [search, setSearch] = useState('');
 
   const activeMembers = useMemo(
     () => (members.data ?? []).filter((m) => m.left_at === null),
@@ -95,9 +97,9 @@ export default function AdminMembers() {
   const formerMembers = useMemo(
     () =>
       (members.data ?? [])
-        .filter((m) => m.left_at !== null)
+        .filter((m) => m.left_at !== null && matchesSearch(search, m.account_name))
         .sort((a, b) => (b.left_at ?? '').localeCompare(a.left_at ?? '')),
-    [members.data],
+    [members.data, search],
   );
 
   const filteredHistory = useMemo(() => {
@@ -108,12 +110,12 @@ export default function AdminMembers() {
 
   const sortedLive = useMemo(() => {
     if (!clan.data) return [];
-    return [...clan.data.members].sort(
+    return clan.data.members.filter((m) => matchesSearch(search, m.account_name)).sort(
       (a, b) =>
         (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99) ||
         a.account_name.localeCompare(b.account_name),
     );
-  }, [clan.data]);
+  }, [clan.data, search]);
 
   async function syncFromWoT() {
     if (!clan.data) return;
@@ -160,6 +162,14 @@ export default function AdminMembers() {
       {sync.isError && (
         <Alert tone="danger">{(sync.error as Error).message}</Alert>
       )}
+
+      <Input
+        label="Recherche"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Pseudo WoT…"
+        className="max-w-sm"
+      />
 
       {/* ── Roster actuel (live WoT) ── */}
       <section>

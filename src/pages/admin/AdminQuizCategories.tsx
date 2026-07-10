@@ -15,12 +15,15 @@ import {
   useQuizCategories,
   useUpsertQuizCategory,
 } from '@/features/quiz/queries';
+import { ReorderButtons } from '@/components/admin/ReorderButtons';
+import { planReorder, useReorderRows } from '@/features/reorder';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminQuizCategories() {
   const list = useQuizCategories();
   const remove = useDeleteQuizCategory();
+  const reorder = useReorderRows('quiz_categories', ['quiz_categories']);
   const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -75,9 +78,18 @@ export default function AdminQuizCategories() {
         <p className="text-center text-atfr-fog py-10">Aucune catégorie.</p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((c) => (
+          {list.data.map((c, index) => (
             <Card key={c.id}>
               <CardBody className="p-5 flex items-center gap-4 flex-wrap">
+                <ReorderButtons
+                  canUp={index > 0}
+                  canDown={index < list.data!.length - 1}
+                  disabled={reorder.isPending}
+                  onMove={(direction) => {
+                    const updates = planReorder(list.data!, index, direction);
+                    if (updates) reorder.mutate(updates);
+                  }}
+                />
                 <span
                   className="h-3 w-3 rounded-full shrink-0"
                   style={{ backgroundColor: c.color }}

@@ -15,12 +15,15 @@ import {
   useTestimonials,
   useUpsertTestimonial,
 } from '@/features/content/queries';
+import { ReorderButtons } from '@/components/admin/ReorderButtons';
+import { planReorder, useReorderRows } from '@/features/reorder';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
 
 export default function AdminTestimonials() {
   const list = useTestimonials();
   const remove = useDeleteTestimonial();
+  const reorder = useReorderRows('testimonials', ['testimonials']);
   const confirmDialog = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -63,9 +66,18 @@ export default function AdminTestimonials() {
         <p className="text-center text-atfr-fog py-10">Aucun témoignage.</p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((t) => (
+          {list.data.map((t, index) => (
             <Card key={t.id}>
               <CardBody className="p-5 flex items-start gap-4 flex-wrap">
+                <ReorderButtons
+                  canUp={index > 0}
+                  canDown={index < list.data!.length - 1}
+                  disabled={reorder.isPending}
+                  onMove={(direction) => {
+                    const updates = planReorder(list.data!, index, direction);
+                    if (updates) reorder.mutate(updates);
+                  }}
+                />
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-atfr-gold/30 bg-atfr-graphite flex items-center justify-center">
                   {t.avatar_url ? (
                     <img src={t.avatar_url} alt="" className="h-full w-full object-cover" />
