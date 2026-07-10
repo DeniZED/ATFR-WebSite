@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database, MediaKind } from '@/types/database';
 
@@ -99,9 +100,9 @@ async function uploadToCloudinary(
 }
 
 export function useUploadMedia() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Média ajouté.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Média ajouté.',
+    silentError: true,
     mutationFn: async (args: {
       file: File;
       caption?: string;
@@ -145,14 +146,14 @@ export function useUploadMedia() {
       if (insErr) throw insErr;
       return inserted as MediaRow;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['media_assets'] }),
+    invalidates: [['media_assets']],
   });
 }
 
 export function useUpdateMedia() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Média mis à jour.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Média mis à jour.',
+    silentError: true,
     mutationFn: async (args: {
       id: string;
       caption?: string | null;
@@ -166,14 +167,13 @@ export function useUpdateMedia() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['media_assets'] }),
+    invalidates: [['media_assets']],
   });
 }
 
 export function useDeleteMedia() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Média supprimé.' },
+  return useInvalidatingMutation({
+    successToast: 'Média supprimé.',
     mutationFn: async (asset: Pick<MediaRow, 'id' | 'path' | 'kind'>) => {
       // Suppression Cloudinary côté serveur (API secret non exposé au browser).
       // The function requires a valid editor session token to authorize the deletion.
@@ -200,6 +200,6 @@ export function useDeleteMedia() {
         .eq('id', asset.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['media_assets'] }),
+    invalidates: [['media_assets']],
   });
 }

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -35,13 +36,12 @@ export function useMembersHistory() {
 }
 
 export function useUpsertMember() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Membre enregistré.' },
+  return useInvalidatingMutation({
+    successToast: 'Membre enregistré.',
     mutationFn: async (input: Database['public']['Tables']['members']['Insert']) => {
       const { error } = await supabase.from('members').upsert(input);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['members'] }),
+    invalidates: [['members']],
   });
 }

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/types/database';
 
@@ -24,9 +25,8 @@ export function useAdminUsers() {
 }
 
 export function useAssignRole() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Rôle attribué.' },
+  return useInvalidatingMutation({
+    successToast: 'Rôle attribué.',
     mutationFn: async (args: { userId: string; role: UserRole }) => {
       const { error } = await supabase
         .from('user_roles')
@@ -36,17 +36,13 @@ export function useAssignRole() {
         );
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin_users'] });
-      qc.invalidateQueries({ queryKey: ['user_role'] });
-    },
+    invalidates: [['admin_users'], ['user_role']],
   });
 }
 
 export function useSetModuleAccess() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Accès aux modules enregistrés.' },
+  return useInvalidatingMutation({
+    successToast: 'Accès aux modules enregistrés.',
     mutationFn: async (args: {
       userId: string;
       moduleAccess: string[];
@@ -61,17 +57,13 @@ export function useSetModuleAccess() {
         .eq('user_id', args.userId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin_users'] });
-      qc.invalidateQueries({ queryKey: ['user_role'] });
-    },
+    invalidates: [['admin_users'], ['user_role']],
   });
 }
 
 export function useRemoveRole() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Rôle retiré.' },
+  return useInvalidatingMutation({
+    successToast: 'Rôle retiré.',
     mutationFn: async (userId: string) => {
       const { error } = await supabase
         .from('user_roles')
@@ -79,9 +71,6 @@ export function useRemoveRole() {
         .eq('user_id', userId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin_users'] });
-      qc.invalidateQueries({ queryKey: ['user_role'] });
-    },
+    invalidates: [['admin_users'], ['user_role']],
   });
 }

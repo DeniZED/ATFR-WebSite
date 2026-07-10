@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 import { MODULE_REGISTRY, type ModuleDefinition } from './registry';
@@ -71,15 +72,15 @@ export function useAdminModules() {
 }
 
 export function useUpsertModule() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Module enregistré.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Module enregistré.',
+    silentError: true,
     mutationFn: async (input: Database['public']['Tables']['learning_modules']['Insert']) => {
       const { error } = await supabase
         .from('learning_modules')
         .upsert(input, { onConflict: 'slug' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['learning_modules'] }),
+    invalidates: [['learning_modules']],
   });
 }

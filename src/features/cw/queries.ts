@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database, CwEventStatus } from '@/types/database';
 
@@ -149,14 +150,13 @@ export function useSetCwEventStatus() {
 }
 
 export function useDeleteCwEvent() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Campagne supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Campagne supprimée.',
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('cw_events').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cw_events'] }),
+    invalidates: [['cw_events']],
   });
 }
 

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import type {
@@ -410,9 +411,9 @@ export function useUpsertDiscordLink() {
 }
 
 export function useDeleteDiscordLink() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Lien Discord supprimé.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Lien Discord supprimé.',
+    silentError: true,
     mutationFn: async (linkId: string) => {
       const { error } = await supabase
         .from('player_discord_links')
@@ -420,14 +421,14 @@ export function useDeleteDiscordLink() {
         .eq('id', linkId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
+    invalidates: [['hr']],
   });
 }
 
 export function useAddStaffNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Note ajoutée.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Note ajoutée.',
+    silentError: true,
     mutationFn: async (input: AddStaffNoteInput) => {
       const payload: StaffNoteInsert = {
         player_id: input.playerId,
@@ -438,7 +439,7 @@ export function useAddStaffNote() {
       const { error } = await supabase.from('player_staff_notes').insert(payload);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hr'] }),
+    invalidates: [['hr']],
   });
 }
 
