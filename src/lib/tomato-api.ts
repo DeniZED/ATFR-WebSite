@@ -4,6 +4,7 @@
 // client-side. The wire contract lives in `src/types/playerStats.ts`.
 
 import type { PlayerStatsPayload, PlayerRecentStats } from '@/types/playerStats';
+import { WN8_TIERS, wn8TierIndex } from '@/lib/wn8-scale';
 
 export type { PlayerRecentStats };
 
@@ -53,30 +54,26 @@ export async function getPlayerExtendedStatsBatch(
   }
 }
 
+// Couleurs Tailwind par palier, alignées index par index sur WN8_TIERS.
+const WN8_TIER_COLORS: readonly string[] = [
+  'text-neutral-400',
+  'text-red-400',
+  'text-orange-400',
+  'text-yellow-400',
+  'text-lime-400',
+  'text-emerald-400',
+  'text-cyan-400',
+  'text-indigo-400',
+  'text-fuchsia-400',
+  'text-pink-300',
+];
+
 export function wn8Color(wn8: number | null): string {
   if (wn8 == null) return 'text-atfr-fog';
-  if (wn8 < 300) return 'text-neutral-400';
-  if (wn8 < 600) return 'text-red-400';
-  if (wn8 < 900) return 'text-orange-400';
-  if (wn8 < 1250) return 'text-yellow-400';
-  if (wn8 < 1600) return 'text-lime-400';
-  if (wn8 < 1900) return 'text-emerald-400';
-  if (wn8 < 2350) return 'text-cyan-400';
-  if (wn8 < 2900) return 'text-indigo-400';
-  if (wn8 < 3400) return 'text-fuchsia-400';
-  return 'text-pink-300';
+  return WN8_TIER_COLORS[wn8TierIndex(wn8)];
 }
 
 export function wn8Label(wn8: number | null): string {
   if (wn8 == null) return '—';
-  if (wn8 < 300) return 'Très faible';
-  if (wn8 < 600) return 'Faible';
-  if (wn8 < 900) return 'Moyen -';
-  if (wn8 < 1250) return 'Moyen';
-  if (wn8 < 1600) return 'Bon';
-  if (wn8 < 1900) return 'Très bon';
-  if (wn8 < 2350) return 'Excellent';
-  if (wn8 < 2900) return 'Unicum';
-  if (wn8 < 3400) return 'Super unicum';
-  return 'Légendaire';
+  return WN8_TIERS[wn8TierIndex(wn8)].label;
 }

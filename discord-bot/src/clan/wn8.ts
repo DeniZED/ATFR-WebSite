@@ -1,5 +1,8 @@
-// Mêmes paliers que src/lib/tomato-api.ts (web) — gardés en synchro manuellement,
-// le bot n'a pas accès au code du site.
+// Copie miroir du barème canonique `src/lib/wn8-scale.ts` (racine du repo,
+// P1-11) — le tsconfig du bot (`rootDir: "src"`) ne peut pas l'importer.
+// Toute modification doit partir du fichier canonique : le test de parité
+// `src/__tests__/wn8-scale-parity.test.ts` lit ce fichier et échoue si les
+// paliers ou libellés divergent.
 
 const COLORS: Array<[number, number]> = [
   [300, 0x95a5a6],

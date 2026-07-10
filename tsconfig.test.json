@@ -27,6 +27,7 @@
     "netlify/functions",
     "src/features/geoguesser/scoring.ts",
     "src/types/database.ts",
-    "src/types/playerStats.ts"
+    "src/types/playerStats.ts",
+    "src/lib/wn8-scale.ts"
   ]
 }

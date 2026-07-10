@@ -58,4 +58,3 @@ export const TIME_SLOTS = [
   { id: 'night', label: 'Nuit (22h–00h)' },
 ] as const;
 
-export type TimeSlotId = (typeof TIME_SLOTS)[number]['id'];
