@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database, QuizDifficulty } from '@/types/database';
 
@@ -37,23 +38,21 @@ export function useGeoMaps(opts: { activeOnly?: boolean } = {}) {
 }
 
 export function useUpsertMap() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Carte enregistrée.' },
+  return useInvalidatingMutation({
+    successToast: 'Carte enregistrée.',
     mutationFn: async (input: MapInsert) => {
       const { error } = await supabase
         .from('wot_maps')
         .upsert(input, { onConflict: 'id' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_maps'] }),
+    invalidates: [['geo_maps']],
   });
 }
 
 export function useBulkUpsertMaps() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (maps: MapInsert[]) => {
       if (maps.length === 0) return { inserted: 0 };
       const { error } = await supabase
@@ -62,22 +61,18 @@ export function useBulkUpsertMaps() {
       if (error) throw error;
       return { inserted: maps.length };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_maps'] }),
+    invalidates: [['geo_maps']],
   });
 }
 
 export function useDeleteMap() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Carte supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Carte supprimée.',
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('wot_maps').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['geo_maps'] });
-      qc.invalidateQueries({ queryKey: ['geo_shots'] });
-    },
+    invalidates: [['geo_maps'], ['geo_shots']],
   });
 }
 
@@ -149,9 +144,9 @@ export function useGeoShot(id: string | null) {
 }
 
 export function useUpsertShot() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Screenshot enregistré.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Screenshot enregistré.',
+    silentError: true,
     mutationFn: async (input: ShotInsert): Promise<string> => {
       if (input.id) {
         const { error } = await supabase
@@ -169,14 +164,13 @@ export function useUpsertShot() {
       if (error) throw error;
       return data.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_shots'] }),
+    invalidates: [['geo_shots']],
   });
 }
 
 export function useDeleteShot() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Screenshot supprimé.' },
+  return useInvalidatingMutation({
+    successToast: 'Screenshot supprimé.',
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('geoguesser_shots')
@@ -184,14 +178,13 @@ export function useDeleteShot() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_shots'] }),
+    invalidates: [['geo_shots']],
   });
 }
 
 export function useDuplicateShot() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Screenshot dupliqué.' },
+  return useInvalidatingMutation({
+    successToast: 'Screenshot dupliqué.',
     mutationFn: async (id: string): Promise<string> => {
       const { data: src, error } = await supabase
         .from('geoguesser_shots')
@@ -219,7 +212,7 @@ export function useDuplicateShot() {
       if (insErr) throw insErr;
       return data.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['geo_shots'] }),
+    invalidates: [['geo_shots']],
   });
 }
 
@@ -289,9 +282,8 @@ export function useGeoSettings() {
 }
 
 export function useUpdateGeoSettings() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (patch: SettingsUpdate) => {
       const { error } = await supabase
         .from('geoguesser_settings')
@@ -299,15 +291,13 @@ export function useUpdateGeoSettings() {
         .eq('id', 1);
       if (error) throw error;
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['geoguesser_settings'] }),
+    invalidates: [['geoguesser_settings']],
   });
 }
 
 export function useResetShotStats() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (shotId: string): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_shot_stats',
@@ -318,16 +308,13 @@ export function useResetShotStats() {
       if (error) throw error;
       return data ?? 0;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['geo_shots'] });
-    },
+    invalidates: [['geo_shots']],
   });
 }
 
 export function useResetMapShotStats() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (mapId: string): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_map_stats',
@@ -338,16 +325,13 @@ export function useResetMapShotStats() {
       if (error) throw error;
       return data ?? 0;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['geo_shots'] });
-    },
+    invalidates: [['geo_shots']],
   });
 }
 
 export function useResetAllShotStats() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (): Promise<number> => {
       const { data, error } = await supabase.rpc(
         'reset_geoguesser_all_stats',
@@ -355,8 +339,6 @@ export function useResetAllShotStats() {
       if (error) throw error;
       return data ?? 0;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['geo_shots'] });
-    },
+    invalidates: [['geo_shots']],
   });
 }

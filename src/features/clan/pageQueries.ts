@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type {
   ClanContentKey,
@@ -45,9 +46,8 @@ export function useClanPage(slug: string) {
 }
 
 export function useUpsertClanPage() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Page clan enregistrée.' },
+  return useInvalidatingMutation({
+    successToast: 'Page clan enregistrée.',
     mutationFn: async (row: ClanPageInsert & { _isNew?: boolean }) => {
       const { _isNew, ...payload } = row;
       payload.updated_at = new Date().toISOString();
@@ -62,14 +62,13 @@ export function useUpsertClanPage() {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['clan_pages'] }),
+    invalidates: [['clan_pages']],
   });
 }
 
 export function useDeleteClanPage() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Page clan supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Page clan supprimée.',
     mutationFn: async (slug: string) => {
       const { error } = await supabase
         .from('clan_pages')
@@ -77,7 +76,7 @@ export function useDeleteClanPage() {
         .eq('slug', slug);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['clan_pages'] }),
+    invalidates: [['clan_pages']],
   });
 }
 
@@ -103,9 +102,8 @@ export function useAdminClanPageContent() {
 }
 
 export function useUpdateClanPageContent() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { silentError: true },
+  return useInvalidatingMutation({
+    silentError: true,
     mutationFn: async (input: {
       page_slug: string;
       content_key: ClanContentKey;
@@ -118,7 +116,6 @@ export function useUpdateClanPageContent() {
         .eq('content_key', input.content_key);
       if (error) throw error;
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['clan_page_content'] }),
+    invalidates: [['clan_page_content']],
   });
 }

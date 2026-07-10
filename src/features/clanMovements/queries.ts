@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type {
   ClanMemberMovementRow,
@@ -30,9 +31,8 @@ export interface UpdateMovementContactStatusInput {
 }
 
 export function useUpdateMovementContactStatus() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Statut de contact mis à jour.' },
+  return useInvalidatingMutation({
+    successToast: 'Statut de contact mis à jour.',
     mutationFn: async ({ movementId, contactStatus }: UpdateMovementContactStatusInput) => {
       const { error } = await supabase
         .from('clan_member_movements')
@@ -40,7 +40,7 @@ export function useUpdateMovementContactStatus() {
         .eq('id', movementId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['clan-movements'] }),
+    invalidates: [['clan-movements']],
   });
 }
 

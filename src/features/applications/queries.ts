@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import { notifyNewApplication } from '@/lib/discord';
 import type { ApplicationStatus, Database } from '@/types/database';
@@ -101,14 +102,13 @@ export function useUpdateApplicationStatus() {
 }
 
 export function useDeleteApplication() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Candidature supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Candidature supprimée.',
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('applications').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['applications'] }),
+    invalidates: [['applications']],
   });
 }
 

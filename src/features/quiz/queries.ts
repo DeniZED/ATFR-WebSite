@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -43,23 +44,21 @@ export function useQuizCategories() {
 }
 
 export function useUpsertQuizCategory() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Catégorie enregistrée.' },
+  return useInvalidatingMutation({
+    successToast: 'Catégorie enregistrée.',
     mutationFn: async (input: CategoryInsert) => {
       const { error } = await supabase
         .from('quiz_categories')
         .upsert(input, { onConflict: 'slug' });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz_categories'] }),
+    invalidates: [['quiz_categories']],
   });
 }
 
 export function useDeleteQuizCategory() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Catégorie supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Catégorie supprimée.',
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('quiz_categories')
@@ -67,10 +66,7 @@ export function useDeleteQuizCategory() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quiz_categories'] });
-      qc.invalidateQueries({ queryKey: ['quiz_questions'] });
-    },
+    invalidates: [['quiz_categories'], ['quiz_questions']],
   });
 }
 
@@ -132,9 +128,9 @@ export interface QuestionPayload {
 }
 
 export function useSaveQuizQuestion() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Question enregistrée.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Question enregistrée.',
+    silentError: true,
     mutationFn: async (payload: QuestionPayload): Promise<string> => {
       const { question, answers } = payload;
       let questionId = question.id;
@@ -177,14 +173,13 @@ export function useSaveQuizQuestion() {
 
       return questionId!;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz_questions'] }),
+    invalidates: [['quiz_questions']],
   });
 }
 
 export function useDeleteQuizQuestion() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Question supprimée.' },
+  return useInvalidatingMutation({
+    successToast: 'Question supprimée.',
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('quiz_questions')
@@ -192,14 +187,13 @@ export function useDeleteQuizQuestion() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz_questions'] }),
+    invalidates: [['quiz_questions']],
   });
 }
 
 export function useDuplicateQuizQuestion() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Question dupliquée.' },
+  return useInvalidatingMutation({
+    successToast: 'Question dupliquée.',
     mutationFn: async (id: string): Promise<string> => {
       const { data: src, error } = await supabase
         .from('quiz_questions')
@@ -243,7 +237,7 @@ export function useDuplicateQuizQuestion() {
 
       return newRow.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz_questions'] }),
+    invalidates: [['quiz_questions']],
   });
 }
 

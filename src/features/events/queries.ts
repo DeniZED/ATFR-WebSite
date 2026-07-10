@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useInvalidatingMutation } from '@/lib/mutation-factory';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -40,9 +41,9 @@ export function useAllEvents() {
 }
 
 export function useUpsertEvent() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Événement enregistré.', silentError: true },
+  return useInvalidatingMutation({
+    successToast: 'Événement enregistré.',
+    silentError: true,
     mutationFn: async (input: Database['public']['Tables']['events']['Insert'] & { id?: string }) => {
       if (input.id) {
         const { data, error } = await supabase
@@ -62,20 +63,17 @@ export function useUpsertEvent() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['events'] });
-    },
+    invalidates: [['events']],
   });
 }
 
 export function useDeleteEvent() {
-  const qc = useQueryClient();
-  return useMutation({
-    meta: { successToast: 'Événement supprimé.' },
+  return useInvalidatingMutation({
+    successToast: 'Événement supprimé.',
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('events').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
+    invalidates: [['events']],
   });
 }
