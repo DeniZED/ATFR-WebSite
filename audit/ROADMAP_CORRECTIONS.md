@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-10** : consolidation du refactor P2-1 — 45 tests unitaires ajoutés sur la logique pure extraite de `Geoguesser.tsx` (`features/geoguesser/mode.ts` : réglages/bornage, disponibilité par difficulté, submodes leaderboard, libellés ; `features/geoguesser/resultStats.ts` : stats de session, conseils, feedback directionnel, stats perso, tendance, dédup leaderboard). Suite à 110 tests. Les `features/*/queries.ts` sont désormais collectables en test (variables Supabase factices dans `vitest.config.ts`).
+>
 > **Mise à jour 2026-07-09 (3)** : **P3-4** corrigé — le contrat de `/.netlify/functions/player-stats` vit désormais dans `src/types/playerStats.ts`, importé type-only par la fonction et par `tomato-api.ts` ; le bot Discord garde une copie miroir annotée (son `rootDir` interdit l'import hors arbre sans toucher au build VPS).
 >
 > **Mise à jour 2026-07-09 (2)** : généralisation du toaster P2-3 — `ToastProvider` remonté à la racine de l'app et `MutationCache` global React Query : toute mutation en échec affiche désormais un toast d'erreur traduit (fini les suppressions/toggles silencieusement échoués), sauf `meta.silentError` pour les ~20 mutations dont la page affiche déjà l'erreur en ligne ; les mutations CRUD déclarent leur confirmation via `meta.successToast` (~40 messages français).
