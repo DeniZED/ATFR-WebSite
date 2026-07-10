@@ -12,6 +12,8 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 >
 > **Mise à jour 2026-07-02 (3)** : vague de consolidation post-P0 livrée — page admin d'édition du contenu clan (`/admin/pages-clan/contenu`), **P1-2** (ESLint étendu aux `.mts`) et **P2-4** (tests `computeRecruitmentScore`).
 >
+> **Mise à jour 2026-07-10 (2)** : **fin du plan** — dernière vague livrée : **P3-1** (code mort supprimé, validation explicite reçue), **P1-11** (barème WN8 canonique `src/lib/wn8-scale.ts` + test de parité lisant la copie du bot — CI rouge à la moindre divergence, aucun redéploiement bot requis), **P3-3** (convention `src/features/README.md`) et **P3-2** (factory `useInvalidatingMutation`, 40 mutations CRUD migrées, 20 restent manuelles par choix). **Tous les items P0/P1/P2/P3 de l'audit sont soldés** ; seule décision restante : l'harmonisation gameplay des 2 barèmes de tier GeoGuesseur.
+>
 > **Mise à jour 2026-07-10** : consolidation du refactor P2-1 — 45 tests unitaires ajoutés sur la logique pure extraite de `Geoguesser.tsx` (`features/geoguesser/mode.ts` : réglages/bornage, disponibilité par difficulté, submodes leaderboard, libellés ; `features/geoguesser/resultStats.ts` : stats de session, conseils, feedback directionnel, stats perso, tendance, dédup leaderboard). Suite à 110 tests. Les `features/*/queries.ts` sont désormais collectables en test (variables Supabase factices dans `vitest.config.ts`).
 >
 > **Mise à jour 2026-07-09 (3)** : **P3-4** corrigé — le contrat de `/.netlify/functions/player-stats` vit désormais dans `src/types/playerStats.ts`, importé type-only par la fonction et par `tomato-api.ts` ; le bot Discord garde une copie miroir annotée (son `rootDir` interdit l'import hors arbre sans toucher au build VPS).
@@ -76,7 +78,7 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 2. **✅ P1-4** Centraliser la règle d'éligibilité recrutement — **CORRIGÉ** (`features/recruitment/logic.ts` + tests, consommé par `PlayerLookupCard` et `ClanMovementsTab`).
 3. **✅ P1-5** Extraire la logique métier des 11 emplacements UI — **CORRIGÉ** (`badge.ts`, `personalStats.ts`, `topPerformers.ts` avec tests ; `mode.ts` + `resultStats.ts` via P2-1 ; + items déjà couverts par P1-4/P0-1). Reste uniquement l'harmonisation des 2 systèmes de tier (décision produit/gameplay, hors périmètre technique).
 4. **✅ P2-4** Ajouter des tests unitaires sur `computeRecruitmentScore` — **CORRIGÉ** : fonction extraite dans `netlify/functions/_recruitment-score.ts` (aucun changement de logique), 10 tests dans `src/__tests__/recruitment-score.test.ts`.
-5. **P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **uniquement après validation explicite**, conformément à la consigne de ne supprimer aucun fichier sans accord préalable.
+5. **✅ P3-1** Supprimer le code mort confirmé (`RequireMember.tsx`, export `TimeSlotId`) — **CORRIGÉ** après validation explicite du porteur du projet.
 
 *Estimation* : lot le plus long en effort cumulé (plusieurs semaines selon les ressources), mais peut être découpé fichier par fichier sans bloquer les livraisons. Recommandé de traiter item 2-3 avant tout ajustement futur des seuils de recrutement, pour éviter d'ajouter une 4e divergence.
 
@@ -99,10 +101,10 @@ Découpage en 5 lots, du plus urgent au plus structurant. Chaque lot est conçu 
 ## Lot 5 — Améliorations produit à plus long terme
 *Objectif : chantiers structurants nécessitant arbitrage produit, pas de bug à corriger mais des choix d'architecture.*
 
-1. **P1-11** Unifier les seuils WN8 site/bot (package partagé ou source unique exposée en API) — implique de coordonner deux déploiements indépendants (site Netlify + bot VPS/PM2).
+1. **✅ P1-11** Unifier les seuils WN8 site/bot — **CORRIGÉ** sans toucher au déploiement du bot : barème canonique `src/lib/wn8-scale.ts` + test de parité `wn8-scale-parity.test.ts` qui lit la copie miroir du bot et fait échouer la CI en cas de divergence.
 2. **✅ P2-3** Introduire un système de toast/notification unifié — **CORRIGÉ** (`useToast`/`ToastProvider`, adoption pilote éditeur de contenu clan, généralisation progressive).
-3. **P3-2** Factory commune pour les ~101 hooks React Query.
-4. **P3-3 / ✅ P3-4** Harmonisation de l'organisation des dossiers `features/*` (restant) ; déduplication des types `PlayerStats*` — **CORRIGÉE** (contrat unique `src/types/playerStats.ts` partagé site/fonction ; copie miroir annotée côté bot, contrainte `rootDir`).
+3. **✅ P3-2** Factory commune pour les hooks React Query — **CORRIGÉ** : `useInvalidatingMutation` adopté par les 40 mutations CRUD mécaniques ; les 20 mutations à logique propre restent manuelles par choix.
+4. **✅ P3-3 / ✅ P3-4** Organisation des dossiers `features/*` — **CORRIGÉ** par convention documentée (`src/features/README.md`) ; déduplication des types `PlayerStats*` — **CORRIGÉE** (contrat unique `src/types/playerStats.ts` partagé site/fonction ; copie miroir annotée côté bot, contrainte `rootDir`).
 5. **✅ P2-6** Révocation d'accès clan-hub — **CORRIGÉ** (cache UI 5 min → 60 s ; le contenu lui-même est de toute façon re-vérifié côté serveur à chaque requête depuis P0-2).
 
 ---

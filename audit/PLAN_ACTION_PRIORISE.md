@@ -87,7 +87,7 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 | ✅ P1-8 | Carte Geoguesser inutilisable au tactile une fois zoomée — **CORRIGÉ** (pan à 1 doigt, pinch-zoom à 2 doigts ancré sur le point médian, `touch-action: none` sur le canvas ; le tap place le pin via le click synthétisé existant, le garde `hasMoved` absorbant les clicks fantômes post-geste) | `src/components/geoguesser/FloatingMapPicker.tsx` | Module académie dégradé sur mobile | Ajouter gestion `touchstart`/`touchmove`/`touchend` | Moyen | Moyen | Élevé |
 | ✅ P1-9 | Messages d'erreur techniques/anglais exposés — **CORRIGÉ** | `Recruitment.tsx:255-259`, `Login.tsx` | Confusion utilisateurs non techniques | Traduire/mapper les erreurs Supabase vers des messages FR | Faible | Faible | Moyen |
 | ✅ P1-10 | États d'erreur masqués en "liste vide" — **CORRIGÉ** | `AdminGallery.tsx`, `AdminApplications.tsx` | Admin peut croire à tort une section vide | Distinguer `isError`/`isEmpty` (pattern déjà présent ailleurs) | Faible | Faible | Moyen |
-| P1-11 | Seuils WN8 dupliqués manuellement site/bot | `discord-bot/src/clan/wn8.ts` (commentaire l'admet) | Risque de divergence silencieuse | Package partagé ou source unique exposée en API | Élevé | Élevé | Moyen |
+| ✅ P1-11 | Seuils WN8 dupliqués manuellement site/bot — **CORRIGÉ** : barème canonique `src/lib/wn8-scale.ts` (paliers + libellés) consommé par `tomato-api.ts` ; le bot garde sa copie miroir (contrainte `rootDir`, build VPS intact) mais le test `wn8-scale-parity.test.ts` lit son fichier et fait échouer la CI à la moindre divergence | `discord-bot/src/clan/wn8.ts` | Risque de divergence silencieuse | Source canonique + test de parité | Élevé | Élevé | Moyen |
 | ✅ P1-12 | Labels d'onglets retirés de l'arbre a11y sous `sm` — **CORRIGÉ** | `AvatarCustomizer.tsx:150-163` | Boutons icône-seule sans nom accessible sur mobile | `hidden sm:inline` → `sr-only sm:not-sr-only` | Faible | Faible | Faible |
 | ✅ P1-13 | `Select.tsx` sans `aria-invalid`/`aria-describedby` — **CORRIGÉ** | `src/components/ui/Select.tsx` | Incohérence avec `Input.tsx`, WCAG 4.1.2 | Aligner sur `Input.tsx` | Faible | Faible | Faible |
 
@@ -113,9 +113,9 @@ Légende effort/impact : Faible / Moyen / Élevé. Légende risque de correction
 
 | # | Problème | Localisation | Effort | Impact |
 |---|---|---|---|---|
-| P3-1 | Code mort : `RequireMember.tsx` (zéro import), export `TimeSlotId` inutilisé | `src/components/layout/RequireMember.tsx` | Faible | Faible |
-| P3-2 | ~101 hooks React Query sans factory commune | `src/features/*/queries.ts` | Moyen | Faible (long terme) |
-| P3-3 | Incohérence d'organisation (`schema.ts`/`types.ts` dans 2/17 features seulement) | `src/features/*` | Moyen | Faible |
+| ✅ P3-1 | Code mort : `RequireMember.tsx` (zéro import), export `TimeSlotId` inutilisé — **CORRIGÉ** (suppression validée explicitement par le porteur du projet) | `src/components/layout/RequireMember.tsx` | Faible | Faible |
+| ✅ P3-2 | ~101 hooks React Query sans factory commune — **CORRIGÉ** : `useInvalidatingMutation` (`src/lib/mutation-factory.ts`) adopté par les 40 mutations CRUD mécaniques (mutationFn + invalidations + meta inchangés) ; les 20 mutations à logique propre restent volontairement manuelles ; les queries restent au cas par cas (formes trop variées pour une factory utile) | `src/features/*/queries.ts` | Moyen | Faible (long terme) |
+| ✅ P3-3 | Incohérence d'organisation (`schema.ts`/`types.ts` dans 2/17 features seulement) — **CORRIGÉ** par convention documentée (`src/features/README.md`) : ces fichiers n'existent que là où ils se justifient, pas de boilerplate vide dans les 15 autres features | `src/features/*` | Moyen | Faible |
 | ✅ P3-4 | Types `PlayerStats*` redéfinis indépendamment (site/bot/fonction) — **CORRIGÉ** : contrat unique dans `src/types/playerStats.ts` (`PlayerStatsPayload` + `PlayerRecentStats`), importé type-only par `player-stats.mts` (effacé au bundling) et par `tomato-api.ts` (`PlayerExtendedStats = PlayerStatsPayload & { profileUrl }`). Le bot Discord garde une copie miroir annotée : son tsconfig (`rootDir: "src"`) ne peut pas importer hors de son arbre sans changer le build VPS | Multi-fichiers | Moyen | Faible |
 
 ---
