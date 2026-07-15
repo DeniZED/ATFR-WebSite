@@ -29,7 +29,7 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn('relative py-20 sm:py-28', className)}
+      className={cn('relative py-14 sm:py-20', className)}
       {...props}
     >
       <div className="container">

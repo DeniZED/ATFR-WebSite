@@ -43,6 +43,7 @@ const AdminCwEventDetail = lazy(() => import('@/pages/admin/AdminCwEventDetail')
 const AdminContent = lazy(() => import('@/pages/admin/AdminContent'));
 const AdminGallery = lazy(() => import('@/pages/admin/AdminGallery'));
 const AdminHighlights = lazy(() => import('@/pages/admin/AdminHighlights'));
+const AdminClanHistory = lazy(() => import('@/pages/admin/AdminClanHistory'));
 const AdminAchievements = lazy(() => import('@/pages/admin/AdminAchievements'));
 const AdminTestimonials = lazy(() => import('@/pages/admin/AdminTestimonials'));
 const AdminModules = lazy(() => import('@/pages/admin/AdminModules'));
@@ -168,6 +169,10 @@ export const router = createBrowserRouter([
           {
             element: <RequireModuleAccess moduleKey="moments" />,
             children: [{ path: 'moments', element: <AdminHighlights /> }],
+          },
+          {
+            element: <RequireModuleAccess moduleKey="histoire" />,
+            children: [{ path: 'histoire', element: <AdminClanHistory /> }],
           },
           {
             element: <RequireModuleAccess moduleKey="palmares" />,
