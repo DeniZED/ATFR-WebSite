@@ -29,7 +29,7 @@ export function Activities() {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.5, delay: i * 0.1, ease: [0.2, 0.8, 0.2, 1] }}
             whileHover={{ y: -6 }}
-            className="group relative overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon"
+            className="spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon"
           >
             <div className="aspect-[4/3] overflow-hidden bg-atfr-graphite relative">
               {it.image ? (

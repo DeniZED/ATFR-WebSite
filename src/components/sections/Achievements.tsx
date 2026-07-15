@@ -52,7 +52,7 @@ export function Achievements() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.45, delay: i * 0.06 }}
-            className="group relative overflow-hidden rounded-xl border border-atfr-gold/20 bg-gradient-to-br from-atfr-carbon to-atfr-graphite/60 p-6"
+            className="spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/20 bg-gradient-to-br from-atfr-carbon to-atfr-graphite/60 p-6"
           >
             <div className="absolute -top-6 -right-6 h-32 w-32 rounded-full bg-atfr-gold/5 blur-2xl transition-all group-hover:bg-atfr-gold/10" />
             <div className="relative flex items-start gap-4">

@@ -54,7 +54,7 @@ export function Testimonials() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.45, delay: i * 0.08 }}
-            className="relative rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-6"
+            className="spotlight-card rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-6"
           >
             <Quote
               size={32}

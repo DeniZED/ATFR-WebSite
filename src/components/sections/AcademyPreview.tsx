@@ -51,7 +51,7 @@ export function AcademyPreview() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-          className="rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-7"
+          className="spotlight-card rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-7"
         >
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-atfr-gold/40 bg-atfr-gold/10 text-atfr-gold">
             <GraduationCap size={22} strokeWidth={1.6} />
@@ -94,7 +94,7 @@ export function AcademyPreview() {
                 <Link
                   to={`/modules/${module.path}`}
                   className={cn(
-                    'group relative flex h-full min-h-[230px] flex-col overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-graphite/60 p-6 transition-all',
+                    'spotlight-card group flex h-full min-h-[230px] flex-col overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-graphite/60 p-6 transition-all',
                     'hover:-translate-y-1 hover:border-atfr-gold/60',
                   )}
                 >

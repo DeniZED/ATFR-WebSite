@@ -70,6 +70,58 @@
 }
 
 @layer utilities {
+  /* Halo doré qui suit le curseur, homogène sur toutes les cartes du site.
+     Position via --mx/--my (posées par useSpotlight, un seul écouteur
+     délégué). Deux couches : une lueur intérieure douce derrière le contenu
+     et un liseré qui s'illumine côté curseur (bordure révélée au masque). */
+  .spotlight-card {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight-card::before,
+  .spotlight-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  /* Lueur intérieure — derrière le contenu de la carte. */
+  .spotlight-card::before {
+    z-index: -1;
+    background: radial-gradient(
+      240px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(232, 176, 67, 0.16),
+      transparent 62%
+    );
+  }
+  /* Liseré lumineux — anneau de 1px révélé par composition de masques. */
+  .spotlight-card::after {
+    padding: 1px;
+    background: radial-gradient(
+      280px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(245, 203, 92, 0.6),
+      rgba(245, 203, 92, 0) 60%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  .spotlight-card:hover::before,
+  .spotlight-card:hover::after {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spotlight-card::before,
+    .spotlight-card::after {
+      transition: none;
+    }
+  }
+
   /* Rythme visuel de la page d'accueil : une section sur deux reçoit un
      voile charbon fondu en haut/bas, ce qui casse le « tunnel noir » en
      laissant respirer la grille tactique sur les sections impaires. */
