@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { Alert, Button, Card, CardBody, Input } from '@/components/ui';
+import { AmbientBackground } from '@/components/layout/AmbientBackground';
 import { useAuth } from '@/hooks/useAuth';
 import { translateSupabaseError } from '@/lib/error-messages';
 
@@ -37,7 +38,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-atfr-ink flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <AmbientBackground />
       <Card className="w-full max-w-md">
         <CardBody className="p-8">
           <div className="text-center mb-8">

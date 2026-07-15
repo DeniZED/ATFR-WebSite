@@ -8,6 +8,7 @@ import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
 import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
 import { CommandPalette } from '@/components/admin/CommandPalette';
+import { AmbientBackground } from './AmbientBackground';
 import { navGroups, topNav, type NavGroup, type NavItem } from './adminNav';
 import { ROLE_LABELS } from '@/types/database';
 
@@ -79,7 +80,8 @@ export function AdminLayout() {
 
   return (
     <ConfirmProvider>
-    <div className="min-h-screen bg-atfr-ink">
+    <div className="min-h-screen">
+      <AmbientBackground />
       {open && (
         <div
           className="fixed inset-0 z-30 bg-atfr-ink/60 lg:hidden"

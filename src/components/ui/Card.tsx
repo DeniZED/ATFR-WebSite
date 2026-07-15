@@ -3,14 +3,14 @@ import { cn } from '@/lib/cn';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   /**
-   * Active le halo doré qui suit le curseur au survol (effet `.spotlight-card`
-   * partagé, piloté par useSpotlight). Opt-in : sans effet sur les cartes
-   * admin, dont le layout ne monte pas l'écouteur.
+   * Halo doré qui suit le curseur au survol (effet `.spotlight-card` partagé,
+   * piloté par useSpotlight, actif sur tous les modules). Activé par défaut
+   * pour une ambiance homogène ; passer `spotlight={false}` pour l'exclure.
    */
   spotlight?: boolean;
 }
 
-export function Card({ className, spotlight, ...props }: CardProps) {
+export function Card({ className, spotlight = true, ...props }: CardProps) {
   return (
     <div
       className={cn(
