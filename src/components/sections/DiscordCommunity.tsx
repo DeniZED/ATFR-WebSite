@@ -228,6 +228,8 @@ function MemberChip({ member }: { member: DiscordWidgetMember }) {
               src={member.avatar_url}
               alt=""
               className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             member.username.slice(0, 2).toUpperCase()

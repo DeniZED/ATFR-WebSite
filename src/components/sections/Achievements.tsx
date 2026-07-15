@@ -62,6 +62,8 @@ export function Achievements() {
                     src={a.image_url}
                     alt=""
                     className="h-full w-full object-cover rounded-lg"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <Trophy size={24} strokeWidth={1.6} />

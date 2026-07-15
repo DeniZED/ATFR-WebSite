@@ -39,10 +39,17 @@
     <link rel="canonical" href="https://atfr-clan.netlify.app/" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <link rel="preconnect" href="https://rsms.me/" />
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <!-- Accélère l'accès aux médias Wargaming (emblème du Hero, proche du LCP). -->
+    <link rel="preconnect" href="https://eu.wargaming.net" crossorigin />
+
+    <!-- Préconnexion aux origines de polices pour réduire la latence.
+         Le chargement reste bloquant (le CSP `script-src 'self'` interdit
+         l'astuce `onload` non bloquante) ; les origines sont pré-résolues et
+         `display=swap` évite le texte invisible sur Oswald. -->
+    <link rel="preconnect" href="https://rsms.me/" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap"
       rel="stylesheet"

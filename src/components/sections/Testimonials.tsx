@@ -71,6 +71,8 @@ export function Testimonials() {
                     src={t.avatar_url}
                     alt=""
                     className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-atfr-gold font-display text-sm">
