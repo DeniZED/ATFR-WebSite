@@ -50,7 +50,7 @@ export function Highlights() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.5, delay: i * 0.06, ease: [0.2, 0.8, 0.2, 1] }}
-            className="group relative overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon"
+            className="spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon"
           >
             <div className="aspect-video overflow-hidden bg-atfr-graphite">
               {h.image_url ? (

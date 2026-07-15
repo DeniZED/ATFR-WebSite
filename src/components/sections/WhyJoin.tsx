@@ -65,7 +65,7 @@ export function WhyJoin() {
                 ease: [0.2, 0.8, 0.2, 1],
               }}
               whileHover={{ y: -5 }}
-              className="group relative overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-6"
+              className="spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/15 bg-atfr-carbon p-6"
             >
               <div
                 className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-atfr-gold/0 via-atfr-gold/70 to-atfr-gold/0 opacity-0 transition-opacity group-hover:opacity-100"
@@ -92,7 +92,7 @@ export function WhyJoin() {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-70px' }}
           transition={{ duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }}
-          className="relative overflow-hidden rounded-xl border border-atfr-gold/20 bg-atfr-graphite/70 p-7"
+          className="spotlight-card overflow-hidden rounded-xl border border-atfr-gold/20 bg-atfr-graphite/70 p-7"
         >
           <div
             className="absolute inset-0 bg-grid bg-[size:38px_38px] opacity-25"

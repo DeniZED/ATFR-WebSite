@@ -2,8 +2,10 @@ import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { PageTransition } from './PageTransition';
 import { TacticalBackground } from './TacticalBackground';
+import { useSpotlight } from '@/hooks/useSpotlight';
 
 export function PublicLayout() {
+  useSpotlight();
   return (
     <div className="min-h-screen flex flex-col">
       <TacticalBackground />

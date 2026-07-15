@@ -80,7 +80,7 @@ export function NextOperation() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }}
-            className="group relative overflow-hidden rounded-xl border border-atfr-gold/20 bg-atfr-carbon p-7 sm:p-8"
+            className="spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/20 bg-atfr-carbon p-7 sm:p-8"
           >
             <div
               className="absolute inset-0 bg-grid bg-[size:42px_42px] opacity-20"

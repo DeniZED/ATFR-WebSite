@@ -37,7 +37,7 @@ export function StatCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group relative overflow-hidden rounded-xl border border-atfr-gold/10 bg-atfr-carbon/70 p-6',
+        'spotlight-card group overflow-hidden rounded-xl border border-atfr-gold/10 bg-atfr-carbon/70 p-6',
         'hover:border-atfr-gold/40 transition-colors duration-300',
         className,
       )}
