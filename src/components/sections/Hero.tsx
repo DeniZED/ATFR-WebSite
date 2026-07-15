@@ -55,6 +55,8 @@ export function Hero() {
             src={posterUrl}
             alt=""
             className="absolute inset-0 h-full w-full object-cover"
+            fetchPriority="high"
+            decoding="async"
             aria-hidden
           />
         ) : (

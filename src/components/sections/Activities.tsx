@@ -38,6 +38,7 @@ export function Activities() {
                   alt={it.title}
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-atfr-gold/10 to-transparent">

@@ -86,6 +86,7 @@ export default function Gallery() {
                     src={a.public_url}
                     alt={a.caption ?? ''}
                     loading="lazy"
+                    decoding="async"
                     className="w-full transition-transform duration-700 group-hover:scale-[1.03]"
                   />
                 ) : (
