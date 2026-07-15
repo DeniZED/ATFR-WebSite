@@ -19,18 +19,20 @@ export default function Home() {
         title="Clan World of Tanks francophone"
         description="ATFR — clan World of Tanks francophone : Clan Wars, académie, entraide et bonne ambiance. Rejoins-nous !"
       />
-      <Hero />
-      <LiveStats />
-      <WhyJoin />
-      <NextOperation />
-      <About />
-      <Activities />
-      <AcademyPreview />
-      <Highlights />
-      <Achievements />
-      <Testimonials />
-      <DiscordCommunity />
-      <JoinCta />
+      <div className="home-flow">
+        <Hero />
+        <LiveStats />
+        <WhyJoin />
+        <NextOperation />
+        <About />
+        <Activities />
+        <AcademyPreview />
+        <Highlights />
+        <Achievements />
+        <Testimonials />
+        <DiscordCommunity />
+        <JoinCta />
+      </div>
     </>
   );
 }

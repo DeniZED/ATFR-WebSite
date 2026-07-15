@@ -44,7 +44,7 @@ export function About() {
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.4, delay: i * 0.08, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <Card className="h-full">
+            <Card spotlight className="h-full">
               <CardBody className="p-6">
                 <div className="h-10 w-10 rounded-md bg-atfr-gold/10 border border-atfr-gold/30 flex items-center justify-center text-atfr-gold mb-4">
                   <v.icon size={20} strokeWidth={1.5} />

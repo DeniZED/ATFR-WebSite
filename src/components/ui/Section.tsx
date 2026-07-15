@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 
 interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
@@ -24,6 +25,7 @@ export function Section({
   children,
   ...props
 }: SectionProps) {
+  const reduce = useReducedMotion();
   return (
     <section
       id={id}
@@ -46,9 +48,20 @@ export function Section({
                 </p>
               )}
               {title && (
-                <Heading className="text-4xl sm:text-5xl font-display font-semibold text-atfr-bone">
-                  {title}
-                </Heading>
+                <div className="inline-flex flex-col items-center">
+                  <Heading className="text-4xl sm:text-5xl font-display font-semibold text-atfr-bone">
+                    {title}
+                  </Heading>
+                  {/* Trait doré qui « se dessine » à l'apparition. */}
+                  <motion.span
+                    aria-hidden
+                    className="mt-4 block h-px w-24 origin-center bg-gradient-to-r from-transparent via-atfr-gold/70 to-transparent"
+                    initial={reduce ? false : { scaleX: 0, opacity: 0 }}
+                    whileInView={reduce ? undefined : { scaleX: 1, opacity: 1 }}
+                    viewport={{ once: true, margin: '-60px' }}
+                    transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+                  />
+                </div>
               )}
               {description && (
                 <p className="mt-4 text-atfr-fog text-base sm:text-lg leading-relaxed">
