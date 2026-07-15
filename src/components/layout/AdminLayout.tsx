@@ -1,107 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  BookOpen,
-  Calendar,
-  ChevronDown,
-  FileText,
-  Gauge,
-  GraduationCap,
-  Image as ImageIcon,
-  KeyRound,
-  Lock,
-  LogOut,
-  Map,
-  Menu,
-  Settings,
-  Shield,
-  Sparkles,
-  Star,
-  Swords,
-  Trophy,
-  Type,
-  UserCog,
-  Users,
-  X,
-} from 'lucide-react';
+import { ChevronDown, Command, LogOut, Menu, Shield, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import { Button } from '@/components/ui/Button';
 import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
+import { CommandPalette } from '@/components/admin/CommandPalette';
+import { navGroups, topNav, type NavGroup, type NavItem } from './adminNav';
 import { ROLE_LABELS } from '@/types/database';
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: typeof Gauge;
-  end?: boolean;
-  moduleKey?: string;
-}
-
-interface NavGroup {
-  id: string;
-  label: string;
-  items: NavItem[];
-}
-
-// Entrées hors groupe, toujours en tête.
-const topNav: NavItem[] = [
-  { to: '/admin', label: 'Dashboard', icon: Gauge, end: true },
-];
-
-// Regroupement thématique de la sidebar : chaque groupe est repliable
-// (état mémorisé) et disparaît si le rôle n'a accès à aucune de ses entrées.
-const navGroups: NavGroup[] = [
-  {
-    id: 'effectif',
-    label: 'Recrutement & effectif',
-    items: [
-      { to: '/admin/candidatures', label: 'Candidatures', icon: FileText, moduleKey: 'candidatures' },
-      { to: '/admin/membres', label: 'Membres', icon: Users, moduleKey: 'membres' },
-      { to: '/admin/rh', label: 'RH joueurs', icon: UserCog, moduleKey: 'rh' },
-    ],
-  },
-  {
-    id: 'activite',
-    label: 'Activité du clan',
-    items: [
-      { to: '/admin/evenements', label: 'Événements', icon: Calendar, moduleKey: 'evenements' },
-      { to: '/admin/clan-wars', label: 'Clan Wars', icon: Swords, moduleKey: 'clan-wars' },
-      { to: '/admin/pages-clan', label: 'Pages clan', icon: Lock, moduleKey: 'pages-clan' },
-    ],
-  },
-  {
-    id: 'vitrine',
-    label: 'Site vitrine',
-    items: [
-      { to: '/admin/contenu', label: 'Contenu', icon: Type, moduleKey: 'contenu' },
-      { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, moduleKey: 'galerie' },
-      { to: '/admin/moments', label: 'Moments forts', icon: Star, moduleKey: 'moments' },
-      { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, moduleKey: 'palmares' },
-      { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, moduleKey: 'temoignages' },
-    ],
-  },
-  {
-    id: 'academie',
-    label: 'Académie & mini-jeux',
-    items: [
-      { to: '/admin/modules', label: 'Académie', icon: GraduationCap, moduleKey: 'modules' },
-      { to: '/admin/academie', label: 'Joueurs Académie', icon: GraduationCap, moduleKey: 'academie' },
-      { to: '/admin/quiz', label: 'Guide pour les bots', icon: BookOpen, moduleKey: 'quiz' },
-      { to: '/admin/geoguesser', label: 'GeoGuesser', icon: Map, moduleKey: 'geoguesser' },
-    ],
-  },
-  {
-    id: 'systeme',
-    label: 'Système',
-    items: [
-      { to: '/admin/utilisateurs', label: 'Utilisateurs', icon: KeyRound, moduleKey: 'utilisateurs' },
-      { to: '/admin/parametres', label: 'Paramètres', icon: Settings, moduleKey: 'parametres' },
-    ],
-  },
-];
 
 const NAV_COLLAPSED_KEY = 'atfr.admin.nav.collapsed.v1';
 
@@ -125,11 +33,24 @@ function groupContainsPath(group: NavGroup, pathname: string): boolean {
 
 export function AdminLayout() {
   const [open, setOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsedGroups());
   const { signOut, user } = useAuth();
   const { role, canAccess } = useRole();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+
+  // Raccourci global ⌘K / Ctrl+K pour ouvrir la palette de commandes.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   async function handleLogout() {
     await signOut();
@@ -186,6 +107,20 @@ export function AdminLayout() {
               Admin
             </p>
           </div>
+        </div>
+
+        <div className="px-3 pt-4">
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="w-full flex items-center gap-2 rounded-md border border-atfr-gold/15 bg-atfr-ink/40 px-3 py-2 text-sm text-atfr-fog hover:border-atfr-gold/30 hover:text-atfr-bone transition-colors"
+          >
+            <Command size={14} className="shrink-0" />
+            <span className="flex-1 text-left">Rechercher…</span>
+            <kbd className="text-[10px] font-mono tracking-wider text-atfr-fog/70 border border-atfr-gold/20 rounded px-1.5 py-0.5">
+              ⌘K
+            </kbd>
+          </button>
         </div>
 
         <nav aria-label="Navigation administration" className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
@@ -254,21 +189,36 @@ export function AdminLayout() {
           <Link to="/admin" className="font-display text-atfr-bone">
             {env.clanTag} Admin
           </Link>
-          <button
-            onClick={() => setOpen((o) => !o)}
-            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
-            aria-expanded={open}
-            aria-controls="admin-sidebar"
-            className="h-10 w-10 inline-flex items-center justify-center"
-          >
-            {open ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Rechercher une page"
+              className="h-10 w-10 inline-flex items-center justify-center text-atfr-fog"
+            >
+              <Command size={18} />
+            </button>
+            <button
+              onClick={() => setOpen((o) => !o)}
+              aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={open}
+              aria-controls="admin-sidebar"
+              className="h-10 w-10 inline-flex items-center justify-center"
+            >
+              {open ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
 
         <main className="p-6 lg:p-10">
           <Outlet />
         </main>
       </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        canAccess={canAccess}
+      />
     </div>
     </ConfirmProvider>
   );
