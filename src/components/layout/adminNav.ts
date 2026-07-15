@@ -1,4 +1,5 @@
 import {
+  Activity,
   BookOpen,
   Calendar,
   FileText,
@@ -69,6 +70,7 @@ export const navGroups: NavGroup[] = [
       { to: '/admin/contenu', label: 'Contenu', icon: Type, moduleKey: 'contenu' },
       { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, moduleKey: 'galerie' },
       { to: '/admin/histoire', label: 'Notre Histoire', icon: History, moduleKey: 'histoire' },
+      { to: '/admin/activites', label: 'Notre Activité', icon: Activity, moduleKey: 'activites' },
       { to: '/admin/moments', label: 'Moments forts', icon: Star, moduleKey: 'moments' },
       { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, moduleKey: 'palmares' },
       { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, moduleKey: 'temoignages' },

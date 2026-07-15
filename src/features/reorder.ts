@@ -13,7 +13,8 @@ type SortableTable =
   | 'achievements'
   | 'testimonials'
   | 'quiz_categories'
-  | 'clan_history';
+  | 'clan_history'
+  | 'clan_activities';
 
 export interface SortOrderUpdate {
   id: string;

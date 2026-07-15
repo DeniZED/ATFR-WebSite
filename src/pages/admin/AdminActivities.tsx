@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   Badge,
@@ -6,36 +6,58 @@ import {
   Card,
   CardBody,
   Input,
+  Select,
   Spinner,
   Textarea,
 } from '@/components/ui';
 import { MediaPicker } from '@/components/admin/MediaPicker';
-import {
-  useAchievements,
-  useDeleteAchievement,
-  useUpsertAchievement,
-} from '@/features/content/queries';
 import { ReorderButtons } from '@/components/admin/ReorderButtons';
+import {
+  ACTIVITY_CATEGORIES,
+  useClanActivities,
+  useDeleteClanActivity,
+  useUpsertClanActivity,
+  type ActivityCategory,
+} from '@/features/activities/queries';
 import { planReorder, useReorderRows } from '@/features/reorder';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FormActions } from '@/components/ui/FormActions';
+import { cn } from '@/lib/cn';
 
-export default function AdminAchievements() {
-  const list = useAchievements();
-  const remove = useDeleteAchievement();
-  const reorder = useReorderRows('achievements', ['achievements']);
+const CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  regulieres: 'Régulières',
+  bastion: 'Bastion',
+  entrainements: 'Entraînements',
+  fun: 'Fun',
+};
+
+export default function AdminActivities() {
+  const list = useClanActivities();
+  const remove = useDeleteClanActivity();
+  const reorder = useReorderRows('clan_activities', ['clan_activities']);
   const confirmDialog = useConfirm();
+  const [category, setCategory] = useState<ActivityCategory>('regulieres');
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+
+  const rows = useMemo(
+    () => (list.data ?? []).filter((a) => a.category === category),
+    [list.data, category],
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">
-            Palmarès
+            Site vitrine
           </p>
-          <h1 className="font-display text-3xl text-atfr-bone">Trophées & classements</h1>
+          <h1 className="font-display text-3xl text-atfr-bone">Notre Activité</h1>
+          <p className="text-sm text-atfr-fog mt-1 max-w-xl">
+            Cartes des onglets d'activité de la page d'accueil. L'onglet
+            <span className="text-atfr-bone"> Clan Wars</span> se gère depuis le
+            <span className="text-atfr-bone"> Palmarès</span>.
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -44,13 +66,32 @@ export default function AdminAchievements() {
           }}
           leadingIcon={<Plus size={14} />}
         >
-          Nouveau trophée
+          Nouvelle activité
         </Button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {ACTIVITY_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCategory(c)}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-sm transition-colors',
+              c === category
+                ? 'border-atfr-gold bg-atfr-gold/15 text-atfr-gold'
+                : 'border-atfr-gold/20 text-atfr-fog hover:text-atfr-bone hover:border-atfr-gold/40',
+            )}
+          >
+            {CATEGORY_LABELS[c]}
+          </button>
+        ))}
+      </div>
+
       {open && (
-        <AchievementForm
+        <ActivityForm
           id={editing}
+          defaultCategory={category}
           onClose={() => {
             setOpen(false);
             setEditing(null);
@@ -62,19 +103,21 @@ export default function AdminAchievements() {
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
-      ) : !list.data || list.data.length === 0 ? (
-        <p className="text-center text-atfr-fog py-10">Aucun trophée.</p>
+      ) : rows.length === 0 ? (
+        <p className="text-center text-atfr-fog py-10">
+          Aucune activité dans « {CATEGORY_LABELS[category]} ».
+        </p>
       ) : (
         <div className="grid gap-3">
-          {list.data.map((a, index) => (
+          {rows.map((a, index) => (
             <Card key={a.id}>
               <CardBody className="p-5 flex items-start gap-4 flex-wrap">
                 <ReorderButtons
                   canUp={index > 0}
-                  canDown={index < list.data!.length - 1}
+                  canDown={index < rows.length - 1}
                   disabled={reorder.isPending}
                   onMove={(direction) => {
-                    const updates = planReorder(list.data!, index, direction);
+                    const updates = planReorder(rows, index, direction);
                     if (updates) reorder.mutate(updates);
                   }}
                 />
@@ -82,28 +125,22 @@ export default function AdminAchievements() {
                   <img
                     src={a.image_url}
                     alt=""
-                    className="h-20 w-20 rounded-md object-cover"
+                    className="h-16 w-28 rounded-md object-cover"
                   />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <h3 className="font-display text-lg text-atfr-bone">
-                      {a.title}
-                    </h3>
-                    {a.rank && <Badge variant="gold">{a.rank}</Badge>}
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <h3 className="font-display text-lg text-atfr-bone">{a.title}</h3>
+                    {a.badge && <Badge variant="gold">{a.badge}</Badge>}
                     {!a.is_visible && <Badge variant="neutral">Masqué</Badge>}
                   </div>
-                  {a.subtitle && (
-                    <p className="text-sm text-atfr-fog">{a.subtitle}</p>
-                  )}
-                  {a.competition && (
-                    <p className="text-xs text-atfr-fog/80 mt-1">
-                      {a.competition}
-                      {a.earned_on && ` — ${a.earned_on}`}
-                    </p>
-                  )}
                   {a.description && (
-                    <p className="text-sm text-atfr-fog mt-2">{a.description}</p>
+                    <p className="text-sm text-atfr-fog">{a.description}</p>
+                  )}
+                  {(a.schedule_time || a.schedule_frequency) && (
+                    <p className="text-xs text-atfr-fog/80 mt-1">
+                      {[a.schedule_time, a.schedule_frequency].filter(Boolean).join(' · ')}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -125,7 +162,7 @@ export default function AdminAchievements() {
                     onClick={async () => {
                       if (
                         await confirmDialog({
-                          message: 'Supprimer ce fait d’armes ?',
+                          message: `Supprimer l'activité « ${a.title} » ?`,
                           tone: 'danger',
                           confirmLabel: 'Supprimer',
                         })
@@ -146,47 +183,41 @@ export default function AdminAchievements() {
   );
 }
 
-function AchievementForm({
+function ActivityForm({
   id,
+  defaultCategory,
   onClose,
 }: {
   id: string | null;
+  defaultCategory: ActivityCategory;
   onClose: () => void;
 }) {
-  const list = useAchievements();
-  const upsert = useUpsertAchievement();
+  const list = useClanActivities();
+  const upsert = useUpsertClanActivity();
   const existing = id ? list.data?.find((x) => x.id === id) : null;
 
+  const [category, setCategory] = useState<ActivityCategory>(
+    (existing?.category as ActivityCategory) ?? defaultCategory,
+  );
   const [title, setTitle] = useState(existing?.title ?? '');
-  const [subtitle, setSubtitle] = useState(existing?.subtitle ?? '');
+  const [badge, setBadge] = useState(existing?.badge ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
-  const [rank, setRank] = useState(existing?.rank ?? '');
-  const [competition, setCompetition] = useState(existing?.competition ?? '');
-  const [earnedOn, setEarnedOn] = useState(existing?.earned_on ?? '');
   const [imageUrl, setImageUrl] = useState(existing?.image_url ?? '');
-  const [sortOrder, setSortOrder] = useState<number>(existing?.sort_order ?? 0);
+  const [time, setTime] = useState(existing?.schedule_time ?? '');
+  const [frequency, setFrequency] = useState(existing?.schedule_frequency ?? '');
   const [isVisible, setIsVisible] = useState(existing?.is_visible ?? true);
-  const [cwPosition, setCwPosition] = useState(existing?.cw_position?.toString() ?? '');
-  const [cwBattles, setCwBattles] = useState(existing?.cw_battles?.toString() ?? '');
-  const [cwTanks, setCwTanks] = useState(existing?.cw_tanks?.toString() ?? '');
-
-  const toNum = (v: string) => (v.trim() === '' ? null : Number(v));
 
   async function save(e: FormEvent) {
     e.preventDefault();
     await upsert.mutateAsync({
       id: existing?.id,
-      title,
-      subtitle: subtitle || null,
-      description: description || null,
-      rank: rank || null,
-      competition: competition || null,
-      earned_on: earnedOn || null,
+      category,
+      title: title.trim(),
+      badge: badge.trim() || null,
+      description: description.trim() || null,
       image_url: imageUrl || null,
-      cw_position: toNum(cwPosition),
-      cw_battles: toNum(cwBattles),
-      cw_tanks: toNum(cwTanks),
-      sort_order: sortOrder,
+      schedule_time: time.trim() || null,
+      schedule_frequency: frequency.trim() || null,
       is_visible: isVisible,
     });
     onClose();
@@ -196,85 +227,58 @@ function AchievementForm({
     <Card>
       <CardBody className="p-5">
         <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
+          <Select
+            label="Onglet"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ActivityCategory)}
+          >
+            {ACTIVITY_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </Select>
+          <Input
+            label="Pastille (badge)"
+            value={badge}
+            onChange={(e) => setBadge(e.target.value)}
+            placeholder="Tous les jours !, Tier X…"
+          />
           <Input
             label="Titre"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-          />
-          <Input
-            label="Rang / position"
-            value={rank}
-            onChange={(e) => setRank(e.target.value)}
-            placeholder="1er, Top 8, Or…"
-          />
-          <Input
-            label="Sous-titre"
-            value={subtitle}
-            onChange={(e) => setSubtitle(e.target.value)}
             className="md:col-span-2"
-          />
-          <Input
-            label="Compétition"
-            value={competition}
-            onChange={(e) => setCompetition(e.target.value)}
-          />
-          <Input
-            label="Date"
-            type="date"
-            value={earnedOn}
-            onChange={(e) => setEarnedOn(e.target.value)}
           />
           <Textarea
             label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            rows={2}
             className="md:col-span-2"
+          />
+          <Input
+            label="Horaire"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            placeholder="21h00 – 00h00, Variable…"
+          />
+          <Input
+            label="Fréquence"
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value)}
+            placeholder="Bi-hebdomadaire, Quotidien…"
           />
           <div className="md:col-span-2">
             <MediaPicker
-              label="Image"
+              label="Image (optionnel)"
               kind="image"
               value={imageUrl}
               onChange={setImageUrl}
             />
           </div>
-          <div className="md:col-span-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-atfr-gold/80 mb-2">
-              Stats Clan Wars (optionnel — grille de la carte « Notre Activité »)
-            </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Position FR"
-                type="number"
-                value={cwPosition}
-                onChange={(e) => setCwPosition(e.target.value)}
-                placeholder="2"
-              />
-              <Input
-                label="Batailles"
-                type="number"
-                value={cwBattles}
-                onChange={(e) => setCwBattles(e.target.value)}
-                placeholder="2000"
-                hint="Affiché avec un « + »"
-              />
-              <Input
-                label="Chars gagnés"
-                type="number"
-                value={cwTanks}
-                onChange={(e) => setCwTanks(e.target.value)}
-                placeholder="48"
-              />
-            </div>
-          </div>
-          <Input
-            label="Ordre d'affichage"
-            type="number"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(Number(e.target.value))}
-          />
-          <label className="flex items-center gap-2 text-sm text-atfr-bone">
+          <label className="flex items-center gap-2 text-sm text-atfr-bone md:col-span-2">
             <input
               type="checkbox"
               checked={isVisible}
