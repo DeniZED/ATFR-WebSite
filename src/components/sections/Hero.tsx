@@ -129,7 +129,7 @@ export function Hero() {
                   {get('hero_cta_primary') || 'Nous rejoindre'}
                 </Button>
               </Link>
-              <a href="#about">
+              <a href="#pourquoi">
                 <Button
                   variant="outline"
                   size="lg"
@@ -189,7 +189,7 @@ export function Hero() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <div className="relative mx-auto max-w-sm">
+            <div className="relative mx-auto max-w-[240px] sm:max-w-sm">
               <motion.div
                 className="absolute inset-3 rounded-full border border-atfr-gold/25"
                 animate={reduceMotion ? undefined : { rotate: 360 }}
