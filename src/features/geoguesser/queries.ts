@@ -108,17 +108,20 @@ export async function fetchWgMaps(): Promise<WgMapPayload[]> {
 export function useGeoShots(opts: {
   mapId?: string;
   publishedOnly?: boolean;
+  enabled?: boolean;
 } = {}) {
+  const { mapId, publishedOnly, enabled = true } = opts;
   return useQuery({
-    queryKey: ['geo_shots', opts],
+    queryKey: ['geo_shots', { mapId, publishedOnly }],
+    enabled,
     queryFn: async (): Promise<ShotWithMap[]> => {
       let q = supabase
         .from('geoguesser_shots')
         .select('*, map:wot_maps(*)')
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
-      if (opts.mapId) q = q.eq('map_id', opts.mapId);
-      if (opts.publishedOnly) q = q.eq('is_published', true);
+      if (mapId) q = q.eq('map_id', mapId);
+      if (publishedOnly) q = q.eq('is_published', true);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as ShotWithMap[];
