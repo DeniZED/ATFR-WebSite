@@ -8,7 +8,12 @@ import { useInvalidatingMutation } from '@/lib/mutation-factory';
 // qu'affichée (0..n-1) en n'écrivant que les lignes qui changent — le
 // déplacement devient déterministe et normalise les égalités au passage.
 
-type SortableTable = 'highlights' | 'achievements' | 'testimonials' | 'quiz_categories';
+type SortableTable =
+  | 'highlights'
+  | 'achievements'
+  | 'testimonials'
+  | 'quiz_categories'
+  | 'clan_history';
 
 export interface SortOrderUpdate {
   id: string;

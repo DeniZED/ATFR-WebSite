@@ -3,6 +3,7 @@ import { LiveStats } from '@/components/sections/LiveStats';
 import { WhyJoin } from '@/components/sections/WhyJoin';
 import { NextOperation } from '@/components/sections/NextOperation';
 import { About } from '@/components/sections/About';
+import { ClanHistory } from '@/components/sections/ClanHistory';
 import { Activities } from '@/components/sections/Activities';
 import { AcademyPreview } from '@/components/sections/AcademyPreview';
 import { Highlights } from '@/components/sections/Highlights';
@@ -25,6 +26,7 @@ export default function Home() {
         <WhyJoin />
         <NextOperation />
         <About />
+        <ClanHistory />
         <Activities />
         <AcademyPreview />
         <Highlights />

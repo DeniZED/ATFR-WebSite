@@ -156,6 +156,7 @@ export const ADMIN_MODULES: { key: string; label: string; area?: AdminArea }[] =
   { key: 'clan-wars', label: 'Clan Wars', area: 'events' },
   { key: 'contenu', label: 'Contenu', area: 'content' },
   { key: 'galerie', label: 'Galerie', area: 'media' },
+  { key: 'histoire', label: 'Notre Histoire', area: 'content' },
   { key: 'moments', label: 'Moments forts', area: 'content' },
   { key: 'palmares', label: 'Palmarès', area: 'content' },
   { key: 'temoignages', label: 'Témoignages', area: 'content' },
@@ -1128,6 +1129,45 @@ export interface Database {
           rank?: string | null;
           competition?: string | null;
           earned_on?: string | null;
+          image_url?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Relationships: [];
+      };
+      clan_history: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          year: string;
+          title: string;
+          description: string | null;
+          icon: string | null;
+          image_url: string | null;
+          sort_order: number;
+          is_visible: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          year: string;
+          title: string;
+          description?: string | null;
+          icon?: string | null;
+          image_url?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          year?: string;
+          title?: string;
+          description?: string | null;
+          icon?: string | null;
           image_url?: string | null;
           sort_order?: number;
           is_visible?: boolean;

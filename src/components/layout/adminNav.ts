@@ -4,6 +4,7 @@ import {
   FileText,
   Gauge,
   GraduationCap,
+  History,
   Image as ImageIcon,
   KeyRound,
   Lock,
@@ -67,6 +68,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { to: '/admin/contenu', label: 'Contenu', icon: Type, moduleKey: 'contenu' },
       { to: '/admin/galerie', label: 'Galerie', icon: ImageIcon, moduleKey: 'galerie' },
+      { to: '/admin/histoire', label: 'Notre Histoire', icon: History, moduleKey: 'histoire' },
       { to: '/admin/moments', label: 'Moments forts', icon: Star, moduleKey: 'moments' },
       { to: '/admin/palmares', label: 'Palmarès', icon: Trophy, moduleKey: 'palmares' },
       { to: '/admin/temoignages', label: 'Témoignages', icon: Sparkles, moduleKey: 'temoignages' },
