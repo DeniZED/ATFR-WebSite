@@ -22,9 +22,10 @@ export interface CwEventDetail extends CwEventRow {
 
 const EVENT_DETAIL_QUERY_KEY = (id: string) => ['cw_event', id];
 
-export function useCwEvents() {
+export function useCwEvents(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['cw_events'],
+    enabled: options.enabled ?? true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cw_events')
