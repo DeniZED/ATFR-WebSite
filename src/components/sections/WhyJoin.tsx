@@ -46,6 +46,7 @@ export function WhyJoin() {
 
   return (
     <Section
+      id="pourquoi"
       eyebrow={get('why_join_eyebrow')}
       title={get('why_join_title')}
       description={get('why_join_text')}

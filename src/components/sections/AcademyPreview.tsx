@@ -116,10 +116,16 @@ export function AcademyPreview() {
                   <p className="relative mt-3 flex-1 text-sm leading-relaxed text-atfr-fog">
                     {module.description}
                   </p>
-                  <span className="relative mt-6 inline-flex items-center gap-1 text-sm font-medium text-atfr-gold transition-all group-hover:gap-2">
-                    {get('academy_preview_module_cta')}
-                    <ArrowRight size={14} />
-                  </span>
+                  <div className="relative mt-6 flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-atfr-success/30 bg-atfr-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-atfr-success">
+                      <span className="h-1.5 w-1.5 rounded-full bg-atfr-success" />
+                      Disponible
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-atfr-gold transition-all group-hover:gap-2">
+                      {get('academy_preview_module_cta')}
+                      <ArrowRight size={14} />
+                    </span>
+                  </div>
                 </Link>
               </motion.div>
             ))

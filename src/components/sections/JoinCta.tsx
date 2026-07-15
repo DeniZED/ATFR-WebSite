@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, MessageCircle } from 'lucide-react';
 import { Button, Section } from '@/components/ui';
 import { useContent } from '@/hooks/useContent';
 
 export function JoinCta() {
   const { get } = useContent();
+  const invite = get('discord_invite_url');
   return (
-    <Section>
+    <Section id="recrutement">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -39,9 +40,16 @@ export function JoinCta() {
                 Postuler maintenant
               </Button>
             </Link>
+            {invite && (
+              <a href={invite} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="lg" leadingIcon={<MessageCircle size={16} />}>
+                  Rejoindre le Discord
+                </Button>
+              </a>
+            )}
             <Link to="/membres">
-              <Button variant="outline" size="lg">
-                Voir la liste des membres
+              <Button variant="ghost" size="lg">
+                Voir les membres
               </Button>
             </Link>
           </div>

@@ -1,17 +1,26 @@
 import { Hero } from '@/components/sections/Hero';
 import { LiveStats } from '@/components/sections/LiveStats';
 import { WhyJoin } from '@/components/sections/WhyJoin';
-import { NextOperation } from '@/components/sections/NextOperation';
+import { Activities } from '@/components/sections/Activities';
+import { DiscordCommunity } from '@/components/sections/DiscordCommunity';
+import { AcademyPreview } from '@/components/sections/AcademyPreview';
 import { About } from '@/components/sections/About';
 import { ClanHistory } from '@/components/sections/ClanHistory';
-import { Activities } from '@/components/sections/Activities';
-import { AcademyPreview } from '@/components/sections/AcademyPreview';
-import { Highlights } from '@/components/sections/Highlights';
-import { Testimonials } from '@/components/sections/Testimonials';
-import { DiscordCommunity } from '@/components/sections/DiscordCommunity';
+import { RecruitProfileSection } from '@/components/sections/RecruitProfileSection';
+import { JoinProcessSection } from '@/components/sections/JoinProcessSection';
 import { JoinCta } from '@/components/sections/JoinCta';
 import { PageMeta } from '@/components/seo/PageMeta';
 
+/**
+ * Parcours vitrine, ordonné pour raconter une histoire :
+ * découvrir ATFR → prouver que le clan est actif (stats) → comprendre
+ * l'intérêt → voir les activités → la communauté → les outils → l'identité
+ * et l'histoire → le profil recherché → comment postuler → CTA final.
+ *
+ * NB : les sections « Prochaine opération », « Moments forts » et
+ * « Témoignages » ont été retirées de ce flux (elles s'affichaient vides).
+ * Leurs composants et leur admin restent en place — à réintégrer sur demande.
+ */
 export default function Home() {
   return (
     <>
@@ -23,14 +32,13 @@ export default function Home() {
         <Hero />
         <LiveStats />
         <WhyJoin />
-        <NextOperation />
+        <Activities />
+        <DiscordCommunity />
+        <AcademyPreview />
         <About />
         <ClanHistory />
-        <Activities />
-        <AcademyPreview />
-        <Highlights />
-        <Testimonials />
-        <DiscordCommunity />
+        <RecruitProfileSection />
+        <JoinProcessSection />
         <JoinCta />
       </div>
     </>

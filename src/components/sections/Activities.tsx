@@ -94,6 +94,7 @@ export function Activities() {
 
   return (
     <Section
+      id="activites"
       eyebrow={get('activities_eyebrow') || 'Le clan en action'}
       title={get('activities_title') || 'Notre Activité'}
       description="Découvrez nos activités régulières et nos plus grands exploits."
