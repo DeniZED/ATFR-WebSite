@@ -157,6 +157,7 @@ export const ADMIN_MODULES: { key: string; label: string; area?: AdminArea }[] =
   { key: 'contenu', label: 'Contenu', area: 'content' },
   { key: 'galerie', label: 'Galerie', area: 'media' },
   { key: 'histoire', label: 'Notre Histoire', area: 'content' },
+  { key: 'activites', label: 'Notre Activité', area: 'content' },
   { key: 'moments', label: 'Moments forts', area: 'content' },
   { key: 'palmares', label: 'Palmarès', area: 'content' },
   { key: 'temoignages', label: 'Témoignages', area: 'content' },
@@ -1102,6 +1103,9 @@ export interface Database {
           competition: string | null;
           earned_on: string | null;
           image_url: string | null;
+          cw_position: number | null;
+          cw_battles: number | null;
+          cw_tanks: number | null;
           sort_order: number;
           is_visible: boolean;
         };
@@ -1116,6 +1120,9 @@ export interface Database {
           competition?: string | null;
           earned_on?: string | null;
           image_url?: string | null;
+          cw_position?: number | null;
+          cw_battles?: number | null;
+          cw_tanks?: number | null;
           sort_order?: number;
           is_visible?: boolean;
         };
@@ -1130,6 +1137,54 @@ export interface Database {
           competition?: string | null;
           earned_on?: string | null;
           image_url?: string | null;
+          cw_position?: number | null;
+          cw_battles?: number | null;
+          cw_tanks?: number | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Relationships: [];
+      };
+      clan_activities: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          category: string;
+          title: string;
+          badge: string | null;
+          description: string | null;
+          image_url: string | null;
+          schedule_time: string | null;
+          schedule_frequency: string | null;
+          sort_order: number;
+          is_visible: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          category: string;
+          title: string;
+          badge?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          schedule_time?: string | null;
+          schedule_frequency?: string | null;
+          sort_order?: number;
+          is_visible?: boolean;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          category?: string;
+          title?: string;
+          badge?: string | null;
+          description?: string | null;
+          image_url?: string | null;
+          schedule_time?: string | null;
+          schedule_frequency?: string | null;
           sort_order?: number;
           is_visible?: boolean;
         };
