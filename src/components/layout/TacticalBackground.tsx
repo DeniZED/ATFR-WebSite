@@ -1,5 +1,6 @@
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { cn } from '@/lib/cn';
+import { EmberField } from './EmberField';
 
 /**
  * Fond ambiant global des pages publiques : une grille tactique (façon carte
@@ -46,6 +47,9 @@ export function TacticalBackground() {
         style={{ y: reduce ? 0 : haloB }}
         className="absolute top-1/3 -right-40 h-[70vh] w-[70vh] rounded-full bg-atfr-gold/[0.05] blur-3xl"
       />
+
+      {/* Braises dorées flottantes (v2). */}
+      <EmberField />
 
       {/* Vignette : assombrit les bords pour recentrer le regard. */}
       <div

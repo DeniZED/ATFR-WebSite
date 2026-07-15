@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -20,36 +20,47 @@ export function Hero() {
   const { get } = useContent();
   const { data: pendingCount = 0 } = usePendingApplicationsCount();
   const reduceMotion = useReducedMotion();
+  const { scrollY } = useScroll();
+  // Parallaxe douce du fond du Hero : le média descend légèrement pendant le
+  // scroll. Le léger zoom (scale) donne la marge nécessaire pour ne jamais
+  // révéler de bord vide.
+  const mediaY = useTransform(scrollY, [0, 800], [0, 60]);
 
   const videoUrl = get('hero_video_url');
   const posterUrl = get('hero_poster_url');
 
   return (
     <section className="relative min-h-[100svh] flex items-center overflow-hidden">
-      {videoUrl ? (
-        <video
-          key={videoUrl}
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay={!reduceMotion}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          poster={posterUrl || undefined}
-          aria-hidden
-        >
-          <source src={videoUrl} />
-        </video>
-      ) : posterUrl ? (
-        <img
-          src={posterUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          aria-hidden
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-hero" aria-hidden />
-      )}
+      <motion.div
+        className="absolute inset-0"
+        style={{ y: reduceMotion ? 0 : mediaY, scale: reduceMotion ? 1 : 1.16 }}
+        aria-hidden
+      >
+        {videoUrl ? (
+          <video
+            key={videoUrl}
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay={!reduceMotion}
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            poster={posterUrl || undefined}
+            aria-hidden
+          >
+            <source src={videoUrl} />
+          </video>
+        ) : posterUrl ? (
+          <img
+            src={posterUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            aria-hidden
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-hero" aria-hidden />
+        )}
+      </motion.div>
 
       <div
         className="absolute inset-0 bg-gradient-to-b from-atfr-ink/60 via-atfr-ink/70 to-atfr-ink"
