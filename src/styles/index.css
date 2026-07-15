@@ -12,11 +12,10 @@
   }
 
   body {
+    /* L'éclairage ambiant (grille + nappes dorées) est désormais porté par
+       <TacticalBackground> sur les pages publiques ; le body ne garde que la
+       couleur de fond pour les pages sans ce calque (admin, académie…). */
     @apply bg-atfr-ink text-atfr-bone font-sans;
-    background-image:
-      radial-gradient(1200px 600px at 10% -10%, rgba(232, 176, 67, 0.08), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(232, 176, 67, 0.05), transparent 55%);
-    background-attachment: fixed;
   }
 
   h1, h2, h3, h4 {
@@ -67,5 +66,20 @@
     );
     background-size: 200% 100%;
     @apply animate-shimmer;
+  }
+}
+
+@layer utilities {
+  /* Rythme visuel de la page d'accueil : une section sur deux reçoit un
+     voile charbon fondu en haut/bas, ce qui casse le « tunnel noir » en
+     laissant respirer la grille tactique sur les sections impaires. */
+  .home-flow > section:nth-of-type(even) {
+    background: linear-gradient(
+      180deg,
+      rgba(18, 19, 22, 0) 0%,
+      rgba(18, 19, 22, 0.55) 14%,
+      rgba(18, 19, 22, 0.55) 86%,
+      rgba(18, 19, 22, 0) 100%
+    );
   }
 }

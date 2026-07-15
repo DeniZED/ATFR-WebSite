@@ -72,12 +72,19 @@ export default {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        // Dérive lente de la grille tactique de fond (une tuile = 42px, la
+        // translation d'exactement 42px boucle sans saut visible).
+        'grid-pan': {
+          '0%': { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '42px 42px' },
+        },
       },
       animation: {
         shimmer: 'shimmer 2.5s linear infinite',
         float: 'float 6s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 2.4s ease-in-out infinite',
         'fade-in': 'fade-in 0.5s ease-out both',
+        'grid-pan': 'grid-pan 20s linear infinite',
       },
       transitionTimingFunction: {
         emphasized: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
