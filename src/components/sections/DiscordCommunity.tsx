@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Headphones, MessageSquare, Mic, Radio } from 'lucide-react';
+import { ExternalLink, Headphones, Info, MessageSquare, Mic, Radio } from 'lucide-react';
 import { Button, Card, CardBody, Section } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useContent } from '@/hooks/useContent';
@@ -135,6 +135,14 @@ export function DiscordCommunity() {
             {/* Voice channels detail */}
             {isLoading ? (
               <div className="mt-8 h-24 shimmer rounded-lg" />
+            ) : !widget ? (
+              <div className="relative mt-8 flex items-start gap-3 rounded-lg border border-atfr-gold/12 bg-atfr-graphite/40 p-4 text-sm text-atfr-fog">
+                <Info size={16} className="mt-0.5 shrink-0 text-atfr-gold/70" />
+                <p>
+                  Le widget Discord est momentanément indisponible (désactivé ou
+                  surchargé). Le bouton « Rejoindre le Discord » reste actif.
+                </p>
+              </div>
             ) : voiceGroups.length > 0 ? (
               <div className="mt-8 space-y-4">
                 {voiceGroups.map((g) => (
@@ -170,12 +178,14 @@ export function DiscordCommunity() {
                 </div>
               </div>
             ) : (
-              !widget && (
-                <p className="relative mt-6 text-sm text-atfr-fog">
-                  Le widget est désactivé ou n'a pas pu être chargé. Utilisez
-                  le bouton ci-dessus pour rejoindre.
+              <div className="relative mt-8 rounded-lg border border-atfr-gold/12 bg-atfr-graphite/40 p-6 text-center">
+                <Mic size={22} className="mx-auto mb-2 text-atfr-gold/60" />
+                <p className="text-sm text-atfr-bone">C'est calme pour l'instant.</p>
+                <p className="mt-1 text-xs text-atfr-fog">
+                  Rejoins le vocal et lance le mouvement — les soirées démarrent
+                  souvent comme ça.
                 </p>
-              )
+              </div>
             )}
           </CardBody>
         </Card>

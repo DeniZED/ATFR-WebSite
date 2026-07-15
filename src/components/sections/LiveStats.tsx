@@ -142,6 +142,15 @@ export function LiveStats() {
         </div>
       )}
 
+      {!isLoading && !isError && data && data.membersCount === 0 && (
+        <div className="mb-6">
+          <Alert tone="info">
+            Aucune donnée de clan disponible pour le moment. Les stats
+            apparaîtront dès que le roster sera synchronisé.
+          </Alert>
+        </div>
+      )}
+
       <div className="mb-8 flex flex-wrap justify-center gap-2">
         {SCOPES.map((s) => (
           <button
