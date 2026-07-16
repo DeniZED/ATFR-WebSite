@@ -1,13 +1,31 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Headphones, Info, MessageSquare, Mic, Radio } from 'lucide-react';
+import {
+  ExternalLink,
+  Headphones,
+  Info,
+  MessageSquare,
+  Mic,
+  Radio,
+  Shield,
+  Users,
+} from 'lucide-react';
 import { Button, Card, CardBody, Section } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useContent } from '@/hooks/useContent';
 import {
+  useDiscordCommunityStats,
   useDiscordWidget,
   type DiscordWidgetMember,
 } from '@/features/discord/queries';
+
+/** Formatte un nombre de secondes en « 128 h » / « 42 min ». */
+function formatVoiceDuration(seconds: number): string {
+  if (seconds <= 0) return '0 h';
+  const hours = Math.round(seconds / 3600);
+  if (hours >= 1) return `${hours.toLocaleString('fr-FR')} h`;
+  return `${Math.round(seconds / 60)} min`;
+}
 
 const STATUS_DOT = {
   online: 'bg-atfr-success',
@@ -26,6 +44,7 @@ export function DiscordCommunity() {
   const serverId = get('discord_server_id');
   const invite = get('discord_invite_url');
   const { data: widget, isLoading } = useDiscordWidget(serverId || null);
+  const { data: community } = useDiscordCommunityStats();
 
   const { voiceGroups, voiceCount, onlineNotInVoice } = useMemo(() => {
     const channels = widget?.channels ?? [];
@@ -111,26 +130,82 @@ export function DiscordCommunity() {
               )}
             </div>
 
-            {/* Stats row */}
-            <div className="relative mt-8 grid grid-cols-3 gap-3 sm:gap-4">
-              <Stat
-                icon={<Radio size={16} />}
-                label="Connectés"
-                value={presenceCount ?? '—'}
-              />
-              <Stat
-                icon={<Mic size={16} />}
-                label="En vocal"
-                value={voiceCount}
-                highlight={voiceCount > 0}
-              />
-              <Stat
-                icon={<Headphones size={16} />}
-                label="Salons actifs"
-                value={voiceGroups.length}
-                highlight={voiceGroups.length > 0}
-              />
-            </div>
+            {/* Stats row — issues du bot (membres par clan) avec repli sur
+                le widget si l'agrégat serveur n'est pas disponible. */}
+            {community ? (
+              <div className="relative mt-8 grid grid-cols-3 gap-3 sm:gap-4">
+                <Stat
+                  icon={<Users size={16} />}
+                  label="Membres serveur"
+                  value={community.total_members.toLocaleString('fr-FR')}
+                  sub={
+                    community.online_total > 0
+                      ? `${community.online_total} en ligne`
+                      : undefined
+                  }
+                />
+                <Stat
+                  icon={<Shield size={16} />}
+                  label="ATFR"
+                  value={community.atfr_members.toLocaleString('fr-FR')}
+                  highlight={community.atfr_members > 0}
+                  sub={
+                    community.atfr_online > 0
+                      ? `${community.atfr_online} en ligne`
+                      : undefined
+                  }
+                />
+                <Stat
+                  icon={<Shield size={16} />}
+                  label="A-T-O"
+                  value={community.ato_members.toLocaleString('fr-FR')}
+                  highlight={community.ato_members > 0}
+                  sub={
+                    community.ato_online > 0
+                      ? `${community.ato_online} en ligne`
+                      : undefined
+                  }
+                />
+              </div>
+            ) : (
+              <div className="relative mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+                <Stat
+                  icon={<Radio size={16} />}
+                  label="Connectés"
+                  value={presenceCount ?? '—'}
+                />
+                <Stat
+                  icon={<Mic size={16} />}
+                  label="En vocal"
+                  value={voiceCount}
+                  highlight={voiceCount > 0}
+                />
+              </div>
+            )}
+
+            {/* Temps vocal cumulé sur 30 jours glissants (bot) */}
+            {community && community.voice_seconds_30d > 0 && (
+              <div className="relative mt-4 flex items-center justify-between gap-3 rounded-lg border border-atfr-gold/15 bg-atfr-graphite/40 px-4 py-3">
+                <div className="flex items-center gap-2.5 text-atfr-fog">
+                  <Headphones size={16} className="text-atfr-gold" />
+                  <span className="text-xs uppercase tracking-[0.18em]">
+                    Temps vocal · 30 derniers jours
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="font-display text-xl text-atfr-bone">
+                    {formatVoiceDuration(community.voice_seconds_30d)}
+                  </span>
+                  {community.voice_members_30d > 0 && (
+                    <span className="ml-2 text-xs text-atfr-fog">
+                      · {community.voice_members_30d} membre
+                      {community.voice_members_30d > 1 ? 's' : ''} actif
+                      {community.voice_members_30d > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Voice channels detail */}
             {isLoading ? (
@@ -199,31 +274,39 @@ function Stat({
   label,
   value,
   highlight,
+  sub,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number | string;
   highlight?: boolean;
+  sub?: string;
 }) {
   return (
     <div
       className={cn(
         'rounded-lg border p-3 text-center transition-colors',
         highlight
-          ? 'border-atfr-success/40 bg-atfr-success/5'
+          ? 'border-atfr-gold/40 bg-atfr-gold/5'
           : 'border-atfr-gold/15 bg-atfr-graphite/40',
       )}
     >
       <div
         className={cn(
           'inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]',
-          highlight ? 'text-atfr-success' : 'text-atfr-fog',
+          highlight ? 'text-atfr-gold' : 'text-atfr-fog',
         )}
       >
         {icon}
         {label}
       </div>
       <p className="mt-1 font-display text-2xl text-atfr-bone">{value}</p>
+      {sub && (
+        <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-atfr-success">
+          <span className="h-1.5 w-1.5 rounded-full bg-atfr-success" aria-hidden />
+          {sub}
+        </p>
+      )}
     </div>
   );
 }

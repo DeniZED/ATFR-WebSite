@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { FileText, Gamepad2, MessageCircle, type LucideIcon } from 'lucide-react';
 import { Section } from '@/components/ui';
-import { useContent } from '@/hooks/useContent';
 
 interface Step {
   icon: LucideIcon;
@@ -30,12 +28,11 @@ const STEPS: Step[] = [
 
 /**
  * « Comment rejoindre ATFR » : le processus en 3 étapes, juste avant le CTA
- * final, pour lever les freins à la candidature.
+ * final, pour lever les freins à la candidature. Les appels à l'action
+ * (Postuler / Discord) sont volontairement portés par la section JoinCta
+ * qui suit immédiatement, pour éviter le doublon de boutons.
  */
 export function JoinProcessSection() {
-  const { get } = useContent();
-  const invite = get('discord_invite_url');
-
   return (
     <Section
       id="comment-rejoindre"
@@ -68,25 +65,6 @@ export function JoinProcessSection() {
           </motion.li>
         ))}
       </ol>
-
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link
-          to="/recrutement"
-          className="rounded-lg bg-gradient-to-br from-atfr-gold-light to-atfr-gold px-5 py-2.5 font-display text-sm uppercase tracking-wide text-atfr-ink transition-transform hover:-translate-y-0.5"
-        >
-          Postuler maintenant
-        </Link>
-        {invite && (
-          <a
-            href={invite}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg border border-atfr-gold/35 bg-atfr-graphite/40 px-5 py-2.5 font-display text-sm uppercase tracking-wide text-atfr-bone transition-colors hover:border-atfr-gold/60"
-          >
-            Rejoindre le Discord
-          </a>
-        )}
-      </div>
     </Section>
   );
 }
