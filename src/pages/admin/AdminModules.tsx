@@ -7,11 +7,18 @@ import {
   Card,
   CardBody,
   Input,
+  Select,
   Spinner,
   Switch,
   Textarea,
 } from '@/components/ui';
 import { useAdminModules, useModuleRows, useUpsertModule } from '@/features/modules/queries';
+import {
+  MODULE_STATUSES,
+  MODULE_STATUS_META,
+  normalizeModuleStatus,
+  type ModuleStatus,
+} from '@/features/modules/registry';
 import {
   useResetLeaderboard,
   useScoreCount,
@@ -22,6 +29,7 @@ interface DraftRow {
   is_published: boolean;
   sort_order: number;
   badge_label: string;
+  status: ModuleStatus;
   custom_title: string;
   custom_description: string;
 }
@@ -30,6 +38,7 @@ const empty: DraftRow = {
   is_published: false,
   sort_order: 0,
   badge_label: '',
+  status: 'disponible',
   custom_title: '',
   custom_description: '',
 };
@@ -54,6 +63,7 @@ export default function AdminModules() {
             is_published: row?.is_published ?? false,
             sort_order: row?.sort_order ?? 0,
             badge_label: row?.badge_label ?? '',
+            status: normalizeModuleStatus(row?.status),
             custom_title: row?.custom_title ?? '',
             custom_description: row?.custom_description ?? '',
           };
@@ -77,6 +87,7 @@ export default function AdminModules() {
           d.is_published !== (r?.is_published ?? false) ||
           d.sort_order !== (r?.sort_order ?? 0) ||
           d.badge_label !== (r?.badge_label ?? '') ||
+          d.status !== normalizeModuleStatus(r?.status) ||
           d.custom_title !== (r?.custom_title ?? '') ||
           d.custom_description !== (r?.custom_description ?? '')
         );
@@ -98,6 +109,7 @@ export default function AdminModules() {
       is_published: d.is_published,
       sort_order: d.sort_order,
       badge_label: d.badge_label || null,
+      status: d.status,
       custom_title: d.custom_title || null,
       custom_description: d.custom_description || null,
     });
@@ -120,7 +132,7 @@ export default function AdminModules() {
       <div className="flex items-end justify-between gap-4 flex-wrap sticky top-0 z-20 -mx-6 lg:-mx-10 px-6 lg:px-10 py-4 bg-atfr-ink/85 backdrop-blur border-b border-atfr-gold/10">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-atfr-gold mb-1">
-            Académie
+            Modules
           </p>
           <h1 className="font-display text-3xl text-atfr-bone">Modules & mini-jeux</h1>
           <p className="text-sm text-atfr-fog mt-1">
@@ -232,8 +244,24 @@ export default function AdminModules() {
                         void saveSlug(registry.slug);
                       }}
                     />
+                    <Select
+                      label="Statut (pastille de disponibilité)"
+                      disabled={upsert.isPending}
+                      value={d.status}
+                      onChange={(e) => {
+                        const status = e.target.value as ModuleStatus;
+                        update(registry.slug, { status });
+                        void saveSlug(registry.slug, { status });
+                      }}
+                    >
+                      {MODULE_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {MODULE_STATUS_META[s].label}
+                        </option>
+                      ))}
+                    </Select>
                     <Input
-                      label="Badge (ex. Nouveau, Bêta, Bientôt)"
+                      label="Tag thématique (haut de carte)"
                       disabled={upsert.isPending}
                       value={d.badge_label}
                       onChange={(e) =>
@@ -242,7 +270,7 @@ export default function AdminModules() {
                       onBlur={() => {
                         void saveSlug(registry.slug);
                       }}
-                      placeholder=""
+                      placeholder={registry.category}
                     />
                     <Input
                       label="Titre personnalisé (override)"

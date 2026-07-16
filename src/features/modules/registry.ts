@@ -59,3 +59,35 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
 export function getModule(slug: string): ModuleDefinition | undefined {
   return MODULE_REGISTRY.find((m) => m.slug === slug);
 }
+
+/** Statut éditorial d'un module (colonne learning_modules.status). */
+export type ModuleStatus = 'disponible' | 'nouveau' | 'bientot';
+
+export const MODULE_STATUSES: ModuleStatus[] = ['disponible', 'nouveau', 'bientot'];
+
+/** Libellé + classes de puce par statut, partagés hub public / admin. */
+export const MODULE_STATUS_META: Record<
+  ModuleStatus,
+  { label: string; dot: string; chip: string }
+> = {
+  disponible: {
+    label: 'Disponible',
+    dot: 'bg-atfr-success',
+    chip: 'border-atfr-success/30 bg-atfr-success/10 text-atfr-success',
+  },
+  nouveau: {
+    label: 'Nouveau',
+    dot: 'bg-atfr-gold',
+    chip: 'border-atfr-gold/40 bg-atfr-gold/10 text-atfr-gold',
+  },
+  bientot: {
+    label: 'Bientôt',
+    dot: 'bg-atfr-fog',
+    chip: 'border-atfr-fog/30 bg-atfr-graphite/60 text-atfr-fog',
+  },
+};
+
+/** Normalise une valeur brute de status vers un ModuleStatus sûr. */
+export function normalizeModuleStatus(value: string | null | undefined): ModuleStatus {
+  return value === 'nouveau' || value === 'bientot' ? value : 'disponible';
+}

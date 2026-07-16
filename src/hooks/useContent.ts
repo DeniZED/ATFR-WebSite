@@ -59,8 +59,8 @@ const DEFAULTS: Record<string, string> = {
   next_operation_date_label: 'Date',
   next_operation_time_label: 'Horaire',
   next_operation_location_label: 'Lieu',
-  academy_preview_eyebrow: 'Académie ATFR',
-  academy_preview_title: 'Des outils qui rendent le site vivant',
+  academy_preview_eyebrow: 'Modules ATFR',
+  academy_preview_title: 'Les outils du clan',
   academy_preview_text:
     'La page principale peut aussi orienter les joueurs vers les modules, les défis et les contenus utiles du clan.',
   academy_preview_card_title: 'Un hub qui donne envie de revenir.',
