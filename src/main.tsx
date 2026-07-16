@@ -8,6 +8,7 @@ import { router } from '@/router';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ClanMembershipProvider } from '@/features/clan/ClanMembershipContext';
 import { IntroLoader } from '@/components/layout/IntroLoader';
+import { AppErrorBoundary } from '@/components/layout/ErrorScreens';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { emitToast } from '@/lib/toast-bus';
 import { translateSupabaseError } from '@/lib/error-messages';
@@ -47,6 +48,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <AppErrorBoundary>
     <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -59,5 +61,6 @@ createRoot(document.getElementById('root')!).render(
       </AuthProvider>
     </QueryClientProvider>
     </HelmetProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );
