@@ -123,7 +123,12 @@ const GROUPS: Array<{ title: string; keys: string[] }> = [
   },
   {
     title: 'Discord',
-    keys: ['discord_server_id', 'discord_invite_url'],
+    keys: [
+      'discord_server_id',
+      'discord_invite_url',
+      'discord_role_atfr',
+      'discord_role_ato',
+    ],
   },
   {
     title: 'Appel à l’action',
