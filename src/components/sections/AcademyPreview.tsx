@@ -4,9 +4,21 @@ import { ArrowRight, BookOpen, GraduationCap, Map, Users } from 'lucide-react';
 import { Button, Section, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePublishedModules } from '@/features/modules/queries';
+import {
+  MODULE_STATUS_META,
+  normalizeModuleStatus,
+  type ModuleStatus,
+} from '@/features/modules/registry';
 import { useContent } from '@/hooks/useContent';
 
-const fallbackModules = [
+const fallbackModules: Array<{
+  title: string;
+  description: string;
+  icon: typeof BookOpen;
+  path: string;
+  tag: string;
+  status: ModuleStatus;
+}> = [
   {
     title: 'Guide pour les bots',
     description:
@@ -14,6 +26,7 @@ const fallbackModules = [
     icon: BookOpen,
     path: 'guide-bots',
     tag: 'Pédagogie',
+    status: 'disponible',
   },
   {
     title: 'WoT Géoguesseur',
@@ -22,6 +35,7 @@ const fallbackModules = [
     icon: Map,
     path: 'wot-geoguesser',
     tag: 'Mini-jeu',
+    status: 'disponible',
   },
 ];
 
@@ -36,6 +50,7 @@ export function AcademyPreview() {
           icon: registry.icon,
           path: registry.path,
           tag: row.badge_label || registry.category,
+          status: normalizeModuleStatus(row.status),
         }))
       : fallbackModules;
 
@@ -117,9 +132,19 @@ export function AcademyPreview() {
                     {module.description}
                   </p>
                   <div className="relative mt-6 flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-atfr-success/30 bg-atfr-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-atfr-success">
-                      <span className="h-1.5 w-1.5 rounded-full bg-atfr-success" />
-                      Disponible
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider',
+                        MODULE_STATUS_META[module.status].chip,
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          MODULE_STATUS_META[module.status].dot,
+                        )}
+                      />
+                      {MODULE_STATUS_META[module.status].label}
                     </span>
                     <span className="inline-flex items-center gap-1 text-sm font-medium text-atfr-gold transition-all group-hover:gap-2">
                       {get('academy_preview_module_cta')}

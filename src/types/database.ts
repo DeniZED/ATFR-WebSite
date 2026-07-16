@@ -1357,6 +1357,7 @@ export interface Database {
           is_published: boolean;
           sort_order: number;
           badge_label: string | null;
+          status: string;
           custom_title: string | null;
           custom_description: string | null;
           updated_at: string;
@@ -1367,6 +1368,7 @@ export interface Database {
           is_published?: boolean;
           sort_order?: number;
           badge_label?: string | null;
+          status?: string;
           custom_title?: string | null;
           custom_description?: string | null;
           updated_at?: string;
@@ -1377,6 +1379,7 @@ export interface Database {
           is_published?: boolean;
           sort_order?: number;
           badge_label?: string | null;
+          status?: string;
           custom_title?: string | null;
           custom_description?: string | null;
           updated_at?: string;
