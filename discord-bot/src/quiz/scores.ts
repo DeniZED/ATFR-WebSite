@@ -64,3 +64,47 @@ export function getLeaderboard(limit = 10): LeaderboardEntry[] {
     .slice(0, limit)
     .map((s, i) => ({ rank: i + 1, userId: s.userId, username: s.username, points: s.points }));
 }
+
+// ── Administration (réservé aux admins via /quiz-admin) ─────────────────────
+
+/** Nombre de joueurs classés. */
+export function scoreCount(): number {
+  load();
+  return scores.size;
+}
+
+/** Vide entièrement le classement. Renvoie le nombre d'entrées supprimées. */
+export function resetAll(): number {
+  load();
+  const removed = scores.size;
+  scores = new Map();
+  persist();
+  return removed;
+}
+
+/** Définit le score absolu d'un joueur (borné à ≥ 0). Renvoie le nouveau total. */
+export function setPoints(userId: string, username: string, points: number): number {
+  load();
+  const value = Math.max(0, Math.round(points));
+  scores.set(userId, { userId, username, points: value });
+  persist();
+  return value;
+}
+
+/** Ajuste le score d'un joueur (delta positif ou négatif, borné à ≥ 0). Renvoie le nouveau total. */
+export function addPoints(userId: string, username: string, delta: number): number {
+  load();
+  const current = scores.get(userId)?.points ?? 0;
+  const value = Math.max(0, current + Math.round(delta));
+  scores.set(userId, { userId, username, points: value });
+  persist();
+  return value;
+}
+
+/** Retire un joueur du classement. Renvoie true s'il y était. */
+export function removeUser(userId: string): boolean {
+  load();
+  const existed = scores.delete(userId);
+  if (existed) persist();
+  return existed;
+}

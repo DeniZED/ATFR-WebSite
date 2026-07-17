@@ -4,6 +4,7 @@ import { handleVoiceCommand } from './voiceCommands.js';
 import { handleStatsCommand, handlePingCommand } from './playerCommands.js';
 import { handleCharCommand } from './tankopediaCommands.js';
 import { handleQuizCommand } from './quizCommands.js';
+import { handleQuizAdminCommand } from './quizAdminCommands.js';
 import { error as logError } from '../logger.js';
 
 const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Promise<void>> = {
@@ -13,6 +14,7 @@ const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Pro
   ping: handlePingCommand,
   char: handleCharCommand,
   quiz: handleQuizCommand,
+  'quiz-admin': handleQuizAdminCommand,
 };
 
 export function registerInteractionHandler(client: Client): void {
