@@ -1,10 +1,16 @@
 import { REST, Routes, type Client } from 'discord.js';
 import { clanCommandDefinition } from './clanCommands.js';
 import { voiceCommandDefinition } from './voiceCommands.js';
+import { statsCommandDefinition, pingCommandDefinition } from './playerCommands.js';
 import { log, error as logError } from '../logger.js';
 import { config } from '../config.js';
 
-export const commandDefinitions = [clanCommandDefinition, voiceCommandDefinition];
+export const commandDefinitions = [
+  clanCommandDefinition,
+  voiceCommandDefinition,
+  statsCommandDefinition,
+  pingCommandDefinition,
+];
 
 export async function registerCommands(client: Client): Promise<void> {
   if (!client.application) throw new Error('Client application is not ready');

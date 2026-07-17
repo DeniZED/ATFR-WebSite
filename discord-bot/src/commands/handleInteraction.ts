@@ -1,11 +1,14 @@
 import { Events, type ChatInputCommandInteraction, type Client } from 'discord.js';
 import { handleClanCommand } from './clanCommands.js';
 import { handleVoiceCommand } from './voiceCommands.js';
+import { handleStatsCommand, handlePingCommand } from './playerCommands.js';
 import { error as logError } from '../logger.js';
 
 const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Promise<void>> = {
   clan: handleClanCommand,
   voice: handleVoiceCommand,
+  stats: handleStatsCommand,
+  ping: handlePingCommand,
 };
 
 export function registerInteractionHandler(client: Client): void {
