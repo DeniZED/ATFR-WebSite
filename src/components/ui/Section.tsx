@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/cn';
+import { useReveal } from '@/hooks/useReveal';
 
 interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   id?: string;
@@ -25,20 +25,11 @@ export function Section({
   children,
   ...props
 }: SectionProps) {
-  const reduce = useReducedMotion();
-
   // Révélation au scroll homogène : l'en-tête, puis le contenu, montent en
-  // fondu à l'entrée dans le viewport. Neutralisé si l'utilisateur préfère
-  // moins d'animations (accessibilité).
-  const reveal = (delay = 0) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, y: 24 },
-          whileInView: { opacity: 1, y: 0 },
-          viewport: { once: true, margin: '-80px' as const },
-          transition: { duration: 0.6, ease: [0.2, 0.8, 0.2, 1], delay },
-        };
+  // fondu à l'entrée dans le viewport (CSS + IntersectionObserver, via
+  // useReveal). Neutralisé si l'utilisateur préfère moins d'animations.
+  const headerRef = useReveal<HTMLElement>();
+  const contentRef = useReveal<HTMLDivElement>();
 
   return (
     <section
@@ -55,7 +46,10 @@ export function Section({
                 {headerAction}
               </div>
             )}
-            <motion.header className="max-w-3xl mx-auto text-center" {...reveal()}>
+            <header
+              ref={headerRef}
+              className="reveal-on-scroll max-w-3xl mx-auto text-center"
+            >
               {eyebrow && (
                 <p className="text-xs uppercase tracking-[0.35em] text-atfr-gold/80 mb-3">
                   {eyebrow}
@@ -66,14 +60,10 @@ export function Section({
                   <Heading className="text-4xl sm:text-5xl font-display font-semibold text-atfr-bone">
                     {title}
                   </Heading>
-                  {/* Trait doré qui « se dessine » à l'apparition. */}
-                  <motion.span
+                  {/* Trait doré sous le titre. */}
+                  <span
                     aria-hidden
-                    className="mt-4 block h-px w-24 origin-center bg-gradient-to-r from-transparent via-atfr-gold/70 to-transparent"
-                    initial={reduce ? false : { scaleX: 0, opacity: 0 }}
-                    whileInView={reduce ? undefined : { scaleX: 1, opacity: 1 }}
-                    viewport={{ once: true, margin: '-60px' }}
-                    transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+                    className="mt-4 block h-px w-24 bg-gradient-to-r from-transparent via-atfr-gold/70 to-transparent"
                   />
                 </div>
               )}
@@ -82,12 +72,13 @@ export function Section({
                   {description}
                 </p>
               )}
-            </motion.header>
+            </header>
           </div>
         )}
-        <motion.div {...reveal(0.1)}>{children}</motion.div>
+        <div ref={contentRef} className="reveal-on-scroll" style={{ transitionDelay: '90ms' }}>
+          {children}
+        </div>
       </div>
     </section>
   );
 }
-
