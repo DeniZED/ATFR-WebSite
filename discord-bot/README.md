@@ -27,6 +27,8 @@ Les notifications Discord d'entrée/sortie sont construites comme une carte de p
 |----------|--------------|
 | `/stats <pseudo>` | Stats WoT d'un joueur : WN8, winrate, batailles, dégâts moyens, tier moyen, chars Tier X, 30 derniers jours, lien Tomato.gg. Résout le pseudo → account_id via l'API Wargaming, puis récupère les stats enrichies via la fonction `player-stats` du site (données tomato.gg). Nécessite `WOT_APPLICATION_ID`. |
 | `/char <nom>` | Fiche d'un char (Tankopedia WG) : nation, type, tier, PV, dégâts/pénétration, cadence, visée, dispersion, vitesse, moteur, vue, image. Recherche par nom avec suggestions si plusieurs résultats. Nécessite `WOT_APPLICATION_ID`. |
+| `/quiz play` | Quiz « devine le char » : le bot affiche l'image d'un char au hasard et 4 réponses en boutons ; le premier à trouver marque un point (⏱️ 25 s). Nécessite `WOT_APPLICATION_ID`. |
+| `/quiz classement` | Classement des joueurs au quiz (scores cumulés). |
 | `/ping` | Vérifie que le bot répond (latence). |
 
 ## Commandes admin (`Gérer le serveur` requis)
@@ -235,9 +237,13 @@ discord-bot/src/
     voiceCommands.ts              ── /voice stats
     playerCommands.ts             ── /stats <pseudo>, /ping (commandes publiques)
     tankopediaCommands.ts         ── /char <nom> (fiche de char)
+    quizCommands.ts               ── /quiz play|classement (mini-jeu à boutons)
     handleInteraction.ts          ── dispatch des interactions Discord
   tankopedia/
     client.ts                     ── API WG Encyclopedia (index + recherche + fiche char)
+  quiz/
+    round.ts                      ── tirage d'un char + leurres pour un tour
+    scores.ts                     ── classement persistant (data/quiz-scores.json)
 ```
 
 ### Flux vocal
