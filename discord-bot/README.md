@@ -26,6 +26,7 @@ Les notifications Discord d'entrée/sortie sont construites comme une carte de p
 | Commande | Description |
 |----------|--------------|
 | `/stats <pseudo>` | Stats WoT d'un joueur : WN8, winrate, batailles, dégâts moyens, tier moyen, chars Tier X, 30 derniers jours, lien Tomato.gg. Résout le pseudo → account_id via l'API Wargaming, puis récupère les stats enrichies via la fonction `player-stats` du site (données tomato.gg). Nécessite `WOT_APPLICATION_ID`. |
+| `/char <nom>` | Fiche d'un char (Tankopedia WG) : nation, type, tier, PV, dégâts/pénétration, cadence, visée, dispersion, vitesse, moteur, vue, image. Recherche par nom avec suggestions si plusieurs résultats. Nécessite `WOT_APPLICATION_ID`. |
 | `/ping` | Vérifie que le bot répond (latence). |
 
 ## Commandes admin (`Gérer le serveur` requis)
@@ -233,7 +234,10 @@ discord-bot/src/
     clanCommands.ts               ── /clan add|bulk-add|remove|list|channel|scan|movements
     voiceCommands.ts              ── /voice stats
     playerCommands.ts             ── /stats <pseudo>, /ping (commandes publiques)
+    tankopediaCommands.ts         ── /char <nom> (fiche de char)
     handleInteraction.ts          ── dispatch des interactions Discord
+  tankopedia/
+    client.ts                     ── API WG Encyclopedia (index + recherche + fiche char)
 ```
 
 ### Flux vocal

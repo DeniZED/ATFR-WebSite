@@ -2,6 +2,7 @@ import { Events, type ChatInputCommandInteraction, type Client } from 'discord.j
 import { handleClanCommand } from './clanCommands.js';
 import { handleVoiceCommand } from './voiceCommands.js';
 import { handleStatsCommand, handlePingCommand } from './playerCommands.js';
+import { handleCharCommand } from './tankopediaCommands.js';
 import { error as logError } from '../logger.js';
 
 const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Promise<void>> = {
@@ -9,6 +10,7 @@ const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Pro
   voice: handleVoiceCommand,
   stats: handleStatsCommand,
   ping: handlePingCommand,
+  char: handleCharCommand,
 };
 
 export function registerInteractionHandler(client: Client): void {
