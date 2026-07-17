@@ -4,6 +4,7 @@ import { voiceCommandDefinition } from './voiceCommands.js';
 import { statsCommandDefinition, pingCommandDefinition } from './playerCommands.js';
 import { charCommandDefinition } from './tankopediaCommands.js';
 import { compareCommandDefinition } from './compareCommands.js';
+import { clanInfoCommandDefinition } from './clanInfoCommands.js';
 import { quizCommandDefinition } from './quizCommands.js';
 import { quizAdminCommandDefinition } from './quizAdminCommands.js';
 import { log, error as logError } from '../logger.js';
@@ -16,6 +17,7 @@ export const commandDefinitions = [
   pingCommandDefinition,
   charCommandDefinition,
   compareCommandDefinition,
+  clanInfoCommandDefinition,
   quizCommandDefinition,
   quizAdminCommandDefinition,
 ];
