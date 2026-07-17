@@ -8,6 +8,7 @@ import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
 import { ClanLayout } from '@/components/clan/ClanLayout';
+import { RouteErrorBoundary } from '@/components/layout/ErrorScreens';
 import { Spinner } from '@/components/ui';
 
 const Home = lazy(() => import('@/pages/Home'));
@@ -81,6 +82,7 @@ const Lazy = () => (
 export const router = createBrowserRouter([
   {
     element: <Lazy />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <PublicLayout />,
