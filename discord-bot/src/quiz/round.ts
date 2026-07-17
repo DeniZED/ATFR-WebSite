@@ -20,9 +20,9 @@ function shuffle<T>(arr: T[]): T[] {
  * ne soit pas trop évident), puis complétés au hasard. Tous les noms sont
  * distincts. Le pool est limité aux chars de tier ≥ 4 (plus reconnaissables).
  */
-export async function buildQuizRound(optionCount = 4): Promise<QuizRound | null> {
+export async function buildQuizRound(optionCount = 4, minTier = 4): Promise<QuizRound | null> {
   const index = await getVehicleIndex();
-  const pool = index.filter((v) => v.tier >= 4 && v.name.trim().length > 0);
+  const pool = index.filter((v) => v.tier >= minTier && v.name.trim().length > 0);
   if (pool.length < optionCount) return null;
 
   const answer = pool[Math.floor(Math.random() * pool.length)];

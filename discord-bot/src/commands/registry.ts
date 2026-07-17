@@ -4,6 +4,7 @@ import { voiceCommandDefinition } from './voiceCommands.js';
 import { statsCommandDefinition, pingCommandDefinition } from './playerCommands.js';
 import { charCommandDefinition } from './tankopediaCommands.js';
 import { quizCommandDefinition } from './quizCommands.js';
+import { quizAdminCommandDefinition } from './quizAdminCommands.js';
 import { log, error as logError } from '../logger.js';
 import { config } from '../config.js';
 
@@ -14,6 +15,7 @@ export const commandDefinitions = [
   pingCommandDefinition,
   charCommandDefinition,
   quizCommandDefinition,
+  quizAdminCommandDefinition,
 ];
 
 export async function registerCommands(client: Client): Promise<void> {

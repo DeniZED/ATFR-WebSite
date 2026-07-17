@@ -43,6 +43,12 @@ Les notifications Discord d'entrée/sortie sont construites comme une carte de p
 | `/clan scan` | Force un scan immédiat de tous les clans suivis |
 | `/clan movements [clan_id] [limit]` | Affiche les derniers mouvements enregistrés |
 | `/voice stats` | Affiche les statistiques vocales du jour |
+| `/quiz-admin reset` | Remet tout le classement du quiz à zéro (confirmation par bouton) |
+| `/quiz-admin set <joueur> <points>` | Définit le score d'un joueur |
+| `/quiz-admin add <joueur> <delta>` | Ajuste le score d'un joueur (delta négatif pour retirer) |
+| `/quiz-admin remove <joueur>` | Retire un joueur du classement |
+| `/quiz-admin list [limite]` | Affiche le classement complet (au-delà du top 10) |
+| `/quiz-admin settings [duree] [tier_min] [reponses]` | Affiche ou modifie les réglages du jeu (durée d'un tour, tier minimum, nombre de réponses) |
 
 ---
 
@@ -238,12 +244,14 @@ discord-bot/src/
     playerCommands.ts             ── /stats <pseudo>, /ping (commandes publiques)
     tankopediaCommands.ts         ── /char <nom> (fiche de char)
     quizCommands.ts               ── /quiz play|classement (mini-jeu à boutons)
+    quizAdminCommands.ts          ── /quiz-admin (gestion classement + réglages, admin)
     handleInteraction.ts          ── dispatch des interactions Discord
   tankopedia/
     client.ts                     ── API WG Encyclopedia (index + recherche + fiche char)
   quiz/
     round.ts                      ── tirage d'un char + leurres pour un tour
     scores.ts                     ── classement persistant (data/quiz-scores.json)
+    settings.ts                   ── réglages persistants (data/quiz-settings.json)
 ```
 
 ### Flux vocal

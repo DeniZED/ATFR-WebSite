@@ -14,8 +14,8 @@ import { error as logError } from '../logger.js';
 import { buildQuizRound, type QuizRound } from '../quiz/round.js';
 import { getVehicleDetail } from '../tankopedia/client.js';
 import { recordWin, getLeaderboard } from '../quiz/scores.js';
+import { getSettings } from '../quiz/settings.js';
 
-const ROUND_MS = 25_000;
 const LETTERS = ['A', 'B', 'C', 'D'] as const;
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
@@ -29,11 +29,13 @@ export const quizCommandDefinition = new SlashCommandBuilder()
   .addSubcommand((sub) => sub.setName('play').setDescription('Lance une question'))
   .addSubcommand((sub) => sub.setName('classement').setDescription('Affiche le classement du quiz'));
 
-function questionEmbed(round: QuizRound, imageUrl: string | null): EmbedBuilder {
+function questionEmbed(round: QuizRound, imageUrl: string | null, roundSeconds: number): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setColor(0x5865f2)
     .setTitle('🎯 Quiz — Quel est ce char ?')
-    .setDescription(`Indice : **Tier ${tierRoman(round.answer.tier)}**\nClique sur la bonne réponse (⏱️ 25 s).`);
+    .setDescription(
+      `Indice : **Tier ${tierRoman(round.answer.tier)}**\nClique sur la bonne réponse (⏱️ ${roundSeconds} s).`,
+    );
   if (imageUrl) embed.setImage(imageUrl);
   return embed;
 }
@@ -69,7 +71,8 @@ async function handlePlay(interaction: ChatInputCommandInteraction): Promise<voi
     return;
   }
 
-  const round = await buildQuizRound(4);
+  const settings = getSettings();
+  const round = await buildQuizRound(settings.optionCount, settings.minTier);
   if (!round) {
     await interaction.editReply('❌ Impossible de préparer un quiz pour le moment. Réessaie plus tard.');
     return;
@@ -80,7 +83,7 @@ async function handlePlay(interaction: ChatInputCommandInteraction): Promise<voi
   const answerIndex = round.options.findIndex((o) => o.tankId === round.answer.tankId);
 
   const message = await interaction.editReply({
-    embeds: [questionEmbed(round, imageUrl)],
+    embeds: [questionEmbed(round, imageUrl, settings.roundSeconds)],
     components: [optionsRow(round, { disabled: false })],
   });
 
@@ -88,7 +91,7 @@ async function handlePlay(interaction: ChatInputCommandInteraction): Promise<voi
   let solved = false;
   const collector = message.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: ROUND_MS,
+    time: settings.roundSeconds * 1000,
   });
 
   collector.on('collect', async (btn: ButtonInteraction) => {
