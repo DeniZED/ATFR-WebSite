@@ -7,6 +7,7 @@ import {
   type VehicleSummary,
   type VehicleDetail,
 } from '../tankopedia/client.js';
+import { nationLabel, typeLabel, tierRoman } from '../tankopedia/labels.js';
 
 export const charCommandDefinition = new SlashCommandBuilder()
   .setName('char')
@@ -19,41 +20,6 @@ export const charCommandDefinition = new SlashCommandBuilder()
       .setMaxLength(64),
   );
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-
-const NATION_LABELS: Record<string, string> = {
-  ussr: '🇷🇺 URSS',
-  germany: '🇩🇪 Allemagne',
-  usa: '🇺🇸 États-Unis',
-  france: '🇫🇷 France',
-  uk: '🇬🇧 Royaume-Uni',
-  china: '🇨🇳 Chine',
-  japan: '🇯🇵 Japon',
-  czech: '🇨🇿 Tchécoslovaquie',
-  sweden: '🇸🇪 Suède',
-  poland: '🇵🇱 Pologne',
-  italy: '🇮🇹 Italie',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  lightTank: '🏎️ Char léger',
-  mediumTank: '⚙️ Char moyen',
-  heavyTank: '🛡️ Char lourd',
-  'AT-SPG': '🎯 Chasseur de chars',
-  SPG: '💥 Artillerie',
-};
-
-function nationLabel(nation: string): string {
-  return NATION_LABELS[nation] ?? nation;
-}
-
-function typeLabel(type: string): string {
-  return TYPE_LABELS[type] ?? type;
-}
-
-function tierRoman(tier: number): string {
-  return ROMAN[tier] ?? String(tier);
-}
 
 function fmt(n: number | null, unit = '', digits = 0): string {
   if (n == null) return '—';
