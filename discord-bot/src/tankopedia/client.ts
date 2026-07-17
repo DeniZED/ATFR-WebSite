@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { rankVehicles } from './search.js';
 
 interface WgEnvelope<T> {
   status: string;
@@ -81,37 +82,12 @@ export interface VehicleSearchResult {
  * liste quelques autres correspondances (par tier décroissant).
  */
 export async function searchVehicle(query: string): Promise<VehicleSearchResult | null> {
-  const q = query.trim().toLowerCase();
-  if (q.length < 1) return null;
+  if (query.trim().length < 1) return null;
   const index = await getVehicleIndex();
+  const ranked = rankVehicles(index, query);
+  if (ranked.length === 0) return null;
 
-  const norm = (s: string) => s.toLowerCase();
-  const exactShort = index.filter((v) => norm(v.shortName) === q);
-  const exactName = index.filter((v) => norm(v.name) === q);
-  const startsWith = index.filter(
-    (v) => norm(v.name).startsWith(q) || norm(v.shortName).startsWith(q),
-  );
-  const contains = index.filter(
-    (v) => norm(v.name).includes(q) || norm(v.shortName).includes(q),
-  );
-
-  const ranked = [...exactShort, ...exactName, ...startsWith, ...contains];
-  // Déduplique en conservant l'ordre de priorité.
-  const seen = new Set<number>();
-  const unique: VehicleSummary[] = [];
-  for (const v of ranked) {
-    if (seen.has(v.tankId)) continue;
-    seen.add(v.tankId);
-    unique.push(v);
-  }
-  if (unique.length === 0) return null;
-
-  const best = unique[0];
-  const alternatives = unique
-    .slice(1)
-    .sort((a, b) => b.tier - a.tier)
-    .slice(0, 5);
-  return { best, alternatives };
+  return { best: ranked[0], alternatives: ranked.slice(1, 6) };
 }
 
 export interface VehicleDetail {

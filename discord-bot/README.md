@@ -26,7 +26,7 @@ Les notifications Discord d'entrée/sortie sont construites comme une carte de p
 | Commande | Description |
 |----------|--------------|
 | `/stats <pseudo>` | Stats WoT d'un joueur : WN8, winrate, batailles, dégâts moyens, tier moyen, chars Tier X, 30 derniers jours, lien Tomato.gg. Résout le pseudo → account_id via l'API Wargaming, puis récupère les stats enrichies via la fonction `player-stats` du site (données tomato.gg). Nécessite `WOT_APPLICATION_ID`. |
-| `/char <nom>` | Fiche d'un char (Tankopedia WG) : nation, type, tier, PV, dégâts/pénétration, cadence, visée, dispersion, vitesse, moteur, vue, image. Recherche par nom avec suggestions si plusieurs résultats. Nécessite `WOT_APPLICATION_ID`. |
+| `/char <nom>` | Fiche d'un char (Tankopedia WG) : nation, type, tier, PV, dégâts/pénétration, cadence, visée, dispersion, vitesse, moteur, vue, image. Recherche tolérante (accents, ponctuation, espaces, petites fautes — `is7`, `bat chatillon 25t` fonctionnent) avec suggestions. Couleur par classe de char. Nécessite `WOT_APPLICATION_ID`. |
 | `/compare <char1> <char2>` | Duel de deux chars stat par stat (PV, dégâts, DPM, pénétration, cadence, visée, dispersion, vitesse, puissance/poids, vue) avec vainqueur par ligne (◀/▶) et verdict global. Nécessite `WOT_APPLICATION_ID`. |
 | `/quiz play` | Quiz « devine le char » : le bot affiche l'image d'un char au hasard et 4 réponses en boutons ; le premier à trouver marque un point (⏱️ 25 s). Nécessite `WOT_APPLICATION_ID`. |
 | `/quiz classement` | Classement des joueurs au quiz (scores cumulés). |
@@ -249,8 +249,9 @@ discord-bot/src/
     quizAdminCommands.ts          ── /quiz-admin (gestion classement + réglages, admin)
     handleInteraction.ts          ── dispatch des interactions Discord
   tankopedia/
-    client.ts                     ── API WG Encyclopedia (index + recherche + fiche char)
-    labels.ts                     ── libellés partagés nation / type / tier
+    client.ts                     ── API WG Encyclopedia (index + fiche char)
+    search.ts                     ── recherche tolérante (accents, ponctuation, fautes)
+    labels.ts                     ── libellés/couleurs/emojis nation & type & tier
   quiz/
     round.ts                      ── tirage d'un char + leurres pour un tour
     scores.ts                     ── classement persistant (data/quiz-scores.json)

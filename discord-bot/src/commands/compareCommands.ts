@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } f
 import { config } from '../config.js';
 import { error as logError } from '../logger.js';
 import { searchVehicle, getVehicleDetail, type VehicleDetail } from '../tankopedia/client.js';
-import { nationLabel, typeLabel, tierRoman } from '../tankopedia/labels.js';
+import { nationLabel, typeLabel, tierRoman, typeEmoji, typeColor } from '../tankopedia/labels.js';
 
 export const compareCommandDefinition = new SlashCommandBuilder()
   .setName('compare')
@@ -83,7 +83,7 @@ function renderTable(rows: CompareRow[]): { table: string; aWins: number; bWins:
 
 function identity(letter: 'A' | 'B', v: VehicleDetail): string {
   const premium = v.isPremium ? ' ⭐' : '';
-  return `**${letter} · ${v.name}${premium}** — Tier ${tierRoman(v.tier)} · ${nationLabel(v.nation)} · ${typeLabel(v.type)}`;
+  return `**${letter} · ${typeEmoji(v.type)} ${v.name}${premium}** — Tier ${tierRoman(v.tier)} · ${nationLabel(v.nation)} · ${typeLabel(v.type)}`;
 }
 
 function verdict(aName: string, bName: string, aWins: number, bWins: number): string {
@@ -135,8 +135,9 @@ export async function handleCompareCommand(interaction: ChatInputCommandInteract
     parts.push('```' + table + '```');
     parts.push(verdict(a.name, b.name, aWins, bWins));
 
+    const winnerColor = aWins > bWins ? typeColor(a.type) : bWins > aWins ? typeColor(b.type) : 0x5865f2;
     const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
+      .setColor(winnerColor)
       .setTitle(`⚔️ ${a.name}  vs  ${b.name}`)
       .setDescription(parts.join('\n\n').slice(0, 4096))
       .setFooter({ text: 'ATFR • Tankopedia — ◀ / ▶ indiquent le vainqueur de chaque ligne' });

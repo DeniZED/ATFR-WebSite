@@ -36,3 +36,28 @@ export function typeLabel(type: string): string {
 export function tierRoman(tier: number): string {
   return ROMAN[tier] ?? String(tier);
 }
+
+const TYPE_EMOJIS: Record<string, string> = {
+  lightTank: '🏎️',
+  mediumTank: '⚙️',
+  heavyTank: '🛡️',
+  'AT-SPG': '🎯',
+  SPG: '💥',
+};
+
+// Couleur d'embed par classe de char (premium géré séparément côté commande).
+const TYPE_COLORS: Record<string, number> = {
+  lightTank: 0x9acd32,
+  mediumTank: 0x4aa3df,
+  heavyTank: 0xc0504d,
+  'AT-SPG': 0x8064a2,
+  SPG: 0xe08a3c,
+};
+
+export function typeEmoji(type: string): string {
+  return TYPE_EMOJIS[type] ?? '🚜';
+}
+
+export function typeColor(type: string): number {
+  return TYPE_COLORS[type] ?? 0x8899a6;
+}

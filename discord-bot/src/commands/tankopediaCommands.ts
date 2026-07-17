@@ -7,7 +7,7 @@ import {
   type VehicleSummary,
   type VehicleDetail,
 } from '../tankopedia/client.js';
-import { nationLabel, typeLabel, tierRoman } from '../tankopedia/labels.js';
+import { nationLabel, typeLabel, tierRoman, typeEmoji, typeColor } from '../tankopedia/labels.js';
 
 export const charCommandDefinition = new SlashCommandBuilder()
   .setName('char')
@@ -34,9 +34,10 @@ function altLabel(v: VehicleSummary): string {
 function buildCharEmbed(v: VehicleDetail, alternatives: VehicleSummary[]): EmbedBuilder {
   const premium = v.isPremium ? ' ⭐' : '';
   const embed = new EmbedBuilder()
-    .setColor(v.isPremium ? 0xe6b800 : 0x8899a6)
-    .setTitle(`${v.name}${premium}`)
-    .setDescription(`**Tier ${tierRoman(v.tier)}** · ${nationLabel(v.nation)} · ${typeLabel(v.type)}`)
+    .setColor(v.isPremium ? 0xe6b800 : typeColor(v.type))
+    .setAuthor({ name: `Tier ${tierRoman(v.tier)} · ${typeLabel(v.type)}` })
+    .setTitle(`${typeEmoji(v.type)} ${v.name}${premium}`)
+    .setDescription(`${nationLabel(v.nation)}`)
     .addFields(
       { name: '❤️ Points de vie', value: fmt(v.hp, 'PV'), inline: true },
       { name: '💥 Dégâts (obus)', value: fmt(v.damage), inline: true },
@@ -59,7 +60,7 @@ function buildCharEmbed(v: VehicleDetail, alternatives: VehicleSummary[]): Embed
 
   const footerBits = ['ATFR • Tankopedia'];
   if (alternatives.length > 0) {
-    footerBits.push(`Autres résultats : ${alternatives.map(altLabel).join(', ')}`);
+    footerBits.push(`Aussi trouvé : ${alternatives.map(altLabel).join(', ')}`);
   }
   embed.setFooter({ text: footerBits.join(' — ').slice(0, 2048) });
 
