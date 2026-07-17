@@ -47,7 +47,7 @@ interface RawVehicleListEntry {
 // un redémarrage du bot suffit à la rafraîchir).
 let indexCache: VehicleSummary[] | null = null;
 
-async function getVehicleIndex(): Promise<VehicleSummary[]> {
+export async function getVehicleIndex(): Promise<VehicleSummary[]> {
   if (indexCache) return indexCache;
   const data = await wg<Record<string, RawVehicleListEntry | null>>('/encyclopedia/vehicles/', {
     fields: 'tank_id,name,short_name,nation,tier,type,is_premium',
