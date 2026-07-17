@@ -4,10 +4,12 @@ import { error as logError } from '../logger.js';
 import {
   searchVehicle,
   getVehicleDetail,
+  suggestVehicles,
   type VehicleSummary,
   type VehicleDetail,
 } from '../tankopedia/client.js';
 import { nationLabel, typeLabel, tierRoman, typeEmoji, typeColor } from '../tankopedia/labels.js';
+import { notFoundMessage } from '../tankopedia/search.js';
 
 export const charCommandDefinition = new SlashCommandBuilder()
   .setName('char')
@@ -81,7 +83,7 @@ export async function handleCharCommand(interaction: ChatInputCommandInteraction
   try {
     const match = await searchVehicle(nom);
     if (!match) {
-      await interaction.editReply(`❌ Aucun char trouvé pour **${nom}**.`);
+      await interaction.editReply(notFoundMessage(nom, await suggestVehicles(nom, 3)));
       return;
     }
 

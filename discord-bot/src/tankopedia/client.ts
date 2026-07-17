@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { rankVehicles } from './search.js';
+import { rankVehicles, nearestVehicles } from './search.js';
 
 interface WgEnvelope<T> {
   status: string;
@@ -88,6 +88,12 @@ export async function searchVehicle(query: string): Promise<VehicleSearchResult 
   if (ranked.length === 0) return null;
 
   return { best: ranked[0], alternatives: ranked.slice(1, 6) };
+}
+
+/** Suggestions les plus proches quand aucune correspondance n'est trouvée. */
+export async function suggestVehicles(query: string, limit = 3): Promise<VehicleSummary[]> {
+  const index = await getVehicleIndex();
+  return nearestVehicles(index, query, limit);
 }
 
 export interface VehicleDetail {
