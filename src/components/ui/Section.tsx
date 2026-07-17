@@ -26,6 +26,20 @@ export function Section({
   ...props
 }: SectionProps) {
   const reduce = useReducedMotion();
+
+  // Révélation au scroll homogène : l'en-tête, puis le contenu, montent en
+  // fondu à l'entrée dans le viewport. Neutralisé si l'utilisateur préfère
+  // moins d'animations (accessibilité).
+  const reveal = (delay = 0) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 24 },
+          whileInView: { opacity: 1, y: 0 },
+          viewport: { once: true, margin: '-80px' as const },
+          transition: { duration: 0.6, ease: [0.2, 0.8, 0.2, 1], delay },
+        };
+
   return (
     <section
       id={id}
@@ -41,7 +55,7 @@ export function Section({
                 {headerAction}
               </div>
             )}
-            <header className="max-w-3xl mx-auto text-center">
+            <motion.header className="max-w-3xl mx-auto text-center" {...reveal()}>
               {eyebrow && (
                 <p className="text-xs uppercase tracking-[0.35em] text-atfr-gold/80 mb-3">
                   {eyebrow}
@@ -68,10 +82,10 @@ export function Section({
                   {description}
                 </p>
               )}
-            </header>
+            </motion.header>
           </div>
         )}
-        {children}
+        <motion.div {...reveal(0.1)}>{children}</motion.div>
       </div>
     </section>
   );
