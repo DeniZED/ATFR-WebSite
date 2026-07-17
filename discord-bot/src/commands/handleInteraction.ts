@@ -3,6 +3,7 @@ import { handleClanCommand } from './clanCommands.js';
 import { handleVoiceCommand } from './voiceCommands.js';
 import { handleStatsCommand, handlePingCommand } from './playerCommands.js';
 import { handleCharCommand } from './tankopediaCommands.js';
+import { handleCompareCommand } from './compareCommands.js';
 import { handleQuizCommand } from './quizCommands.js';
 import { handleQuizAdminCommand } from './quizAdminCommands.js';
 import { error as logError } from '../logger.js';
@@ -13,6 +14,7 @@ const handlers: Record<string, (interaction: ChatInputCommandInteraction) => Pro
   stats: handleStatsCommand,
   ping: handlePingCommand,
   char: handleCharCommand,
+  compare: handleCompareCommand,
   quiz: handleQuizCommand,
   'quiz-admin': handleQuizAdminCommand,
 };

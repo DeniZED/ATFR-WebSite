@@ -1,0 +1,149 @@
+import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import { config } from '../config.js';
+import { error as logError } from '../logger.js';
+import { searchVehicle, getVehicleDetail, type VehicleDetail } from '../tankopedia/client.js';
+import { nationLabel, typeLabel, tierRoman } from '../tankopedia/labels.js';
+
+export const compareCommandDefinition = new SlashCommandBuilder()
+  .setName('compare')
+  .setDescription('Compare deux chars World of Tanks stat par stat')
+  .addStringOption((opt) =>
+    opt.setName('char1').setDescription('Premier char').setRequired(true).setMaxLength(64),
+  )
+  .addStringOption((opt) =>
+    opt.setName('char2').setDescription('Second char').setRequired(true).setMaxLength(64),
+  );
+
+interface CompareRow {
+  label: string;
+  a: number | null;
+  b: number | null;
+  better: 'high' | 'low';
+  render: (n: number) => string;
+}
+
+const int = (n: number) => Math.round(n).toLocaleString('fr-FR');
+const dec = (digits: number) => (n: number) => n.toFixed(digits);
+
+function dpm(v: VehicleDetail): number | null {
+  return v.damage != null && v.fireRate != null ? v.damage * v.fireRate : null;
+}
+
+function powerToWeight(v: VehicleDetail): number | null {
+  return v.enginePower != null && v.weight != null && v.weight > 0 ? v.enginePower / v.weight : null;
+}
+
+function buildRows(a: VehicleDetail, b: VehicleDetail): CompareRow[] {
+  return [
+    { label: 'Points de vie', a: a.hp, b: b.hp, better: 'high', render: int },
+    { label: 'Dégâts (obus)', a: a.damage, b: b.damage, better: 'high', render: int },
+    { label: 'DPM théorique', a: dpm(a), b: dpm(b), better: 'high', render: int },
+    { label: 'Pénétration', a: a.penetration, b: b.penetration, better: 'high', render: (n) => `${int(n)} mm` },
+    { label: 'Cadence (c/min)', a: a.fireRate, b: b.fireRate, better: 'high', render: dec(2) },
+    { label: 'Visée (s)', a: a.aimTime, b: b.aimTime, better: 'low', render: dec(2) },
+    { label: 'Dispersion (m)', a: a.dispersion, b: b.dispersion, better: 'low', render: dec(2) },
+    { label: 'Vitesse (km/h)', a: a.speedForward, b: b.speedForward, better: 'high', render: int },
+    { label: 'Moteur (ch)', a: a.enginePower, b: b.enginePower, better: 'high', render: int },
+    { label: 'Puiss./poids', a: powerToWeight(a), b: powerToWeight(b), better: 'high', render: dec(1) },
+    { label: 'Portée de vue (m)', a: a.viewRange, b: b.viewRange, better: 'high', render: int },
+  ];
+}
+
+type Winner = 'a' | 'b' | 'tie' | 'none';
+
+function rowWinner(row: CompareRow): Winner {
+  if (row.a == null || row.b == null) return 'none';
+  if (row.a === row.b) return 'tie';
+  const aWins = row.better === 'high' ? row.a > row.b : row.a < row.b;
+  return aWins ? 'a' : 'b';
+}
+
+function renderTable(rows: CompareRow[]): { table: string; aWins: number; bWins: number } {
+  const cell = (n: number | null, render: (v: number) => string) => (n == null ? '—' : render(n));
+  const labelW = Math.max(...rows.map((r) => r.label.length), 'Caractéristique'.length);
+  const aCells = rows.map((r) => cell(r.a, r.render));
+  const bCells = rows.map((r) => cell(r.b, r.render));
+  const aW = Math.max(...aCells.map((s) => s.length), 1);
+  const bW = Math.max(...bCells.map((s) => s.length), 1);
+
+  const marker: Record<Winner, string> = { a: '◀', b: '▶', tie: '=', none: ' ' };
+  let aWins = 0;
+  let bWins = 0;
+
+  const lines = [`${'Caractéristique'.padEnd(labelW)}   ${'A'.padStart(aW)}   ${'B'.padStart(bW)}`];
+  rows.forEach((r, i) => {
+    const w = rowWinner(r);
+    if (w === 'a') aWins++;
+    else if (w === 'b') bWins++;
+    lines.push(`${r.label.padEnd(labelW)}   ${aCells[i].padStart(aW)} ${marker[w]} ${bCells[i].padStart(bW)}`);
+  });
+
+  return { table: lines.join('\n'), aWins, bWins };
+}
+
+function identity(letter: 'A' | 'B', v: VehicleDetail): string {
+  const premium = v.isPremium ? ' ⭐' : '';
+  return `**${letter} · ${v.name}${premium}** — Tier ${tierRoman(v.tier)} · ${nationLabel(v.nation)} · ${typeLabel(v.type)}`;
+}
+
+function verdict(aName: string, bName: string, aWins: number, bWins: number): string {
+  if (aWins === bWins) return `🤝 Match serré — **${aWins}** caractéristique(s) partout.`;
+  const [winner, wl, ll] = aWins > bWins ? [aName, aWins, bWins] : [bName, bWins, aWins];
+  return `🏆 **${winner}** prend l'avantage (**${wl}** caractéristiques à **${ll}**).`;
+}
+
+export async function handleCompareCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  const q1 = interaction.options.getString('char1', true);
+  const q2 = interaction.options.getString('char2', true);
+  await interaction.deferReply();
+
+  if (!config.clanTracker.wotApplicationId) {
+    await interaction.editReply(
+      '⚠️ Le bot n’est pas configuré pour interroger la Tankopedia (`WOT_APPLICATION_ID` manquant).',
+    );
+    return;
+  }
+
+  try {
+    const [m1, m2] = await Promise.all([searchVehicle(q1), searchVehicle(q2)]);
+    if (!m1) {
+      await interaction.editReply(`❌ Char introuvable : **${q1}**.`);
+      return;
+    }
+    if (!m2) {
+      await interaction.editReply(`❌ Char introuvable : **${q2}**.`);
+      return;
+    }
+    if (m1.best.tankId === m2.best.tankId) {
+      await interaction.editReply('❌ Choisis deux chars différents à comparer.');
+      return;
+    }
+
+    const [a, b] = await Promise.all([getVehicleDetail(m1.best.tankId), getVehicleDetail(m2.best.tankId)]);
+    if (!a || !b) {
+      await interaction.editReply('❌ Impossible de récupérer la fiche d’un des deux chars.');
+      return;
+    }
+
+    const rows = buildRows(a, b);
+    const { table, aWins, bWins } = renderTable(rows);
+
+    const parts = [identity('A', a), identity('B', b)];
+    if (a.tier !== b.tier) {
+      parts.push(`⚠️ Tiers différents (${tierRoman(a.tier)} vs ${tierRoman(b.tier)}) — comparaison indicative.`);
+    }
+    parts.push('```' + table + '```');
+    parts.push(verdict(a.name, b.name, aWins, bWins));
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(`⚔️ ${a.name}  vs  ${b.name}`)
+      .setDescription(parts.join('\n\n').slice(0, 4096))
+      .setFooter({ text: 'ATFR • Tankopedia — ◀ / ▶ indiquent le vainqueur de chaque ligne' });
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    logError('Commande /compare:', err);
+    await interaction.editReply('❌ Une erreur est survenue pendant la comparaison. Réessaie plus tard.');
+  }
+}
