@@ -104,6 +104,74 @@ export async function resolveClanInput(input: string): Promise<ResolvedClan | nu
   return searchClanByTag(trimmed);
 }
 
+export interface ClanInfo {
+  clanId: number;
+  tag: string | null;
+  name: string | null;
+  membersCount: number;
+  motto: string | null;
+  description: string | null;
+  createdAt: number | null;
+  leaderName: string | null;
+  color: string | null;
+  emblemUrl: string | null;
+  members: Array<{ name: string; role: string | null; roleLabel: string | null }>;
+}
+
+interface WgClanInfoDetailed {
+  clan_id: number;
+  tag?: string;
+  name?: string;
+  members_count?: number;
+  motto?: string;
+  description?: string;
+  created_at?: number;
+  leader_name?: string;
+  color?: string;
+  emblems?: { x256?: { wot?: string; portal?: string } } | null;
+  members?: Array<{
+    account_name?: string;
+    role?: string;
+    role_i18n?: string;
+  } | null> | null;
+}
+
+/** Fiche détaillée d'un clan (effectif, chef, emblème, état-major) via l'API WG. */
+export async function fetchClanInfo(clanId: number): Promise<ClanInfo | null> {
+  const data = await wg<Record<string, WgClanInfoDetailed | null>>('/clans/info/', {
+    clan_id: String(clanId),
+    fields:
+      'clan_id,tag,name,members_count,motto,description,created_at,leader_name,color,' +
+      'emblems.x256.wot,emblems.x256.portal,' +
+      'members.account_name,members.role,members.role_i18n',
+    language: 'fr',
+  });
+  const clan = data?.[String(clanId)];
+  if (!clan) return null;
+
+  const members = (clan.members ?? [])
+    .filter((m): m is NonNullable<typeof m> => !!m && typeof m.account_name === 'string')
+    .map((m) => ({
+      name: m.account_name as string,
+      role: m.role ?? null,
+      roleLabel: m.role_i18n ?? null,
+    }));
+
+  return {
+    clanId: clan.clan_id,
+    tag: clan.tag ?? null,
+    name: clan.name ?? null,
+    membersCount: clan.members_count ?? members.length,
+    motto: clan.motto?.trim() || null,
+    description: clan.description?.trim() || null,
+    createdAt: clan.created_at ?? null,
+    leaderName: clan.leader_name ?? null,
+    color: clan.color ?? null,
+    emblemUrl: clan.emblems?.x256?.wot ?? clan.emblems?.x256?.portal ?? null,
+    members,
+  };
+}
+
 export async function fetchClanRoster(clanId: number): Promise<ClanRoster | null> {
   const clanMap = await wg<Record<string, WgClanInfo | null>>('/clans/info/', {
     clan_id: String(clanId),
