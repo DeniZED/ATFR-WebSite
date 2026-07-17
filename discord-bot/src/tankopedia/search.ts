@@ -76,3 +76,36 @@ export function rankVehicles(index: VehicleSummary[], query: string): VehicleSum
   );
   return scored.map((s) => s.v);
 }
+
+export const TANKS_GG_LIST_URL = 'https://tanks.gg/list';
+
+/**
+ * Message d'échec de recherche, avec suggestions « tu voulais dire… ? » et un
+ * lien vers la liste tanks.gg (utile pour les chars absents de l'API WG mais
+ * présents sur tanks.gg, qui lit les fichiers du jeu).
+ */
+export function notFoundMessage(query: string, suggestions: VehicleSummary[]): string {
+  const base = `❌ Aucun char trouvé pour **${query}**.`;
+  const hint = suggestions.length
+    ? `\n💡 Tu voulais dire : ${suggestions.map((v) => `**${v.name}**`).join(' · ')} ?`
+    : '';
+  return `${base}${hint}\n🔎 Voir la liste complète (dont chars absents de l’API WG) : <${TANKS_GG_LIST_URL}>`;
+}
+
+/**
+ * Renvoie les N chars dont le nom est le plus proche de la requête, sans seuil
+ * — utilisé pour proposer « tu voulais dire… ? » quand aucune correspondance
+ * n'est trouvée.
+ */
+export function nearestVehicles(index: VehicleSummary[], query: string, limit = 3): VehicleSummary[] {
+  const cq = compact(query);
+  if (cq.length === 0) return [];
+  return index
+    .map((v) => ({
+      v,
+      d: Math.min(levenshtein(cq, compact(v.shortName)), levenshtein(cq, compact(v.name))),
+    }))
+    .sort((a, b) => a.d - b.d || b.v.tier - a.v.tier)
+    .slice(0, limit)
+    .map((x) => x.v);
+}

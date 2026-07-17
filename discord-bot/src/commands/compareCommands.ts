@@ -1,8 +1,9 @@
 import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
 import { config } from '../config.js';
 import { error as logError } from '../logger.js';
-import { searchVehicle, getVehicleDetail, type VehicleDetail } from '../tankopedia/client.js';
+import { searchVehicle, getVehicleDetail, suggestVehicles, type VehicleDetail } from '../tankopedia/client.js';
 import { nationLabel, typeLabel, tierRoman, typeEmoji, typeColor } from '../tankopedia/labels.js';
+import { notFoundMessage } from '../tankopedia/search.js';
 
 export const compareCommandDefinition = new SlashCommandBuilder()
   .setName('compare')
@@ -107,11 +108,11 @@ export async function handleCompareCommand(interaction: ChatInputCommandInteract
   try {
     const [m1, m2] = await Promise.all([searchVehicle(q1), searchVehicle(q2)]);
     if (!m1) {
-      await interaction.editReply(`❌ Char introuvable : **${q1}**.`);
+      await interaction.editReply(notFoundMessage(q1, await suggestVehicles(q1, 3)));
       return;
     }
     if (!m2) {
-      await interaction.editReply(`❌ Char introuvable : **${q2}**.`);
+      await interaction.editReply(notFoundMessage(q2, await suggestVehicles(q2, 3)));
       return;
     }
     if (m1.best.tankId === m2.best.tankId) {
