@@ -58,6 +58,42 @@ export async function searchClanByTag(tag: string): Promise<ResolvedClan | null>
   return { clanId: exact.clan_id, tag: exact.tag, name: exact.name };
 }
 
+export interface ResolvedAccount {
+  accountId: number;
+  nickname: string;
+}
+
+/**
+ * Résout un pseudo de joueur WoT vers son account_id via l'API WG.
+ * Essaie une correspondance exacte, puis le premier résultat "commence par".
+ */
+export async function resolveAccount(nickname: string): Promise<ResolvedAccount | null> {
+  const search = nickname.trim();
+  if (search.length < 2) return null;
+  const results = await wg<Array<{ account_id: number; nickname: string }> | null>('/account/list/', {
+    search,
+    limit: '10',
+    fields: 'account_id,nickname',
+  });
+  if (!results || results.length === 0) return null;
+  const exact = results.find((a) => a.nickname.toLowerCase() === search.toLowerCase());
+  const chosen = exact ?? results[0];
+  return { accountId: chosen.account_id, nickname: chosen.nickname };
+}
+
+/** Tag du clan actuel d'un joueur (best-effort ; null si aucun ou en cas d'échec). */
+export async function fetchPlayerClanTag(accountId: number): Promise<string | null> {
+  try {
+    const data = await wg<Record<string, { clan?: { tag: string } | null } | null>>(
+      '/clans/accountinfo/',
+      { account_id: String(accountId), fields: 'clan.tag' },
+    );
+    return data?.[String(accountId)]?.clan?.tag ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Accepte un clan_id numérique ou un tag, et retourne le clan résolu. */
 export async function resolveClanInput(input: string): Promise<ResolvedClan | null> {
   const trimmed = input.trim();

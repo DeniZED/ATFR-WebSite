@@ -21,6 +21,13 @@ Chaque scan (planifié, manuel via `/clan scan` ou via le bouton "Scanner mainte
 Les notifications Discord d'entrée/sortie sont construites comme une carte de profil joueur (stats tomato.gg + WG) :
 **score de recrutement** (/100, calculé par `player-stats.mts` côté site à partir des seuils/pondérations configurés dans **Admin → Réglages → "Recrutement — score & filtres"**), WN8 et winrate (global + 30 derniers jours), nombre de batailles, tier moyen, dégâts moyens, nombre de chars Tier X, et lien direct vers le profil Tomato.gg. Le même score alimente le filtre WN8 et la colonne "Score" de l'onglet **Mouvements** côté site (Admin → Staff → RH).
 
+## Commandes publiques (tous les membres)
+
+| Commande | Description |
+|----------|--------------|
+| `/stats <pseudo>` | Stats WoT d'un joueur : WN8, winrate, batailles, dégâts moyens, tier moyen, chars Tier X, 30 derniers jours, lien Tomato.gg. Résout le pseudo → account_id via l'API Wargaming, puis récupère les stats enrichies via la fonction `player-stats` du site (données tomato.gg). Nécessite `WOT_APPLICATION_ID`. |
+| `/ping` | Vérifie que le bot répond (latence). |
+
 ## Commandes admin (`Gérer le serveur` requis)
 
 | Commande | Description |
@@ -225,6 +232,7 @@ discord-bot/src/
     registry.ts                  ── enregistrement des commandes slash
     clanCommands.ts               ── /clan add|bulk-add|remove|list|channel|scan|movements
     voiceCommands.ts              ── /voice stats
+    playerCommands.ts             ── /stats <pseudo>, /ping (commandes publiques)
     handleInteraction.ts          ── dispatch des interactions Discord
 ```
 
