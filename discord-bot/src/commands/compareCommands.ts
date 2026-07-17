@@ -4,6 +4,13 @@ import { error as logError } from '../logger.js';
 import { searchVehicle, getVehicleDetail, suggestVehicles, type VehicleDetail } from '../tankopedia/client.js';
 import { nationLabel, typeLabel, tierRoman, typeEmoji, typeColor } from '../tankopedia/labels.js';
 import { notFoundMessage } from '../tankopedia/search.js';
+import {
+  renderComparisonTable,
+  comparisonVerdict,
+  fmtInt as int,
+  fmtDec as dec,
+  type CompareRow,
+} from '../format/compareTable.js';
 
 export const compareCommandDefinition = new SlashCommandBuilder()
   .setName('compare')
@@ -14,17 +21,6 @@ export const compareCommandDefinition = new SlashCommandBuilder()
   .addStringOption((opt) =>
     opt.setName('char2').setDescription('Second char').setRequired(true).setMaxLength(64),
   );
-
-interface CompareRow {
-  label: string;
-  a: number | null;
-  b: number | null;
-  better: 'high' | 'low';
-  render: (n: number) => string;
-}
-
-const int = (n: number) => Math.round(n).toLocaleString('fr-FR');
-const dec = (digits: number) => (n: number) => n.toFixed(digits);
 
 function dpm(v: VehicleDetail): number | null {
   return v.damage != null && v.fireRate != null ? v.damage * v.fireRate : null;
@@ -50,47 +46,9 @@ function buildRows(a: VehicleDetail, b: VehicleDetail): CompareRow[] {
   ];
 }
 
-type Winner = 'a' | 'b' | 'tie' | 'none';
-
-function rowWinner(row: CompareRow): Winner {
-  if (row.a == null || row.b == null) return 'none';
-  if (row.a === row.b) return 'tie';
-  const aWins = row.better === 'high' ? row.a > row.b : row.a < row.b;
-  return aWins ? 'a' : 'b';
-}
-
-function renderTable(rows: CompareRow[]): { table: string; aWins: number; bWins: number } {
-  const cell = (n: number | null, render: (v: number) => string) => (n == null ? '—' : render(n));
-  const labelW = Math.max(...rows.map((r) => r.label.length), 'Caractéristique'.length);
-  const aCells = rows.map((r) => cell(r.a, r.render));
-  const bCells = rows.map((r) => cell(r.b, r.render));
-  const aW = Math.max(...aCells.map((s) => s.length), 1);
-  const bW = Math.max(...bCells.map((s) => s.length), 1);
-
-  const marker: Record<Winner, string> = { a: '◀', b: '▶', tie: '=', none: ' ' };
-  let aWins = 0;
-  let bWins = 0;
-
-  const lines = [`${'Caractéristique'.padEnd(labelW)}   ${'A'.padStart(aW)}   ${'B'.padStart(bW)}`];
-  rows.forEach((r, i) => {
-    const w = rowWinner(r);
-    if (w === 'a') aWins++;
-    else if (w === 'b') bWins++;
-    lines.push(`${r.label.padEnd(labelW)}   ${aCells[i].padStart(aW)} ${marker[w]} ${bCells[i].padStart(bW)}`);
-  });
-
-  return { table: lines.join('\n'), aWins, bWins };
-}
-
 function identity(letter: 'A' | 'B', v: VehicleDetail): string {
   const premium = v.isPremium ? ' ⭐' : '';
   return `**${letter} · ${typeEmoji(v.type)} ${v.name}${premium}** — Tier ${tierRoman(v.tier)} · ${nationLabel(v.nation)} · ${typeLabel(v.type)}`;
-}
-
-function verdict(aName: string, bName: string, aWins: number, bWins: number): string {
-  if (aWins === bWins) return `🤝 Match serré — **${aWins}** caractéristique(s) partout.`;
-  const [winner, wl, ll] = aWins > bWins ? [aName, aWins, bWins] : [bName, bWins, aWins];
-  return `🏆 **${winner}** prend l'avantage (**${wl}** caractéristiques à **${ll}**).`;
 }
 
 export async function handleCompareCommand(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -127,14 +85,14 @@ export async function handleCompareCommand(interaction: ChatInputCommandInteract
     }
 
     const rows = buildRows(a, b);
-    const { table, aWins, bWins } = renderTable(rows);
+    const { table, aWins, bWins } = renderComparisonTable(rows);
 
     const parts = [identity('A', a), identity('B', b)];
     if (a.tier !== b.tier) {
       parts.push(`⚠️ Tiers différents (${tierRoman(a.tier)} vs ${tierRoman(b.tier)}) — comparaison indicative.`);
     }
     parts.push('```' + table + '```');
-    parts.push(verdict(a.name, b.name, aWins, bWins));
+    parts.push(comparisonVerdict(a.name, b.name, aWins, bWins, 'caractéristique(s)'));
 
     const winnerColor = aWins > bWins ? typeColor(a.type) : bWins > aWins ? typeColor(b.type) : 0x5865f2;
     const embed = new EmbedBuilder()
