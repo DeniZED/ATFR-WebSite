@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { useReveal } from '@/hooks/useReveal';
+import { useReveal, useRevealStagger } from '@/hooks/useReveal';
 
 interface SectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   id?: string;
@@ -25,11 +25,11 @@ export function Section({
   children,
   ...props
 }: SectionProps) {
-  // Révélation au scroll homogène : l'en-tête, puis le contenu, montent en
-  // fondu à l'entrée dans le viewport (CSS + IntersectionObserver, via
-  // useReveal). Neutralisé si l'utilisateur préfère moins d'animations.
-  const headerRef = useReveal<HTMLElement>();
-  const contentRef = useReveal<HTMLDivElement>();
+  // Révélation au scroll « vivante » : l'en-tête monte en fondu, puis les
+  // cartes/blocs du contenu entrent en cascade, avec des directions
+  // alternées (gauche / haut / droite). Neutralisé sous prefers-reduced-motion.
+  const headerRef = useReveal<HTMLElement>('up');
+  const contentRef = useRevealStagger<HTMLDivElement>();
 
   return (
     <section
@@ -75,9 +75,9 @@ export function Section({
             </header>
           </div>
         )}
-        <div ref={contentRef} className="reveal-on-scroll" style={{ transitionDelay: '90ms' }}>
-          {children}
-        </div>
+        {/* Le conteneur n'est pas masqué : useRevealStagger met en cascade
+            ses cartes/blocs internes. */}
+        <div ref={contentRef}>{children}</div>
       </div>
     </section>
   );
