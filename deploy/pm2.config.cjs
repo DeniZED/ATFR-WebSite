@@ -11,6 +11,9 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const ROOT = path.resolve(__dirname, '..');
+// Caddy interprète les antislashs Windows comme des échappements : on force
+// des slashs normaux pour le chemin du dossier dist (Caddy les accepte).
+const DIST_DIR = path.join(ROOT, 'dist').replace(/\\/g, '/');
 
 module.exports = {
   apps: [
@@ -32,7 +35,7 @@ module.exports = {
       interpreter: 'none',
       env: {
         SITE_DOMAIN: process.env.SITE_DOMAIN || '',
-        SITE_ROOT: path.join(ROOT, 'dist'),
+        SITE_ROOT: DIST_DIR,
         API_UPSTREAM: process.env.API_UPSTREAM || 'localhost:8080',
       },
     },
