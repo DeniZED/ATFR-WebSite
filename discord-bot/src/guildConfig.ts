@@ -8,7 +8,11 @@ import {
 } from './supabaseSync.js';
 import type { GuildClanConfig } from './clan/types.js';
 
-const CACHE_TTL_MS = 60_000;
+// La config de clan (clans suivis, intervalle de scan, salon de notif) ne
+// change que via une commande/dashboard admin — et ces mutations mettent le
+// cache à jour directement. On peut donc garder le cache longtemps pour
+// éviter de rappeler la fonction Netlify discord-clan-config en boucle.
+const CACHE_TTL_MS = 15 * 60_000;
 const cache = new Map<string, { config: GuildClanConfig; fetchedAt: number }>();
 
 export async function getGuildConfig(guildId: string): Promise<GuildClanConfig> {
