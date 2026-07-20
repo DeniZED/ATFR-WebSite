@@ -30,11 +30,13 @@ module.exports = {
       script: process.env.CADDY_BIN || 'caddy',
       args: ['run', '--config', path.join(ROOT, 'deploy', 'Caddyfile')],
       interpreter: 'none',
-      // cwd = racine du repo, donc Caddy sert "dist" (chemin relatif du
-      // Caddyfile) sans avoir à passer un chemin absolu avec espaces.
+      // SITE_ROOT : chemin absolu SANS espaces vers dist (ex. un lien
+      // C:/atfrsite sous Windows). Si non défini, Caddy sert "dist" relatif
+      // au cwd (fonctionne en Docker, cwd = /srv).
       env: {
         SITE_DOMAIN: process.env.SITE_DOMAIN || '',
         API_UPSTREAM: process.env.API_UPSTREAM || 'localhost:8080',
+        ...(process.env.SITE_ROOT ? { SITE_ROOT: process.env.SITE_ROOT } : {}),
       },
     },
   ],
