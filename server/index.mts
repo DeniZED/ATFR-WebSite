@@ -1,9 +1,19 @@
+import { config as loadEnv } from 'dotenv';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
 import { readdir } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
+
+// Charge deploy/.env s'il existe (installation native Windows/Linux). En
+// Docker, les variables sont déjà injectées par env_file, et l'absence du
+// fichier est simplement ignorée par dotenv. Doit s'exécuter AVANT l'import
+// dynamique des fonctions (certaines lisent process.env au chargement).
+loadEnv({ path: path.join(ROOT, 'deploy', '.env') });
 
 /**
  * Serveur d'API auto-hébergé — remplace les Netlify Functions.
@@ -19,8 +29,6 @@ import path from 'node:path';
  * Le contenu statique (dist/) est servi par Caddy en amont, pas ici.
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 const FUNCTIONS_DIR = path.join(ROOT, 'netlify', 'functions');
 const PORT = Number(process.env.PORT ?? 8080);
 
