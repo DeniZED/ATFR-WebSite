@@ -528,7 +528,10 @@ loadHistoryDaily();
 refreshClanConfig();
 setInterval(refreshAll, 3000);
 setInterval(loadHistoryDaily, 60_000);
-setInterval(refreshClanConfig, 15_000);
+// La config de clan change rarement (et chaque action du dashboard met déjà
+// l'affichage à jour). On espace fortement ce rafraîchissement : combiné au
+// cache serveur, il ne déclenche quasiment plus d'appel à la fonction Netlify.
+setInterval(refreshClanConfig, 5 * 60_000);
 </script>
 </body>
 </html>`;

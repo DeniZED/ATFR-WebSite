@@ -6,7 +6,10 @@ import { triggerMemberSync } from './supabaseSync.js';
 import { getGuildConfig } from './guildConfig.js';
 import { scanAllClansForGuild } from './clan/scanner.js';
 
-const CHECK_INTERVAL_MS = 60_000;
+// Fréquence de vérification « faut-il scanner ? ». L'intervalle de scan
+// minimal étant de 15 min, vérifier toutes les 5 min est largement assez
+// précis — et ça réduit d'autant les lectures de config (fonction Netlify).
+const CHECK_INTERVAL_MS = 5 * 60_000;
 const lastScanAt = new Map<string, number>();
 
 function trackedGuildIds(client: Client): string[] {

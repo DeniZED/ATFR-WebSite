@@ -63,7 +63,12 @@ export async function handleClanApi(
 
   try {
     if (url === '/api/clan/config' && req.method === 'GET') {
-      const cfg = await refreshGuildConfig(guildId);
+      // Lecture via le cache (getGuildConfig) et non refreshGuildConfig :
+      // le dashboard poll cette route régulièrement ; sans cache, chaque
+      // poll déclenchait un appel à la fonction Netlify discord-clan-config.
+      // Les mutations (add/remove/interval…) mettent le cache à jour, donc
+      // l'affichage reste juste après une action.
+      const cfg = await getGuildConfig(guildId);
       sendJson(res, { guildId, config: cfg, channels: textChannelOptions(client, guildId) });
       return true;
     }
