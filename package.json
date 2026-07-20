@@ -12,13 +12,17 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "serve": "tsx server/index.mts",
     "audit:deps": "npm audit --audit-level=moderate",
     "gen:types": "supabase gen types typescript --linked --schema public > src/types/database.gen.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.59.0",
+    "hono": "^4.6.14",
+    "node-cron": "^3.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -36,6 +40,7 @@
   "devDependencies": {
     "@netlify/functions": "^5.2.0",
     "@types/node": "^22.7.4",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",

@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github
+**/*.log
+deploy/.env
+.env
+.env.*
+discord-bot/node_modules
+discord-bot/dist
+coverage
