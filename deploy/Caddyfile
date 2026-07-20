@@ -26,8 +26,9 @@
 
 	# Site statique (SPA) + règles de cache.
 	# SITE_ROOT : "/srv/dist" en Docker, le chemin du dossier dist en natif.
+	# Les guillemets gèrent les chemins Windows contenant des espaces.
 	handle {
-		root * {$SITE_ROOT:/srv/dist}
+		root * "{$SITE_ROOT:/srv/dist}"
 
 		# Assets fingerprintés : cache long et immuable.
 		@assets path /assets/*
