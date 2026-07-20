@@ -11,9 +11,6 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const ROOT = path.resolve(__dirname, '..');
-// Caddy interprète les antislashs Windows comme des échappements : on force
-// des slashs normaux pour le chemin du dossier dist (Caddy les accepte).
-const DIST_DIR = path.join(ROOT, 'dist').replace(/\\/g, '/');
 
 module.exports = {
   apps: [
@@ -33,9 +30,10 @@ module.exports = {
       script: process.env.CADDY_BIN || 'caddy',
       args: ['run', '--config', path.join(ROOT, 'deploy', 'Caddyfile')],
       interpreter: 'none',
+      // cwd = racine du repo, donc Caddy sert "dist" (chemin relatif du
+      // Caddyfile) sans avoir à passer un chemin absolu avec espaces.
       env: {
         SITE_DOMAIN: process.env.SITE_DOMAIN || '',
-        SITE_ROOT: DIST_DIR,
         API_UPSTREAM: process.env.API_UPSTREAM || 'localhost:8080',
       },
     },
