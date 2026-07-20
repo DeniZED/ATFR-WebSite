@@ -8,7 +8,10 @@
 const path = require('path');
 
 // Charge deploy/.env pour récupérer SITE_DOMAIN, CADDY_BIN, etc.
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// override: true => deploy/.env fait autorité, même si une variable de même
+// nom traîne déjà dans l'environnement du shell (ex. un SITE_DOMAIN=:8090
+// laissé par un test local).
+require('dotenv').config({ path: path.join(__dirname, '.env'), override: true });
 
 const ROOT = path.resolve(__dirname, '..');
 
