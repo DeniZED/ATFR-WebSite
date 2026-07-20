@@ -19,13 +19,15 @@
 	}
 
 	# API : mêmes URLs que Netlify -> aucun changement côté front/bot.
+	# API_UPSTREAM : "api:8080" en Docker, "localhost:8080" en natif (Windows).
 	handle /.netlify/functions/* {
-		reverse_proxy api:8080
+		reverse_proxy {$API_UPSTREAM:api:8080}
 	}
 
 	# Site statique (SPA) + règles de cache.
+	# SITE_ROOT : "/srv/dist" en Docker, le chemin du dossier dist en natif.
 	handle {
-		root * /srv/dist
+		root * {$SITE_ROOT:/srv/dist}
 
 		# Assets fingerprintés : cache long et immuable.
 		@assets path /assets/*
