@@ -1,0 +1,21 @@
+# API ATFR — rejoue les Netlify Functions via un petit serveur Hono.
+# Les fonctions sont en TypeScript (Request -> Response standard) : on les
+# exécute directement avec tsx, sans étape de bundling.
+FROM node:20-slim
+
+WORKDIR /app
+
+# Dépendances (inclut tsx + hono + @supabase/supabase-js + zod + cloudinary…)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Code nécessaire au runtime de l'API
+COPY netlify ./netlify
+COPY server ./server
+COPY src/types ./src/types
+
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["npx", "tsx", "server/index.mts"]

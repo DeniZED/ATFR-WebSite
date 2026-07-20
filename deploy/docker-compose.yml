@@ -1,0 +1,55 @@
+# Stack ATFR auto-hébergée (site + API), à lancer sur le VPS.
+#   cd deploy && docker compose up -d --build
+#
+# Prérequis : un fichier deploy/.env rempli à partir de .env.example, et le
+# domaine SITE_DOMAIN qui pointe (enregistrement A) vers l'IP du VPS.
+
+services:
+  # ----- API : Netlify Functions rejouées (Hono) + tâches planifiées -----
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ----- Web : front statique + Caddy (TLS auto) -----
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_CLAN_ID: ${VITE_CLAN_ID}
+        VITE_CLAN_TAG: ${VITE_CLAN_TAG}
+        VITE_SITE_URL: ${VITE_SITE_URL}
+        VITE_WOT_APPLICATION_ID: ${VITE_WOT_APPLICATION_ID}
+        VITE_CLOUDINARY_CLOUD_NAME: ${VITE_CLOUDINARY_CLOUD_NAME}
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

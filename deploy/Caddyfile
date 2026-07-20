@@ -1,0 +1,41 @@
+# Caddy — reverse proxy + HTTPS automatique (Let's Encrypt, gratuit).
+# Le domaine vient de la variable SITE_DOMAIN (voir .env).
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# En-têtes de sécurité — miroir de l'ancien netlify.toml.
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		X-DNS-Prefetch-Control "off"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://rsms.me https://fonts.googleapis.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldoftanks.eu https://static.modxvm.com https://cdn.discordapp.com https://discord.com https://api.cloudinary.com; img-src 'self' data: https://eu.wargaming.net https://res.cloudinary.com https://cdn.discordapp.com https://glossary-eu-static.gcdn.co https://*.supabase.co https://worldoftanks.eu; media-src 'self' https://*.supabase.co https://res.cloudinary.com; font-src 'self' data: https://rsms.me https://fonts.gstatic.com; frame-ancestors 'none'; upgrade-insecure-requests"
+		-Server
+	}
+
+	# API : mêmes URLs que Netlify -> aucun changement côté front/bot.
+	handle /.netlify/functions/* {
+		reverse_proxy api:8080
+	}
+
+	# Site statique (SPA) + règles de cache.
+	handle {
+		root * /srv/dist
+
+		# Assets fingerprintés : cache long et immuable.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# index.html : jamais mis en cache (nouveaux déploiements pris vite).
+		@html path /index.html
+		header @html Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

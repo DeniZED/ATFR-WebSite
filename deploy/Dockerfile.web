@@ -1,0 +1,22 @@
+# Front statique (build Vite) servi par Caddy (HTTPS Let's Encrypt gratuit).
+# Les variables VITE_* sont « bakées » au build : elles doivent être fournies
+# en build args (voir docker-compose.yml / .env).
+
+FROM node:20-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_CLAN_ID
+ARG VITE_CLAN_TAG
+ARG VITE_SITE_URL
+ARG VITE_WOT_APPLICATION_ID
+ARG VITE_CLOUDINARY_CLOUD_NAME
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv/dist
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
