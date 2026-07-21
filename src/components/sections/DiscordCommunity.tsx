@@ -33,12 +33,6 @@ const STATUS_DOT = {
   dnd: 'bg-atfr-danger',
 } as const;
 
-interface VoiceChannelGroup {
-  channelId: string;
-  channelName: string;
-  members: DiscordWidgetMember[];
-}
-
 export function DiscordCommunity() {
   const { get } = useContent();
   const serverId = get('discord_server_id');
@@ -46,28 +40,15 @@ export function DiscordCommunity() {
   const { data: widget, isLoading } = useDiscordWidget(serverId || null);
   const { data: community } = useDiscordCommunityStats();
 
-  const { voiceGroups, voiceCount, onlineNotInVoice } = useMemo(() => {
-    const channels = widget?.channels ?? [];
+  // On expose une présence vivante (qui est en vocal / en ligne) SANS révéler
+  // la structure des salons : pas de nom de salon, pas de regroupement par
+  // channel — juste une liste à plat des membres connectés en vocal.
+  const { voiceMembers, voiceCount, onlineNotInVoice } = useMemo(() => {
     const members = widget?.members ?? [];
-    const voiceMembers = members.filter((m) => !!m.channel_id);
-    const channelsById = new Map(channels.map((c) => [c.id, c]));
-    const groupsMap = new Map<string, VoiceChannelGroup>();
-    for (const m of voiceMembers) {
-      const cid = m.channel_id!;
-      const channelName = channelsById.get(cid)?.name ?? 'Salon vocal';
-      if (!groupsMap.has(cid)) {
-        groupsMap.set(cid, { channelId: cid, channelName, members: [] });
-      }
-      groupsMap.get(cid)!.members.push(m);
-    }
-    const groups = [...groupsMap.values()].sort((a, b) => {
-      const pa = channelsById.get(a.channelId)?.position ?? 0;
-      const pb = channelsById.get(b.channelId)?.position ?? 0;
-      return pa - pb;
-    });
+    const inVoice = members.filter((m) => !!m.channel_id);
     return {
-      voiceGroups: groups,
-      voiceCount: voiceMembers.length,
+      voiceMembers: inVoice.slice(0, 16),
+      voiceCount: inVoice.length,
       onlineNotInVoice: members.filter((m) => !m.channel_id).slice(0, 8),
     };
   }, [widget]);
@@ -218,28 +199,18 @@ export function DiscordCommunity() {
                   surchargé). Le bouton « Rejoindre le Discord » reste actif.
                 </p>
               </div>
-            ) : voiceGroups.length > 0 ? (
-              <div className="mt-8 space-y-4">
-                {voiceGroups.map((g) => (
-                  <div
-                    key={g.channelId}
-                    className="rounded-lg border border-atfr-gold/15 bg-atfr-graphite/40 p-4"
-                  >
-                    <div className="mb-3 flex items-center gap-2 text-sm text-atfr-bone">
-                      <Mic size={14} className="text-atfr-success" />
-                      <span className="font-medium">{g.channelName}</span>
-                      <span className="text-xs text-atfr-fog">
-                        · {g.members.length}{' '}
-                        {g.members.length > 1 ? 'connectés' : 'connecté'}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {g.members.map((m) => (
-                        <MemberChip key={m.id} member={m} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            ) : voiceMembers.length > 0 ? (
+              <div className="mt-8 border-t border-atfr-gold/10 pt-6">
+                <p className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-atfr-fog">
+                  <Mic size={14} className="text-atfr-success" />
+                  En vocal · {voiceCount}{' '}
+                  {voiceCount > 1 ? 'connectés' : 'connecté'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {voiceMembers.map((m) => (
+                    <MemberChip key={m.id} member={m} />
+                  ))}
+                </div>
               </div>
             ) : onlineNotInVoice.length > 0 ? (
               <div className="mt-8 border-t border-atfr-gold/10 pt-6">
