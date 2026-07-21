@@ -8,6 +8,7 @@ import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
 import { RequireNavVisible } from '@/components/layout/RequireNavVisible';
+import { RequireModulePlayable } from '@/components/layout/RequireModulePlayable';
 import { ClanLayout } from '@/components/clan/ClanLayout';
 import { RouteErrorBoundary } from '@/components/layout/ErrorScreens';
 import { Spinner } from '@/components/ui';
@@ -130,9 +131,20 @@ export const router = createBrowserRouter([
         element: <AcademyLayout />,
         children: [
           { path: '/modules', element: <Modules /> },
-          { path: '/modules/guide-bots', element: <GuideBots /> },
-          { path: '/modules/wot-geoguesser', element: <Geoguesser /> },
-          { path: '/modules/:slug', element: <ModuleStub /> },
+          {
+            element: <RequireModulePlayable slug="guide-bots" />,
+            children: [{ path: '/modules/guide-bots', element: <GuideBots /> }],
+          },
+          {
+            element: <RequireModulePlayable slug="wot-geoguesser" />,
+            children: [
+              { path: '/modules/wot-geoguesser', element: <Geoguesser /> },
+            ],
+          },
+          {
+            element: <RequireModulePlayable />,
+            children: [{ path: '/modules/:slug', element: <ModuleStub /> }],
+          },
         ],
       },
       { path: '/admin/login', element: <Login /> },

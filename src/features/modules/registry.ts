@@ -23,10 +23,6 @@ export interface ModuleDefinition {
   /** true = réservé aux membres du clan ATFR. Les non-membres voient le module
    * sur le hub mais ne peuvent pas y accéder (affiche un gate avec CTA). */
   membersOnly?: boolean;
-  /** Affiche un état "implémentation à venir" tant que le composant n'est
-   * pas prêt — la carte reste cliquable mais on annonce clairement le
-   * statut. */
-  comingSoon?: boolean;
 }
 
 export const MODULE_REGISTRY: ModuleDefinition[] = [

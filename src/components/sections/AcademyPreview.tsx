@@ -1,58 +1,31 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, GraduationCap, Map, Users } from 'lucide-react';
+import { ArrowRight, GraduationCap, Users } from 'lucide-react';
 import { Button, Section, Spinner } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePublishedModules } from '@/features/modules/queries';
 import {
   MODULE_STATUS_META,
   normalizeModuleStatus,
-  type ModuleStatus,
 } from '@/features/modules/registry';
 import { useContent } from '@/hooks/useContent';
-
-const fallbackModules: Array<{
-  title: string;
-  description: string;
-  icon: typeof BookOpen;
-  path: string;
-  tag: string;
-  status: ModuleStatus;
-}> = [
-  {
-    title: 'Guide pour les bots',
-    description:
-      'Questions pédagogiques, situations pièges et explications pour progresser sans se prendre au sérieux.',
-    icon: BookOpen,
-    path: 'guide-bots',
-    tag: 'Pédagogie',
-    status: 'disponible',
-  },
-  {
-    title: 'WoT Géoguesseur',
-    description:
-      'Une capture, une map, une position. Le mini-jeu parfait pour travailler la lecture de terrain.',
-    icon: Map,
-    path: 'wot-geoguesser',
-    tag: 'Mini-jeu',
-    status: 'disponible',
-  },
-];
 
 export function AcademyPreview() {
   const { get } = useContent();
   const { data, isLoading } = usePublishedModules();
-  const modules =
-    data && data.length > 0
-      ? data.slice(0, 3).map(({ registry, row }) => ({
-          title: row.custom_title || registry.title,
-          description: row.custom_description || registry.description,
-          icon: registry.icon,
-          path: registry.path,
-          tag: row.badge_label || registry.category,
-          status: normalizeModuleStatus(row.status),
-        }))
-      : fallbackModules;
+
+  const modules = (data ?? []).slice(0, 3).map(({ registry, row }) => ({
+    title: row.custom_title || registry.title,
+    description: row.custom_description || registry.description,
+    icon: registry.icon,
+    path: registry.path,
+    tag: row.badge_label || registry.category,
+    status: normalizeModuleStatus(row.status),
+  }));
+
+  // Aucun module publié → on masque toute la section. (Pas de fallback codé
+  // en dur : sinon les modules réapparaîtraient après les avoir dépubliés.)
+  if (!isLoading && modules.length === 0) return null;
 
   return (
     <Section
