@@ -7,6 +7,7 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { RequireModuleAccess } from '@/components/layout/RequireModuleAccess';
 import { RequireClanAccess } from '@/components/layout/RequireClanAccess';
+import { RequireNavVisible } from '@/components/layout/RequireNavVisible';
 import { ClanLayout } from '@/components/clan/ClanLayout';
 import { RouteErrorBoundary } from '@/components/layout/ErrorScreens';
 import { Spinner } from '@/components/ui';
@@ -88,9 +89,18 @@ export const router = createBrowserRouter([
         element: <PublicLayout />,
         children: [
           { path: '/', element: <Home /> },
-          { path: '/membres', element: <Members /> },
-          { path: '/evenements', element: <Events /> },
-          { path: '/galerie', element: <Gallery /> },
+          {
+            element: <RequireNavVisible page="members" />,
+            children: [{ path: '/membres', element: <Members /> }],
+          },
+          {
+            element: <RequireNavVisible page="events" />,
+            children: [{ path: '/evenements', element: <Events /> }],
+          },
+          {
+            element: <RequireNavVisible page="gallery" />,
+            children: [{ path: '/galerie', element: <Gallery /> }],
+          },
           { path: '/recrutement', element: <Recruitment /> },
           { path: '/auth/wg/callback', element: <AuthWgCallback /> },
           { path: '/clan-hub', element: <Navigate to="/clan" replace /> },
