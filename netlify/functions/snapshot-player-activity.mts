@@ -37,8 +37,11 @@ async function wgAccountInfo(
   const qs = new URLSearchParams({
     application_id: APP_ID,
     account_id: accountIds.join(','),
-    fields:
-      'account_id,nickname,last_battle_time,statistics.all.battles,statistics.rating.battles',
+    // NB : l'endpoint WoT /account/info/ n'expose PAS `statistics.rating` —
+    // le demander fait rejeter toute la requête avec INVALID_FIELDS (et donc
+    // 0 snapshot inséré). `statistics.all.battles` couvre déjà l'ensemble des
+    // batailles ; les batailles « rating » ne sont pas suivies ici.
+    fields: 'account_id,nickname,last_battle_time,statistics.all.battles',
   });
   const res = await fetch(`${WG_BASE}/account/info/?${qs}`);
   if (!res.ok) throw new Error(`[snapshot] WoT /account/info/ ${res.status}`);

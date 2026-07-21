@@ -1,7 +1,29 @@
 import { Link } from 'react-router-dom';
 import { env } from '@/lib/env';
+import { useNavVisibility } from '@/features/content/useNavVisibility';
+
+const navLinks = [
+  { to: '/', label: 'Accueil', always: true },
+  { to: '/membres', label: 'Membres', key: 'members' as const },
+  { to: '/evenements', label: 'Événements', key: 'events' as const },
+  { to: '/galerie', label: 'Galerie', key: 'gallery' as const },
+  { to: '/modules', label: 'Académie', always: true },
+  { to: '/recrutement', label: 'Rejoindre', always: true },
+];
 
 export function Footer() {
+  const { data: vis } = useNavVisibility();
+
+  // Même règle que la navbar : on masque un lien si sa page est vide /
+  // désactivée. Tant que la visibilité charge (`vis` indéfini), on affiche tout.
+  const links = navLinks.filter((l) => {
+    if (l.always || !vis) return true;
+    if (l.key === 'members') return vis.members;
+    if (l.key === 'events') return vis.events;
+    if (l.key === 'gallery') return vis.gallery;
+    return true;
+  });
+
   return (
     <footer className="border-t border-atfr-gold/10 bg-atfr-ink/60 mt-20">
       <div className="container py-12 grid gap-10 md:grid-cols-4">
@@ -20,12 +42,16 @@ export function Footer() {
             Navigation
           </p>
           <ul className="space-y-2 text-sm text-atfr-fog">
-            <li><Link to="/" className="hover:text-atfr-gold transition-colors duration-200">Accueil</Link></li>
-            <li><Link to="/membres" className="hover:text-atfr-gold transition-colors duration-200">Membres</Link></li>
-            <li><Link to="/evenements" className="hover:text-atfr-gold transition-colors duration-200">Événements</Link></li>
-            <li><Link to="/galerie" className="hover:text-atfr-gold transition-colors duration-200">Galerie</Link></li>
-            <li><Link to="/modules" className="hover:text-atfr-gold transition-colors duration-200">Académie</Link></li>
-            <li><Link to="/recrutement" className="hover:text-atfr-gold transition-colors duration-200">Rejoindre</Link></li>
+            {links.map((l) => (
+              <li key={l.to}>
+                <Link
+                  to={l.to}
+                  className="hover:text-atfr-gold transition-colors duration-200"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 

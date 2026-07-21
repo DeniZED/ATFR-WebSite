@@ -25,10 +25,12 @@
 	}
 
 	# Site statique (SPA) + règles de cache.
-	# SITE_ROOT : "/srv/dist" en Docker, le chemin du dossier dist en natif.
-	# Les guillemets gèrent les chemins Windows contenant des espaces.
+	# Chemin RELATIF au dossier de travail de Caddy pour éviter tout souci de
+	# chemin absolu (espaces Windows, antislashs). Caddy est lancé depuis la
+	# racine du repo en natif (cwd), et depuis /srv dans l'image Docker — dans
+	# les deux cas "dist" pointe au bon endroit. Surchargeable via SITE_ROOT.
 	handle {
-		root * "{$SITE_ROOT:/srv/dist}"
+		root * {$SITE_ROOT:dist}
 
 		# Assets fingerprintés : cache long et immuable.
 		@assets path /assets/*
