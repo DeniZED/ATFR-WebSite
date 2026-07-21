@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, RotateCcw, Save } from 'lucide-react';
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardBody,
@@ -180,9 +179,6 @@ export default function AdminModules() {
                         <h3 className="font-display text-lg text-atfr-bone">
                           {registry.title}
                         </h3>
-                        {registry.comingSoon && (
-                          <Badge variant="neutral">Stub</Badge>
-                        )}
                       </div>
                       <p className="text-xs text-atfr-fog mt-1">
                         slug · <code>{registry.slug}</code>
@@ -245,7 +241,7 @@ export default function AdminModules() {
                       }}
                     />
                     <Select
-                      label="Statut (pastille de disponibilité)"
+                      label="Statut (« Bientôt » = visible mais non jouable)"
                       disabled={upsert.isPending}
                       value={d.status}
                       onChange={(e) => {
