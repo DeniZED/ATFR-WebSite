@@ -28,6 +28,7 @@ Les notifications Discord d'entrée/sortie sont construites comme une carte de p
 | `/stats <pseudo>` | Stats WoT d'un joueur : WN8, winrate, batailles, dégâts moyens, tier moyen, chars Tier X, 30 derniers jours, lien Tomato.gg. Résout le pseudo → account_id via l'API Wargaming, puis récupère les stats enrichies via la fonction `player-stats` du site (données tomato.gg). Nécessite `WOT_APPLICATION_ID`. |
 | `/char <nom>` | Fiche d'un char (Tankopedia WG) : nation, type, tier, PV, dégâts/pénétration, cadence, visée, dispersion, vitesse, moteur, vue, image. Recherche tolérante (accents, ponctuation, espaces, petites fautes — `is7`, `bat chatillon 25t` fonctionnent) avec suggestions. Couleur par classe de char. Nécessite `WOT_APPLICATION_ID`. |
 | `/compare <char1> <char2>` | Duel de deux chars stat par stat (PV, dégâts, DPM, pénétration, cadence, visée, dispersion, vitesse, puissance/poids, vue) avec vainqueur par ligne (◀/▶) et verdict global. Nécessite `WOT_APPLICATION_ID`. |
+| `/versus <joueur1> <joueur2>` | Duel de stats entre deux joueurs (WN8, winrate, batailles, dégâts, tier moyen, chars Tier X, 30 derniers jours) avec vainqueur par ligne et verdict. Nécessite `WOT_APPLICATION_ID`. |
 | `/clan-info [clan]` | Fiche d'un clan (par défaut ATFR) : nom, emblème, devise, effectif, chef, date de création, état-major. Accepte un tag ou un clan_id. Nécessite `WOT_APPLICATION_ID`. |
 | `/quiz play` | Quiz « devine le char » : le bot affiche l'image d'un char au hasard et 4 réponses en boutons ; le premier à trouver marque un point (⏱️ 25 s). Nécessite `WOT_APPLICATION_ID`. |
 | `/quiz classement` | Classement des joueurs au quiz (scores cumulés). |
@@ -246,6 +247,7 @@ discord-bot/src/
     playerCommands.ts             ── /stats <pseudo>, /ping (commandes publiques)
     tankopediaCommands.ts         ── /char <nom> (fiche de char)
     compareCommands.ts            ── /compare <char1> <char2> (duel de chars)
+    versusCommands.ts             ── /versus <j1> <j2> (duel de joueurs)
     clanInfoCommands.ts           ── /clan-info [clan] (fiche d'un clan)
     quizCommands.ts               ── /quiz play|classement (mini-jeu à boutons)
     quizAdminCommands.ts          ── /quiz-admin (gestion classement + réglages, admin)
@@ -258,6 +260,8 @@ discord-bot/src/
     round.ts                      ── tirage d'un char + leurres pour un tour
     scores.ts                     ── classement persistant (data/quiz-scores.json)
     settings.ts                   ── réglages persistants (data/quiz-settings.json)
+  format/
+    compareTable.ts               ── tableau comparatif partagé (/compare + /versus)
 ```
 
 ### Flux vocal
