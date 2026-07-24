@@ -14,8 +14,10 @@ const LEVEL_ORDER: ActivityLevel[] = [
   'inactive',
 ];
 const LEVEL_COLOR: Record<ActivityLevel, string> = {
+  // Vert = « Très actif » (≥ 80) uniquement ; « Actif » (50-79) en doré, cohérent
+  // avec la barre de score et les badges (ACTIVITY_BADGE).
   very_active: 'bg-atfr-success',
-  active: 'bg-emerald-500/70',
+  active: 'bg-atfr-gold',
   low: 'bg-atfr-warning',
   inactive: 'bg-atfr-danger',
 };

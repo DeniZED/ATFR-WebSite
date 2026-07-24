@@ -162,10 +162,13 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 
 export const ACTIVITY_BADGE: Record<
   ActivityLevel,
-  'success' | 'warning' | 'danger' | 'neutral'
+  'success' | 'warning' | 'danger' | 'neutral' | 'gold'
 > = {
+  // Le vert (success) est réservé à « Très actif » (≥ 80). « Actif » (50-79)
+  // passe en doré pour s'aligner sur la barre de score et ne plus afficher en
+  // vert des joueurs au score moyen ou au statut RH inactif.
   very_active: 'success',
-  active: 'success',
+  active: 'gold',
   low: 'warning',
   inactive: 'danger',
 };
