@@ -53,6 +53,13 @@ import { useRole } from '@/hooks/useRole';
 import type { DiscordMemberPayload, PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
 import { ClanMovementsTab } from '@/components/admin/ClanMovementsTab';
+import { DataQualityDot } from '@/components/admin/DataQualityBadge';
+import {
+  filterByScope,
+  RH_SCOPES,
+  RH_SCOPE_LABELS,
+  type RhScope,
+} from '@/features/rh/perimeter';
 
 type PeriodPreset = '7' | '14' | '30' | '90' | 'custom';
 type PresenceFilter = 'all' | 'present' | 'missing';
@@ -86,7 +93,8 @@ export default function AdminPlayers() {
   const navigate = useNavigate();
   const { can, isLoading: roleLoading } = useRole();
   const canManageRh = can('members');
-  const [tab, setTab] = useState<'active' | 'archive' | 'movements'>('active');
+  const [tab, setTab] = useState<'players' | 'movements'>('players');
+  const [scope, setScope] = useState<RhScope>('current');
   const [search, setSearch] = useState('');
   const [clan, setClan] = useState('all');
   const [status, setStatus] = useState<PlayerHrStatus | 'all'>('all');
@@ -171,17 +179,22 @@ export default function AdminPlayers() {
     return [...values].sort((a, b) => a.localeCompare(b));
   }, [players.data]);
 
-  // Split players by tab: archive = former, active = everyone else
+  // Périmètre RH : membres actuels / prospects / anciens / tous. Toutes les
+  // métriques de la liste (tuiles, tableau, alertes) sont calculées sur ce
+  // périmètre — anciens et prospects ne faussent plus les stats par défaut.
   const allRows = useMemo(() => players.data?.players ?? [], [players.data]);
-  const activePlayers = useMemo(
-    () => allRows.filter((s) => s.player.status !== 'former'),
+  const scopedRows = useMemo(
+    () => filterByScope(allRows, scope),
+    [allRows, scope],
+  );
+  const scopeCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        RH_SCOPES.map((s) => [s, filterByScope(allRows, s).length]),
+      ) as Record<RhScope, number>,
     [allRows],
   );
-  const archivedPlayers = useMemo(
-    () => allRows.filter((s) => s.player.status === 'former'),
-    [allRows],
-  );
-  const tabRows = tab === 'archive' ? archivedPlayers : activePlayers;
+  const tabRows = scopedRows;
 
   const playerNicknamesById = useMemo(
     () => new Map(allRows.map((s) => [s.player.id, s.player.nickname])),
@@ -274,12 +287,12 @@ export default function AdminPlayers() {
     }
   }
 
-  // Stats computed on active players only (former/archived excluded)
+  // Stats calculées sur le PÉRIMÈTRE sélectionné (membres actuels par défaut).
   const stats = useMemo(() => {
-    const rows = activePlayers;
+    const rows = scopedRows;
     return {
       total: rows.length,
-      archived: archivedPlayers.length,
+      archived: scopeCounts.former,
       active: rows.filter((s) => s.score.value >= 50).length,
       inactive: rows.filter((s) => s.score.value < 25).length,
       watch: rows.filter((s) => s.player.status === 'watch').length,
@@ -292,7 +305,7 @@ export default function AdminPlayers() {
       alerts: rows.reduce((sum, s) => sum + s.alerts.length, 0),
       voiceSeconds: rows.reduce((sum, s) => sum + s.voiceSeconds, 0),
     };
-  }, [activePlayers, archivedPlayers, discordNameKeys]);
+  }, [scopedRows, scopeCounts, discordNameKeys]);
 
   const hasActiveFilter =
     search.trim().length > 0 ||
@@ -444,12 +457,11 @@ export default function AdminPlayers() {
       ) : (
         <>
 
-      {/* ── Tabs: actifs / archive / mouvements ── */}
+      {/* ── Onglets : joueurs / mouvements ── */}
       <div className="flex gap-1 border-b border-atfr-gold/15 pb-0">
         {(
           [
-            { key: 'active', label: `Actifs (${activePlayers.length})` },
-            { key: 'archive', label: `Archive (${archivedPlayers.length})` },
+            { key: 'players', label: 'Joueurs' },
             { key: 'movements', label: 'Mouvements' },
           ] as const
         ).map(({ key, label }) => (
@@ -472,6 +484,28 @@ export default function AdminPlayers() {
         <ClanMovementsTab playerNicknamesById={playerNicknamesById} />
       ) : (
       <>
+      {/* ── Périmètre RH (global) ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[11px] uppercase tracking-[0.2em] text-atfr-fog">
+          Périmètre
+        </span>
+        {RH_SCOPES.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setScope(s)}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              scope === s
+                ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-gold'
+                : 'border-atfr-gold/15 text-atfr-fog hover:text-atfr-bone',
+            )}
+          >
+            {RH_SCOPE_LABELS[s]} ({scopeCounts[s]})
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
         <StatCard
           label="Joueurs suivis"
@@ -843,12 +877,15 @@ function PlayerRow({
             {player.nickname.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <Link
-              to={`/admin/rh/${player.id}`}
-              className="font-medium text-atfr-bone hover:text-atfr-gold"
-            >
-              {player.nickname}
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to={`/admin/rh/${player.id}`}
+                className="font-medium text-atfr-bone hover:text-atfr-gold"
+              >
+                {player.nickname}
+              </Link>
+              <DataQualityDot quality={summary.dataQuality} />
+            </div>
             <p className="text-xs text-atfr-fog">
               {player.account_id ? `WoT ${player.account_id}` : 'WoT non lié'}
             </p>
