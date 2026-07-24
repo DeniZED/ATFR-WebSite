@@ -18,6 +18,7 @@ import { useClanStats } from '@/features/stats/queries';
 import { useGeoShots } from '@/features/geoguesser/queries';
 import { useCwEvents } from '@/features/cw/queries';
 import { makeRollingPeriod } from '@/features/rh/activity';
+import { filterByScope } from '@/features/rh/perimeter';
 import { useHrPlayers } from '@/features/rh/queries';
 import { useRole } from '@/hooks/useRole';
 import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
@@ -48,8 +49,16 @@ export default function AdminHome() {
   const movements = useClanMovements({ limit: 500, enabled: canReadRh });
   const geoShots = useGeoShots({ enabled: canGeo });
   const cwEvents = useCwEvents({ enabled: canCw });
-  const hrAlerts =
-    hr.data?.players.reduce((sum, player) => sum + player.alerts.length, 0) ?? 0;
+  // Le dashboard ne présente QUE les membres actuels : anciens et prospects
+  // ne faussent pas la synthèse RH (stats, alertes, graphes).
+  const rhMembers = useMemo(
+    () => filterByScope(hr.data?.players ?? [], 'current'),
+    [hr.data],
+  );
+  const hrAlerts = rhMembers.reduce(
+    (sum, player) => sum + player.alerts.length,
+    0,
+  );
 
   const now = Date.now();
   const tasks: AdminTask[] = [];
@@ -143,7 +152,7 @@ export default function AdminHome() {
         />
         <StatCard
           label="Joueurs RH"
-          value={!canReadRh || hr.isError ? '—' : (hr.data?.players.length ?? 0)}
+          value={!canReadRh || hr.isError ? '—' : rhMembers.length}
           loading={canReadRh && hr.isLoading}
           icon={<UserCog size={20} />}
         />
@@ -165,13 +174,13 @@ export default function AdminHome() {
         <>
           <Suspense fallback={null}>
             <HrTrendChart
-              players={hr.data.players}
+              players={rhMembers}
               period={hr.data.period}
               movements={movements.data}
             />
-            <HrStatusBreakdown players={hr.data.players} />
+            <HrStatusBreakdown players={rhMembers} />
           </Suspense>
-          <HrTopPerformers players={hr.data.players} />
+          <HrTopPerformers players={rhMembers} />
         </>
       )}
     </div>
