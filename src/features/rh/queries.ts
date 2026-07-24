@@ -18,6 +18,7 @@ import type {
 } from '@/types/database';
 import {
   buildPlayerSummary,
+  voiceOverlapsPeriod,
   type ActivityPeriod,
   type PlayerActivitySummary,
 } from '@/features/rh/activity';
@@ -691,13 +692,13 @@ function buildSummaryForPlayer(input: {
   const currentVoice = input.voiceSessions.filter(
     (session) =>
       belongsToPlayer(session, input.player, link) &&
-      isBetweenDateTime(session.joined_at, input.period.from, input.period.to),
+      voiceOverlapsPeriod(session, input.period.from, input.period.to),
   );
   const previousVoice = input.voiceSessions.filter(
     (session) =>
       belongsToPlayer(session, input.player, link) &&
-      isBetweenDateTime(
-        session.joined_at,
+      voiceOverlapsPeriod(
+        session,
         input.period.previousFrom,
         input.period.previousTo,
       ),
@@ -732,11 +733,6 @@ function belongsToPlayer(
 
 function isBetweenDateOnly(value: string, from: Date, to: Date): boolean {
   const date = new Date(`${value}T12:00:00.000Z`);
-  return date >= from && date <= to;
-}
-
-function isBetweenDateTime(value: string, from: Date, to: Date): boolean {
-  const date = new Date(value);
   return date >= from && date <= to;
 }
 

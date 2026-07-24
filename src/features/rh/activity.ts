@@ -18,12 +18,52 @@ export interface ActivityPeriod {
   days: number;
 }
 
+export interface ScoreComponent {
+  key: 'recency' | 'battles' | 'voice' | 'regularity' | 'trend';
+  label: string;
+  points: number; // points obtenus (arrondis)
+  max: number; // points maximum de la composante
+  detail: string; // libellé exploitable par le staff
+}
+
 export interface ActivityScore {
   value: number;
   level: ActivityLevel;
   label: string;
   detail: string;
+  /** Décomposition du score par composante (récence, batailles, vocal…). */
+  components: ScoreComponent[];
+  /** Raisons principales du score, lisibles par le staff. */
+  reasons: string[];
+  /** Données manquantes qui limitent le calcul (à distinguer d'une inactivité). */
+  missingData: string[];
+  /** Tendance vs période précédente. */
+  trend: { pct: number | null; direction: 'up' | 'down' | 'flat' | 'unknown' };
 }
+
+export type DataQualityLevel = 'complete' | 'partial' | 'low';
+
+export interface DataQuality {
+  level: DataQualityLevel;
+  label: string;
+  /** Ce qui manque ou est douteux dans le suivi. */
+  reasons: string[];
+}
+
+export const DATA_QUALITY_LABELS: Record<DataQualityLevel, string> = {
+  complete: 'Complète',
+  partial: 'Partielle',
+  low: 'Faible',
+};
+
+export const DATA_QUALITY_BADGE: Record<
+  DataQualityLevel,
+  'success' | 'warning' | 'danger'
+> = {
+  complete: 'success',
+  partial: 'warning',
+  low: 'danger',
+};
 
 export interface StaffAlert {
   kind:
@@ -68,15 +108,17 @@ export interface PlayerActivitySummary {
   battleDelta: number | null;
   previousBattleDelta: number | null;
   score: ActivityScore;
+  dataQuality: DataQuality;
+  hasOpenVoiceSession: boolean;
   alerts: StaffAlert[];
 }
 
 const SCORE_RULES = {
-  recentGame: 35,
-  voice: 30,
-  regularity: 20,
-  trend: 15,
-  targetVoiceHours: 10,
+  // Poids des 5 composantes (total = 100).
+  weights: { recency: 20, battles: 20, voice: 25, regularity: 20, trend: 15 },
+  // Objectifs par défaut, adaptés à la durée de période (× nombre de jours).
+  battlesTargetPerDay: 3, // ~90 batailles / 30 jours
+  voiceTargetMinutesPerDay: 20, // ~10 h / 30 jours
   strongDropPct: -45,
   inactivityWarningDays: 14,
   inactivityDangerDays: 30,
@@ -181,8 +223,17 @@ export function buildPlayerSummary(input: {
       ],
     ) ?? null;
 
-  const voiceSeconds = sumVoiceSeconds(input.voiceSessions);
-  const previousVoiceSeconds = sumVoiceSeconds(input.previousVoiceSessions);
+  const currentVoice = clippedVoiceSeconds(
+    input.voiceSessions,
+    input.period.from,
+    input.period.to,
+  );
+  const voiceSeconds = currentVoice.seconds;
+  const previousVoiceSeconds = clippedVoiceSeconds(
+    input.previousVoiceSessions,
+    input.period.previousFrom,
+    input.period.previousTo,
+  ).seconds;
   const voiceSessionCount = input.voiceSessions.length;
   const activeDays = countActiveDays(input.snapshots);
   const previousActiveDays = countActiveDays(input.previousSnapshots);
@@ -194,11 +245,23 @@ export function buildPlayerSummary(input: {
   const score = computeActivityScore({
     period: input.period,
     latestWotActivityAt,
+    battles: Math.max(0, battleDelta ?? 0),
+    previousBattles: Math.max(0, previousBattleDelta ?? 0),
     voiceSeconds,
     previousVoiceSeconds,
     activeDays,
     previousActiveDays,
+    hasSnapshots: input.snapshots.length > 0,
+    hasDiscordLink: Boolean(input.discordLink?.discord_user_id),
     trackingSettings: input.trackingSettings ?? null,
+  });
+
+  const dataQuality = computeDataQuality({
+    player: input.player,
+    discordLink: input.discordLink,
+    snapshots: input.snapshots,
+    voiceSessions: input.voiceSessions,
+    period: input.period,
   });
 
   return {
@@ -222,6 +285,8 @@ export function buildPlayerSummary(input: {
     battleDelta,
     previousBattleDelta,
     score,
+    dataQuality,
+    hasOpenVoiceSession: currentVoice.hasOpen,
     alerts: computeAlerts({
       player: input.player,
       discordLink: input.discordLink,
@@ -240,55 +305,129 @@ export function buildPlayerSummary(input: {
 export function computeActivityScore(input: {
   period: ActivityPeriod;
   latestWotActivityAt: string | null;
+  battles: number;
+  previousBattles: number;
   voiceSeconds: number;
   previousVoiceSeconds: number;
   activeDays: number;
   previousActiveDays: number;
+  hasSnapshots: boolean;
+  hasDiscordLink: boolean;
   trackingSettings?: PlayerTrackingSettingsRow | null;
 }): ActivityScore {
+  const W = SCORE_RULES.weights;
+  const missingData: string[] = [];
+
+  // ── Récence WoT ─────────────────────────────────────────────────────────
   const daysSinceGame = input.latestWotActivityAt
     ? daysBetween(new Date(input.latestWotActivityAt), input.period.to)
     : null;
+  const recencyPts = recencyPoints(daysSinceGame, W.recency);
+  if (daysSinceGame == null) missingData.push('Aucune activité WoT connue');
 
-  let recentGameScore = 0;
-  if (daysSinceGame != null) {
-    if (daysSinceGame <= 7) recentGameScore = SCORE_RULES.recentGame;
-    else if (daysSinceGame <= 14) recentGameScore = 25;
-    else if (daysSinceGame <= 30) recentGameScore = 12;
-  }
+  // ── Volume de batailles vs objectif (adapté à la durée de période) ──────
+  const battlesTarget = Math.max(
+    1,
+    SCORE_RULES.battlesTargetPerDay * input.period.days,
+  );
+  const battles = Math.max(0, input.battles);
+  const battlesPts = input.hasSnapshots
+    ? Math.min(W.battles, (battles / battlesTarget) * W.battles)
+    : 0;
+  if (!input.hasSnapshots) missingData.push('Aucun snapshot WoT sur la période');
 
+  // ── Vocal Discord vs objectif (adapté à la durée de période) ────────────
   const voiceHours = input.voiceSeconds / 3600;
   const targetVoiceHours =
-    (input.trackingSettings?.voice_target_minutes ?? null) != null
-      ? Math.max(0, (input.trackingSettings?.voice_target_minutes ?? 0) / 60)
-      : SCORE_RULES.targetVoiceHours;
-  const voiceScore =
+    input.trackingSettings?.voice_target_minutes != null
+      ? Math.max(0, input.trackingSettings.voice_target_minutes / 60)
+      : (SCORE_RULES.voiceTargetMinutesPerDay * input.period.days) / 60;
+  const voicePts =
     targetVoiceHours <= 0
-      ? SCORE_RULES.voice
-      : Math.min(
-          SCORE_RULES.voice,
-          (voiceHours / targetVoiceHours) * SCORE_RULES.voice,
-        );
+      ? W.voice
+      : Math.min(W.voice, (voiceHours / targetVoiceHours) * W.voice);
+  if (!input.hasDiscordLink) {
+    missingData.push('Discord non lié (vocal non mesurable)');
+  }
 
-  const regularityScore =
+  // ── Régularité (jours actifs / jours de période) ────────────────────────
+  const regularityPts =
     (Math.min(input.activeDays, input.period.days) / input.period.days) *
-    SCORE_RULES.regularity;
+    W.regularity;
 
-  const currentWeight = input.activeDays + voiceHours;
+  // ── Tendance vs période précédente équivalente ──────────────────────────
+  const currentWeight = input.activeDays + voiceHours + battles / 50;
   const previousWeight =
-    input.previousActiveDays + input.previousVoiceSeconds / 3600;
+    input.previousActiveDays +
+    input.previousVoiceSeconds / 3600 +
+    Math.max(0, input.previousBattles) / 50;
   const trendPct = percentChange(currentWeight, previousWeight);
-  const trendScore =
+  const trendPts =
     trendPct == null
-      ? SCORE_RULES.trend * 0.6
+      ? W.trend * 0.6
       : trendPct >= 0
-        ? SCORE_RULES.trend
-        : Math.max(0, SCORE_RULES.trend + trendPct / 10);
+        ? W.trend
+        : Math.max(0, W.trend + trendPct / 10);
+  if (trendPct == null) missingData.push('Pas de période de comparaison');
 
   const value = clampScore(
-    recentGameScore + voiceScore + regularityScore + trendScore,
+    recencyPts + battlesPts + voicePts + regularityPts + trendPts,
   );
   const level = getActivityLevel(value);
+  const direction: ActivityScore['trend']['direction'] =
+    trendPct == null
+      ? 'unknown'
+      : trendPct > 3
+        ? 'up'
+        : trendPct < -3
+          ? 'down'
+          : 'flat';
+
+  const components: ScoreComponent[] = [
+    {
+      key: 'recency',
+      label: 'Récence WoT',
+      points: Math.round(recencyPts),
+      max: W.recency,
+      detail:
+        daysSinceGame == null
+          ? 'Aucune activité connue'
+          : `Dernière bataille il y a ${daysSinceGame} j`,
+    },
+    {
+      key: 'battles',
+      label: 'Volume batailles',
+      points: Math.round(battlesPts),
+      max: W.battles,
+      detail: input.hasSnapshots
+        ? `${battles} batailles / objectif ${battlesTarget}`
+        : 'Pas de snapshot WoT',
+    },
+    {
+      key: 'voice',
+      label: 'Vocal Discord',
+      points: Math.round(voicePts),
+      max: W.voice,
+      detail: `${formatDuration(input.voiceSeconds)} / objectif ${Math.round(targetVoiceHours)} h`,
+    },
+    {
+      key: 'regularity',
+      label: 'Régularité',
+      points: Math.round(regularityPts),
+      max: W.regularity,
+      detail: `${input.activeDays}/${input.period.days} jours actifs`,
+    },
+    {
+      key: 'trend',
+      label: 'Tendance',
+      points: Math.round(trendPts),
+      max: W.trend,
+      detail:
+        trendPct == null
+          ? 'Pas de comparaison'
+          : `${trendPct > 0 ? '+' : ''}${Math.round(trendPct)}% vs période préc.`,
+    },
+  ];
 
   return {
     value,
@@ -297,8 +436,142 @@ export function computeActivityScore(input: {
     detail:
       trendPct == null
         ? 'Score basé sur la période actuelle'
-        : `Evolution ${trendPct > 0 ? '+' : ''}${Math.round(trendPct)}% vs période précédente`,
+        : `Évolution ${trendPct > 0 ? '+' : ''}${Math.round(trendPct)}% vs période précédente`,
+    components,
+    reasons: buildScoreReasons(components, trendPct),
+    missingData,
+    trend: { pct: trendPct, direction },
   };
+}
+
+function recencyPoints(daysSinceGame: number | null, max: number): number {
+  if (daysSinceGame == null) return 0;
+  if (daysSinceGame <= 3) return max;
+  if (daysSinceGame <= 7) return max * 0.85;
+  if (daysSinceGame <= 14) return max * 0.6;
+  if (daysSinceGame <= 21) return max * 0.35;
+  if (daysSinceGame <= 30) return max * 0.15;
+  return 0;
+}
+
+function buildScoreReasons(
+  components: ScoreComponent[],
+  trendPct: number | null,
+): string[] {
+  const reasons: string[] = [];
+  if (trendPct != null && trendPct <= SCORE_RULES.strongDropPct) {
+    reasons.push(`Forte baisse d'activité (${Math.round(trendPct)}%)`);
+  }
+  const ranked = [...components].sort(
+    (a, b) => a.points / a.max - b.points / b.max,
+  );
+  for (const c of ranked.slice(0, 2)) {
+    if (c.max > 0 && c.points / c.max < 0.5) {
+      reasons.push(`${c.label} en dessous de l'objectif (${c.points}/${c.max})`);
+    }
+  }
+  const best = ranked[ranked.length - 1];
+  if (best && best.max > 0 && best.points / best.max >= 0.8) {
+    reasons.push(`Point fort : ${best.label}`);
+  }
+  return reasons;
+}
+
+/**
+ * Fiabilité du suivi d'un joueur — distingue « inactif » de « données
+ * manquantes » (un joueur mal suivi ne doit pas être classé inactif à tort).
+ */
+export function computeDataQuality(input: {
+  player: PlayerRow;
+  discordLink: PlayerDiscordLinkRow | null;
+  snapshots: PlayerActivitySnapshotRow[];
+  voiceSessions: DiscordVoiceSessionRow[];
+  period: ActivityPeriod;
+  now?: Date;
+}): DataQuality {
+  const now = input.now ?? new Date();
+  const reasons: string[] = [];
+
+  const hasWot = Boolean(input.player.account_id);
+  const hasDiscord = Boolean(input.discordLink?.discord_user_id);
+  const snapCount = input.snapshots.length;
+  const hasOpenSession = input.voiceSessions.some((s) => !s.left_at);
+  const latestSnapDate = input.snapshots.reduce<string | null>(
+    (max, s) => (!max || s.snapshot_date > max ? s.snapshot_date : max),
+    null,
+  );
+  const daysSinceSnap = latestSnapDate
+    ? daysBetween(new Date(`${latestSnapDate}T12:00:00.000Z`), now)
+    : null;
+  // On attend ~1 snapshot tous les 3 jours au minimum sur la période.
+  const expectedSnaps = Math.max(1, Math.round(input.period.days / 3));
+
+  if (!hasWot) reasons.push('Compte WoT non lié');
+  if (!hasDiscord) reasons.push('Discord non lié');
+  if (hasWot && snapCount === 0) {
+    reasons.push('Aucun snapshot WoT sur la période');
+  } else if (hasWot && snapCount < expectedSnaps) {
+    reasons.push('Peu de snapshots WoT (suivi partiel)');
+  }
+  if (daysSinceSnap != null && daysSinceSnap > 2) {
+    reasons.push(`Dernière sync WoT il y a ${daysSinceSnap} j`);
+  }
+  if (hasOpenSession) reasons.push('Session vocale ouverte / non clôturée');
+
+  const noSources = !hasWot && !hasDiscord;
+  let level: DataQualityLevel = 'complete';
+  if (noSources) level = 'low';
+  else if (reasons.length > 0) level = 'partial';
+
+  return { level, label: DATA_QUALITY_LABELS[level], reasons };
+}
+
+/**
+ * Somme des secondes de vocal **découpées à la période** [from, to].
+ * - une session qui déborde des bornes n'est comptée que sur son chevauchement ;
+ * - une session ouverte (`left_at` nul) est bornée à « maintenant » (plafonnée
+ *   à 12 h pour éviter qu'une session bloquée gonfle le total) et signalée.
+ */
+export function clippedVoiceSeconds(
+  sessions: DiscordVoiceSessionRow[],
+  from: Date,
+  to: Date,
+  now: Date = new Date(),
+): { seconds: number; hasOpen: boolean } {
+  const OPEN_CAP_SECONDS = 12 * 3600;
+  let seconds = 0;
+  let hasOpen = false;
+  for (const session of sessions) {
+    const start = new Date(session.joined_at);
+    if (Number.isNaN(start.getTime())) continue;
+    let end: Date;
+    if (session.left_at) {
+      end = new Date(session.left_at);
+    } else {
+      hasOpen = true;
+      const capped = new Date(Math.min(now.getTime(), start.getTime() + OPEN_CAP_SECONDS * 1000));
+      end = capped;
+    }
+    const clipStart = Math.max(start.getTime(), from.getTime());
+    const clipEnd = Math.min(end.getTime(), to.getTime());
+    if (clipEnd > clipStart) seconds += (clipEnd - clipStart) / 1000;
+  }
+  return { seconds: Math.round(seconds), hasOpen };
+}
+
+/** true si la session chevauche la période [from, to] (bornes incluses). */
+export function voiceOverlapsPeriod(
+  session: DiscordVoiceSessionRow,
+  from: Date,
+  to: Date,
+  now: Date = new Date(),
+): boolean {
+  const start = new Date(session.joined_at).getTime();
+  if (Number.isNaN(start)) return false;
+  const end = session.left_at
+    ? new Date(session.left_at).getTime()
+    : now.getTime();
+  return start <= to.getTime() && end >= from.getTime();
 }
 
 export function computeAlerts(input: {
@@ -505,10 +778,6 @@ function countActiveDays(snapshots: PlayerActivitySnapshotRow[]): number {
     }
   }
   return days.size;
-}
-
-function sumVoiceSeconds(sessions: DiscordVoiceSessionRow[]): number {
-  return sessions.reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0);
 }
 
 function sumNullable(values: Array<number | null>): number | null {
