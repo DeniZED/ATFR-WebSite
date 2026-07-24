@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  Archive,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   Clock3,
+  Eye,
   Link2,
   RefreshCcw,
   Search,
@@ -43,13 +45,17 @@ import {
   useHrPlayers,
   useImportMembersToPlayers,
   useRecomputePlayerStatuses,
+  useSavePlayer,
   useSnapshotPlayerActivity,
   useSyncAllDiscordMembers,
 } from '@/features/rh/queries';
 import { useClanInfo } from '@/features/clan/queries';
 import { useDiscordWidget } from '@/features/discord/queries';
+import { useAuth } from '@/hooks/useAuth';
+import { useConfirm } from '@/hooks/useConfirm';
 import { useContent } from '@/hooks/useContent';
 import { useRole } from '@/hooks/useRole';
+import { useToast } from '@/hooks/useToast';
 import type { DiscordMemberPayload, PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
 import { ClanMovementsTab } from '@/components/admin/ClanMovementsTab';
@@ -99,6 +105,10 @@ const SORT_ACCESSORS: Record<SortKey, (s: PlayerActivitySummary) => string | num
 export default function AdminPlayers() {
   const navigate = useNavigate();
   const { can, isLoading: roleLoading } = useRole();
+  const { user } = useAuth();
+  const confirmDialog = useConfirm();
+  const toast = useToast();
+  const savePlayer = useSavePlayer();
   const canManageRh = can('members');
   const [tab, setTab] = useState<'players' | 'movements'>('players');
   const [scope, setScope] = useState<RhScope>('current');
@@ -296,6 +306,45 @@ export default function AdminPlayers() {
     } else {
       setSortKey(key);
       setSortDir('desc');
+    }
+  }
+
+  // Actions rapides par ligne (Phase 4b) : basculer un joueur en « À surveiller »
+  // ou l'archiver (statut « former ») directement depuis la liste, sans ouvrir
+  // la fiche. L'archivage demande une confirmation (action structurante).
+  // useSavePlayer trace l'historique de statut et invalide le cache ['hr'].
+  async function handleQuickAction(
+    summary: PlayerActivitySummary,
+    action: 'watch' | 'archive',
+  ) {
+    if (!canManageRh) return;
+    const player = summary.player;
+    if (player.status === (action === 'watch' ? 'watch' : 'former')) return;
+
+    if (action === 'archive') {
+      const ok = await confirmDialog({
+        title: 'Archiver le joueur',
+        message: `Passer « ${player.nickname} » en ancien membre (statut archivé) ? La fiche et l'historique sont conservés, mais le joueur sort du périmètre « Membres actuels ».`,
+        confirmLabel: 'Archiver',
+        cancelLabel: 'Annuler',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+
+    try {
+      await savePlayer.mutateAsync({
+        id: player.id,
+        actorId: user?.id,
+        previousStatus: player.status,
+        previousRole: player.internal_role,
+        patch: {
+          status: action === 'watch' ? 'watch' : 'former',
+          updated_by: user?.id ?? null,
+        },
+      });
+    } catch {
+      toast({ tone: 'danger', message: 'Action impossible. Réessaie.' });
     }
   }
 
@@ -851,6 +900,9 @@ export default function AdminPlayers() {
           sortKey={sortKey}
           sortDir={sortDir}
           onSort={toggleSort}
+          canManageRh={canManageRh}
+          onQuickAction={handleQuickAction}
+          actionPending={savePlayer.isPending}
         />
       )}
       </>
@@ -867,12 +919,21 @@ function PlayerTable({
   sortKey,
   sortDir,
   onSort,
+  canManageRh,
+  onQuickAction,
+  actionPending,
 }: {
   players: PlayerActivitySummary[];
   discordNameKeys: Set<string>;
   sortKey: SortKey;
   sortDir: SortDir;
   onSort: (key: SortKey) => void;
+  canManageRh: boolean;
+  onQuickAction: (
+    summary: PlayerActivitySummary,
+    action: 'watch' | 'archive',
+  ) => void;
+  actionPending: boolean;
 }) {
   return (
     <Card>
@@ -906,6 +967,9 @@ function PlayerTable({
                       normalizeDiscordName(summary.player.nickname),
                     )
                   }
+                  canManageRh={canManageRh}
+                  onQuickAction={onQuickAction}
+                  actionPending={actionPending}
                 />
               ))}
             </tbody>
@@ -919,9 +983,18 @@ function PlayerTable({
 function PlayerRow({
   summary,
   hasDiscordSuggestion,
+  canManageRh,
+  onQuickAction,
+  actionPending,
 }: {
   summary: PlayerActivitySummary;
   hasDiscordSuggestion: boolean;
+  canManageRh: boolean;
+  onQuickAction: (
+    summary: PlayerActivitySummary,
+    action: 'watch' | 'archive',
+  ) => void;
+  actionPending: boolean;
 }) {
   const player = summary.player;
   const alertSeverity = summary.alerts.some((alert) => alert.severity === 'danger')
@@ -1038,12 +1111,38 @@ function PlayerRow({
         </p>
       </Td>
       <Td>
-        <Link
-          to={`/admin/rh/${player.id}`}
-          className="inline-flex items-center justify-center rounded-md border border-atfr-gold/30 px-3 py-1.5 text-xs font-medium text-atfr-gold transition-colors hover:bg-atfr-gold/10"
-        >
-          Éditer
-        </Link>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link
+            to={`/admin/rh/${player.id}`}
+            className="inline-flex items-center justify-center rounded-md border border-atfr-gold/30 px-3 py-1.5 text-xs font-medium text-atfr-gold transition-colors hover:bg-atfr-gold/10"
+          >
+            Éditer
+          </Link>
+          {canManageRh && player.status !== 'watch' && player.status !== 'former' && (
+            <button
+              type="button"
+              onClick={() => onQuickAction(summary, 'watch')}
+              disabled={actionPending}
+              title="Basculer en « À surveiller »"
+              className="inline-flex items-center gap-1 rounded-md border border-atfr-fog/25 px-2 py-1.5 text-xs font-medium text-atfr-fog transition-colors hover:border-atfr-gold/40 hover:text-atfr-gold disabled:opacity-50"
+            >
+              <Eye size={13} />
+              Surveiller
+            </button>
+          )}
+          {canManageRh && player.status !== 'former' && (
+            <button
+              type="button"
+              onClick={() => onQuickAction(summary, 'archive')}
+              disabled={actionPending}
+              title="Archiver (ancien membre)"
+              className="inline-flex items-center gap-1 rounded-md border border-atfr-danger/30 px-2 py-1.5 text-xs font-medium text-atfr-danger transition-colors hover:bg-atfr-danger/10 disabled:opacity-50"
+            >
+              <Archive size={13} />
+              Archiver
+            </button>
+          )}
+        </div>
       </Td>
     </tr>
   );
