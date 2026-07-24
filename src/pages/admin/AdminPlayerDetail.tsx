@@ -24,6 +24,8 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import { HrScoreBreakdown } from '@/components/admin/HrScoreBreakdown';
+import { HrPlayerDiagnostic } from '@/components/admin/HrPlayerDiagnostic';
+import { HrPlayerTimeline } from '@/components/admin/HrPlayerTimeline';
 import {
   ACTIVITY_BADGE,
   STATUS_BADGE,
@@ -400,6 +402,8 @@ export default function AdminPlayerDetail() {
           </CardBody>
         </Card>
       )}
+
+      <HrPlayerDiagnostic summary={summary} />
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
@@ -779,6 +783,14 @@ export default function AdminPlayerDetail() {
           </CardBody>
         </Card>
       </div>
+
+      <HrPlayerTimeline
+        memberHistory={detailData.memberHistory}
+        statusHistory={detailData.statusHistory}
+        notes={summary.notes}
+        alerts={detailData.persistedAlerts}
+        discordLink={summary.discordLink}
+      />
 
       <Card>
         <CardBody className="p-6 space-y-4">
