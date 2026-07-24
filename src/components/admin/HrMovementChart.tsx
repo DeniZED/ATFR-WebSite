@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Card, CardBody } from '@/components/ui';
+import { env } from '@/lib/env';
 import type { ActivityPeriod } from '@/features/rh/activity';
 import type { ClanMemberMovementRow } from '@/types/database';
 
@@ -32,7 +33,8 @@ export function HrMovementChart({
   movements?: ClanMemberMovementRow[];
   period: ActivityPeriod;
 }) {
-  const { data, arrivals, departures, untriaged } = useMemo(() => {
+  const clanId = Number(env.clanId);
+  const { data, arrivals, departures } = useMemo(() => {
     const buckets = new Map<string, DayPoint>();
     const cursor = new Date(period.from);
     while (cursor <= period.to) {
@@ -51,11 +53,12 @@ export function HrMovementChart({
 
     let arrivals = 0;
     let departures = 0;
-    let untriaged = 0;
     for (const m of movements) {
+      // Uniquement les mouvements du clan ATFR (le bot suit ~50 autres clans
+      // pour le recrutement — ils ne doivent PAS apparaître ici).
+      if (Number.isFinite(clanId) && m.clan_id !== clanId) continue;
       const key = (m.occurred_at ?? '').slice(0, 10);
       const bucket = buckets.get(key);
-      if (m.contact_status === 'new') untriaged += 1;
       if (m.event === 'join') {
         arrivals += 1;
         if (bucket) {
@@ -70,8 +73,8 @@ export function HrMovementChart({
         }
       }
     }
-    return { data: [...buckets.values()], arrivals, departures, untriaged };
-  }, [movements, period]);
+    return { data: [...buckets.values()], arrivals, departures };
+  }, [movements, period, clanId]);
 
   const net = arrivals - departures;
 
@@ -88,8 +91,8 @@ export function HrMovementChart({
             <span className={net >= 0 ? 'text-atfr-success' : 'text-atfr-danger'}>
               {net >= 0 ? '+' : ''}
               {net}
-            </span>
-            {untriaged > 0 ? ` · ${untriaged} à trier` : ''}
+            </span>{' '}
+            chez {env.clanTag}
           </p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
