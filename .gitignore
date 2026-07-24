@@ -9,6 +9,9 @@ dist-ssr/
 build/
 .vite/
 
+# Sauvegardes base de données (deploy/backup-db.mjs)
+backups/
+
 # Logs
 logs
 *.log
