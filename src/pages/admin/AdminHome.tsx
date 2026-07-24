@@ -22,13 +22,22 @@ import { filterByScope } from '@/features/rh/perimeter';
 import { useHrPlayers } from '@/features/rh/queries';
 import { useRole } from '@/hooks/useRole';
 import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
+import { HrPlayersToReview } from '@/components/admin/HrPlayersToReview';
+import { HrHealthTrendChart } from '@/components/admin/HrHealthTrendChart';
 import { AdminTasks, type AdminTask } from '@/components/admin/AdminTasks';
 import { useClanMovements } from '@/features/clanMovements/queries';
 
 // Graphiques recharts chargés en lazy (P2-5) : le chunk recharts
 // (~115 kB gzip) ne bloque pas le premier rendu du dashboard admin.
-const HrTrendChart = lazy(() =>
-  import('@/components/admin/HrTrendChart').then((m) => ({ default: m.HrTrendChart })),
+const HrActivityTrendChart = lazy(() =>
+  import('@/components/admin/HrActivityTrendChart').then((m) => ({
+    default: m.HrActivityTrendChart,
+  })),
+);
+const HrMovementChart = lazy(() =>
+  import('@/components/admin/HrMovementChart').then((m) => ({
+    default: m.HrMovementChart,
+  })),
 );
 const HrStatusBreakdown = lazy(() =>
   import('@/components/admin/HrStatusBreakdown').then((m) => ({ default: m.HrStatusBreakdown })),
@@ -172,15 +181,14 @@ export default function AdminHome() {
 
       {canReadRh && !hr.isError && hr.data && (
         <>
+          <HrHealthTrendChart players={rhMembers} />
           <Suspense fallback={null}>
-            <HrTrendChart
-              players={rhMembers}
-              period={hr.data.period}
-              movements={movements.data}
-            />
+            <HrActivityTrendChart players={rhMembers} period={hr.data.period} />
+            <HrMovementChart movements={movements.data} period={hr.data.period} />
             <HrStatusBreakdown players={rhMembers} />
           </Suspense>
           <HrTopPerformers players={rhMembers} />
+          <HrPlayersToReview players={rhMembers} />
         </>
       )}
     </div>
