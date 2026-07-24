@@ -1,5 +1,6 @@
 import type {
   PlayerActivitySnapshotRow,
+  PlayerAlertActionRow,
   PlayerDiscordLinkRow,
   PlayerHrStatus,
   PlayerRow,
@@ -7,6 +8,8 @@ import type {
   PlayerTrackingSettingsRow,
   DiscordVoiceSessionRow,
 } from '@/types/database';
+// alerts.ts n'importe activity.ts qu'en type-only → pas de cycle runtime.
+import { activeAlerts as computeActiveAlerts, indexAlertActions } from './alerts';
 
 export type ActivityLevel = 'very_active' | 'active' | 'low' | 'inactive';
 
@@ -110,7 +113,12 @@ export interface PlayerActivitySummary {
   score: ActivityScore;
   dataQuality: DataQuality;
   hasOpenVoiceSession: boolean;
+  /** Toutes les alertes calculées, quel que soit leur état de traitement. */
   alerts: StaffAlert[];
+  /** Décisions de traitement persistées (Phase 6), indexées par kind. */
+  alertActions: PlayerAlertActionRow[];
+  /** Alertes encore actives (hors en veille / ignorées / résolues). */
+  activeAlerts: StaffAlert[];
 }
 
 const SCORE_RULES = {
@@ -203,6 +211,7 @@ export function buildPlayerSummary(input: {
   previousVoiceSessions: DiscordVoiceSessionRow[];
   notes: PlayerStaffNoteRow[];
   period: ActivityPeriod;
+  alertActions?: PlayerAlertActionRow[];
 }): PlayerActivitySummary {
   const latestSnapshotActivity = latestDate(
     input.snapshots
@@ -264,6 +273,24 @@ export function buildPlayerSummary(input: {
     period: input.period,
   });
 
+  const alerts = computeAlerts({
+    player: input.player,
+    discordLink: input.discordLink,
+    period: input.period,
+    score,
+    latestWotActivityAt,
+    voiceSeconds,
+    previousVoiceSeconds,
+    activeDays,
+    previousActiveDays,
+    trackingSettings: input.trackingSettings ?? null,
+  });
+  const alertActions = input.alertActions ?? [];
+  const activeAlerts = computeActiveAlerts(
+    alerts,
+    indexAlertActions(alertActions),
+  );
+
   return {
     player: input.player,
     discordLink: input.discordLink,
@@ -287,18 +314,9 @@ export function buildPlayerSummary(input: {
     score,
     dataQuality,
     hasOpenVoiceSession: currentVoice.hasOpen,
-    alerts: computeAlerts({
-      player: input.player,
-      discordLink: input.discordLink,
-      period: input.period,
-      score,
-      latestWotActivityAt,
-      voiceSeconds,
-      previousVoiceSeconds,
-      activeDays,
-      previousActiveDays,
-      trackingSettings: input.trackingSettings ?? null,
-    }),
+    alerts,
+    alertActions,
+    activeAlerts,
   };
 }
 

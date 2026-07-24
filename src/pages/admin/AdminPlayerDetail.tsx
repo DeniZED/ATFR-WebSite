@@ -7,7 +7,6 @@ import {
   MessageSquarePlus,
   Save,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react';
 import {
   Alert,
@@ -26,6 +25,7 @@ import { useRole } from '@/hooks/useRole';
 import { HrScoreBreakdown } from '@/components/admin/HrScoreBreakdown';
 import { HrPlayerDiagnostic } from '@/components/admin/HrPlayerDiagnostic';
 import { HrPlayerTimeline } from '@/components/admin/HrPlayerTimeline';
+import { HrAlertsWorkflow } from '@/components/admin/HrAlertsWorkflow';
 import {
   ACTIVITY_BADGE,
   STATUS_BADGE,
@@ -268,15 +268,6 @@ export default function AdminPlayerDetail() {
   const profileUrl =
     player.tomato_url || player.wot_profile_url || tomatoProfileUrl(player.nickname);
   const recentChannels = getRecentChannels(summary.voiceSessions);
-  const visibleAlerts = [
-    ...summary.alerts,
-    ...detailData.persistedAlerts.map((alert) => ({
-      kind: alert.kind,
-      severity: alert.severity,
-      title: alert.title,
-      description: alert.description ?? 'Alerte enregistrée par le staff ou le bot.',
-    })),
-  ];
 
   return (
     <div className="space-y-6">
@@ -370,38 +361,11 @@ export default function AdminPlayerDetail() {
         />
       </div>
 
-      {visibleAlerts.length > 0 && (
-        <Card>
-          <CardBody className="p-5">
-            <p className="font-display text-lg text-atfr-bone mb-3">
-              Alertes staff
-            </p>
-            <div className="grid gap-3 md:grid-cols-2">
-              {visibleAlerts.map((alert) => (
-                <div
-                  key={`${alert.kind}-${alert.title}`}
-                  className="rounded-md border border-atfr-gold/10 bg-atfr-ink/60 p-4"
-                >
-                  <Badge
-                    variant={
-                      alert.severity === 'danger'
-                        ? 'danger'
-                        : alert.severity === 'warning'
-                          ? 'warning'
-                          : 'outline'
-                    }
-                  >
-                    <TriangleAlert size={12} /> {alert.title}
-                  </Badge>
-                  <p className="mt-2 text-sm text-atfr-fog">
-                    {alert.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-      )}
+      <HrAlertsWorkflow
+        summary={summary}
+        actorId={user?.id ?? null}
+        canManage={canManageRh}
+      />
 
       <HrPlayerDiagnostic summary={summary} />
 

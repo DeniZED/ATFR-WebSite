@@ -33,7 +33,7 @@ export function playersToCsv(players: PlayerActivitySummary[]): string {
     s.battleDelta ?? '',
     Math.round(s.voiceSeconds / 60),
     s.activeDays,
-    s.alerts.length,
+    s.activeAlerts.length,
     s.dataQuality.label,
     s.latestWotActivityAt ?? '',
   ]);
