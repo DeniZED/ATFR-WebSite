@@ -173,6 +173,9 @@ export function useHrPlayers(
       };
     },
     staleTime: 30_000,
+    // Rafraîchissement automatique : la vue se met à jour au fil des snapshots
+    // WoT (cron) et des données du bot, sans avoir à recharger la page.
+    refetchInterval: 5 * 60_000,
   });
 }
 

@@ -22,6 +22,7 @@ export function useClanMovements(options: { limit?: number; enabled?: boolean } 
       return (data ?? []) as ClanMemberMovementRow[];
     },
     staleTime: 30_000,
+    refetchInterval: 5 * 60_000,
   });
 }
 
