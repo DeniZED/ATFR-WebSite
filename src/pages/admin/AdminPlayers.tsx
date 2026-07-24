@@ -53,6 +53,7 @@ import { useRole } from '@/hooks/useRole';
 import type { DiscordMemberPayload, PlayerHrStatus } from '@/types/database';
 import { cn } from '@/lib/cn';
 import { ClanMovementsTab } from '@/components/admin/ClanMovementsTab';
+import { DataQualityDot } from '@/components/admin/DataQualityBadge';
 import {
   filterByScope,
   RH_SCOPES,
@@ -876,12 +877,15 @@ function PlayerRow({
             {player.nickname.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <Link
-              to={`/admin/rh/${player.id}`}
-              className="font-medium text-atfr-bone hover:text-atfr-gold"
-            >
-              {player.nickname}
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to={`/admin/rh/${player.id}`}
+                className="font-medium text-atfr-bone hover:text-atfr-gold"
+              >
+                {player.nickname}
+              </Link>
+              <DataQualityDot quality={summary.dataQuality} />
+            </div>
             <p className="text-xs text-atfr-fog">
               {player.account_id ? `WoT ${player.account_id}` : 'WoT non lié'}
             </p>

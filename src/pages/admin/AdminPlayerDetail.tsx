@@ -23,6 +23,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
+import { HrScoreBreakdown } from '@/components/admin/HrScoreBreakdown';
 import {
   ACTIVITY_BADGE,
   STATUS_BADGE,
@@ -647,6 +648,7 @@ export default function AdminPlayerDetail() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
+        <HrScoreBreakdown summary={summary} />
         <Card>
           <CardBody className="p-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
