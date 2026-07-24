@@ -120,18 +120,17 @@ export function useHrPlayers(
       const [
         playersResult,
         linksResult,
-        snapshotsResult,
+        snapshots,
         voiceSessions,
         notesResult,
         settingsResult,
       ] = await Promise.all([
         supabase.from('players').select('*').order('nickname'),
         supabase.from('player_discord_links').select('*'),
-        supabase
-          .from('player_activity_snapshots')
-          .select('*')
-          .gte('snapshot_date', isoDate(period.previousFrom))
-          .lte('snapshot_date', isoDate(period.to)),
+        // Paginé : ~95 joueurs × 30-60 jours dépasse le plafond PostgREST de
+        // 1000 lignes → sans pagination, la plupart des snapshots étaient
+        // coupés et batailles/jours actifs tombaient à 0.
+        fetchAllSnapshots(period.previousFrom, period.to),
         fetchAllVoiceSessions({ from: period.previousFrom, to: period.to }),
         supabase
           .from('player_staff_notes')
@@ -143,7 +142,6 @@ export function useHrPlayers(
 
       throwIfError(playersResult.error);
       throwIfError(linksResult.error);
-      throwIfError(snapshotsResult.error);
       throwIfError(notesResult.error);
       if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
         throw settingsResult.error;
@@ -151,8 +149,6 @@ export function useHrPlayers(
 
       const rows = (playersResult.data ?? []) as PlayerRow[];
       const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
-      const snapshots =
-        (snapshotsResult.data ?? []) as PlayerActivitySnapshotRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
       const settings =
         (settingsResult.data ?? []) as PlayerTrackingSettingsRow[];
@@ -741,6 +737,34 @@ function isBetweenDateOnly(value: string, from: Date, to: Date): boolean {
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+const SNAPSHOTS_PAGE_SIZE = 1000;
+
+// Même limite PostgREST (~1000 lignes) que le vocal : sur un large périmètre,
+// tout charger d'un coup tronque silencieusement les snapshots les plus
+// récents et fausse batailles / jours actifs. On pagine via .range().
+async function fetchAllSnapshots(
+  from: Date,
+  to: Date,
+): Promise<PlayerActivitySnapshotRow[]> {
+  const rows: PlayerActivitySnapshotRow[] = [];
+  let offset = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('player_activity_snapshots')
+      .select('*')
+      .gte('snapshot_date', isoDate(from))
+      .lte('snapshot_date', isoDate(to))
+      .order('id', { ascending: true })
+      .range(offset, offset + SNAPSHOTS_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as PlayerActivitySnapshotRow[];
+    rows.push(...page);
+    if (page.length < SNAPSHOTS_PAGE_SIZE) break;
+    offset += SNAPSHOTS_PAGE_SIZE;
+  }
+  return rows;
 }
 
 const VOICE_SESSIONS_PAGE_SIZE = 1000;
