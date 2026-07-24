@@ -25,6 +25,7 @@ import { HrTopPerformers } from '@/components/admin/HrTopPerformers';
 import { HrPlayersToReview } from '@/components/admin/HrPlayersToReview';
 import { HrHealthTrendChart } from '@/components/admin/HrHealthTrendChart';
 import { AdminTasks, type AdminTask } from '@/components/admin/AdminTasks';
+import { DashboardSection } from '@/components/admin/DashboardSection';
 import { useClanMovements } from '@/features/clanMovements/queries';
 
 // Graphiques recharts chargés en lazy (P2-5) : le chunk recharts
@@ -181,14 +182,24 @@ export default function AdminHome() {
 
       {canReadRh && !hr.isError && hr.data && (
         <>
+          {/* Actionnable en premier (dashboard compact — Phase 8) : la santé RH
+              d'un coup d'œil + les joueurs à revoir, sans dérouler de graphe. */}
           <HrHealthTrendChart players={rhMembers} />
-          <Suspense fallback={null}>
-            <HrActivityTrendChart players={rhMembers} period={hr.data.period} />
-            <HrMovementChart movements={movements.data} period={hr.data.period} />
-            <HrStatusBreakdown players={rhMembers} />
-          </Suspense>
-          <HrTopPerformers players={rhMembers} />
           <HrPlayersToReview players={rhMembers} />
+
+          {/* Analyses détaillées repliées par défaut : les graphes recharts ne
+              montent (et ne chargent leur chunk) qu'à l'ouverture. */}
+          <DashboardSection
+            title="Analyses détaillées"
+            subtitle="Tendances d'activité, mouvements de clan, répartition des statuts et top joueurs."
+          >
+            <Suspense fallback={null}>
+              <HrActivityTrendChart players={rhMembers} period={hr.data.period} />
+              <HrMovementChart movements={movements.data} period={hr.data.period} />
+              <HrStatusBreakdown players={rhMembers} />
+            </Suspense>
+            <HrTopPerformers players={rhMembers} />
+          </DashboardSection>
         </>
       )}
     </div>
