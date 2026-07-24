@@ -259,3 +259,34 @@ pg_restore --clean --if-exists --no-owner --no-privileges -d "<SUPABASE_DB_URL_C
 > Pour une vraie résilience « hors-site », copie de temps en temps le dossier
 > `C:\atfr-backups` ailleurs (autre disque, cloud perso). Un backup sur le même
 > VPS ne protège pas d'une perte du VPS lui-même.
+
+## Snapshots WoT automatiques (batailles / jours actifs)
+
+Les graphes RH « batailles/jour » et « joueurs actifs/jour » se calculent à
+partir de **snapshots quotidiens** (delta d'un jour sur l'autre). Il faut donc
+un snapshot **chaque jour** — sinon les valeurs restent à 0 les jours sautés,
+et se cumulent d'un coup le jour où on relance.
+
+La tâche est aussi planifiée dans `atfr-api` (cron interne), mais pour une
+exécution **fiable même si `atfr-api` redémarre**, on ajoute un job PM2 dédié
+qui lance le snapshot chaque jour à 06:00, indépendamment :
+
+```cmd
+cd "C:\Users\Administrator\Desktop\Bot Discord - Site\ATFR-WebSite"
+pm2 start deploy\run-snapshot.mjs --name atfr-snapshot --interpreter node --interpreter-args "--import tsx" --no-autorestart --cron-restart "0 6 * * *"
+pm2 save
+```
+
+Test immédiat (génère le snapshot du jour tout de suite) :
+
+```cmd
+pm2 restart atfr-snapshot
+pm2 logs atfr-snapshot --lines 20
+```
+
+→ tu dois voir `[snapshot] done — N snapshot(s) inserted`. À partir de là, le
+snapshot tourne **tout seul chaque jour** — plus besoin de presser le bouton.
+
+> `--no-autorestart` : le script s'exécute puis s'arrête jusqu'au prochain
+> déclenchement (06:00). `pm2 save` le rend persistant après reboot.
+> (Si ta version de PM2 refuse `--cron-restart`, utilise `--cron`.)
