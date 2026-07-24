@@ -194,3 +194,65 @@ détecter une panne totale (celle qui t'a échappé au dernier reboot).
 
 > Sans ces variables, la tâche tourne mais ne fait rien (aucune alerte) — tout
 > reste optionnel et sans effet de bord.
+
+## Sauvegardes de la base Supabase
+
+⚠️ Toute la donnée du clan vit dans **un seul projet Supabase free tier** (rétention
+de sauvegarde limitée). Un dump quotidien sur le VPS protège contre la perte.
+
+### 1. Installer pg_dump (client PostgreSQL)
+
+```cmd
+winget install PostgreSQL.PostgreSQL.17
+```
+
+→ pg_dump se retrouve dans `C:\Program Files\PostgreSQL\17\bin\pg_dump.exe`.
+La version de pg_dump doit être **≥** celle du serveur Supabase (PG 15 ou 17).
+
+### 2. Récupérer la chaîne de connexion
+
+Supabase → **Settings → Database → Connection string → Session pooler**. Copie
+l'URI (avec le mot de passe de la base) dans `deploy\.env` :
+
+```
+SUPABASE_DB_URL=postgresql://postgres.xxxx:MOT_DE_PASSE@aws-0-eu-west-3.pooler.supabase.com:5432/postgres
+PG_DUMP_BIN=C:\Program Files\PostgreSQL\17\bin\pg_dump.exe
+BACKUP_DIR=C:\atfr-backups
+BACKUP_RETENTION=14
+```
+
+> Prends bien le **Session pooler** (port 5432), compatible IPv4 et pg_dump.
+> Le *Transaction pooler* (6543) ne convient pas.
+
+### 3. Tester une fois à la main
+
+```cmd
+cd "C:\Users\Administrator\Desktop\Bot Discord - Site\ATFR-WebSite"
+node deploy\backup-db.mjs
+```
+
+→ doit créer `C:\atfr-backups\atfr-AAAA-MM-JJ_HH-MM-SS.dump` et afficher la taille.
+
+### 4. Planifier (quotidien, 04:00) via PM2
+
+```cmd
+pm2 start deploy\backup-db.mjs --name atfr-backup --no-autorestart --cron-restart "0 4 * * *"
+pm2 save
+```
+
+`--no-autorestart` : le script s'exécute puis s'arrête jusqu'au prochain déclenchement.
+`pm2 save` : la tâche revient après un reboot. (Si ta version de PM2 refuse
+`--cron-restart`, utilise `--cron`.)
+
+### Restaurer un dump (en cas de besoin)
+
+⚠️ Destructif — restaure de préférence sur un **nouveau** projet Supabase, pas
+par-dessus la prod :
+
+```cmd
+pg_restore --clean --if-exists --no-owner --no-privileges -d "<SUPABASE_DB_URL_CIBLE>" "C:\atfr-backups\atfr-....dump"
+```
+
+> Pour une vraie résilience « hors-site », copie de temps en temps le dossier
+> `C:\atfr-backups` ailleurs (autre disque, cloud perso). Un backup sur le même
+> VPS ne protège pas d'une perte du VPS lui-même.
