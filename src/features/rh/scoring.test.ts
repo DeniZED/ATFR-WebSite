@@ -84,6 +84,41 @@ describe('computeActivityScore', () => {
       true,
     );
   });
+
+  it('ne plafonne pas un joueur actif récemment', () => {
+    // base : dernière activité = NOW, stats au max → très actif, non plafonné.
+    const score = computeActivityScore(base);
+    expect(score.value).toBeGreaterThanOrEqual(80);
+    expect(score.level).toBe('very_active');
+    expect(score.reasons.some((r) => r.includes('plafonné'))).toBe(false);
+  });
+
+  it('plafonne à « faible » un joueur inactif au-delà du seuil d’alerte', () => {
+    // Dernière activité il y a ~20 j (> 14, ≤ 30) malgré un fort volume passé.
+    const score = computeActivityScore({
+      ...base,
+      latestWotActivityAt: '2026-07-04T12:00:00.000Z',
+    });
+    expect(score.value).toBeLessThanOrEqual(49);
+    expect(score.level).toBe('low');
+    expect(score.reasons.some((r) => r.includes('plafonné'))).toBe(true);
+  });
+
+  it('plafonne à « inactif » au-delà du seuil danger', () => {
+    // Dernière activité il y a ~45 j (> 30) → inactif quel que soit le volume.
+    const score = computeActivityScore({
+      ...base,
+      latestWotActivityAt: '2026-06-09T12:00:00.000Z',
+    });
+    expect(score.value).toBeLessThanOrEqual(24);
+    expect(score.level).toBe('inactive');
+  });
+
+  it('plafonne à « inactif » sans aucune activité connue', () => {
+    const score = computeActivityScore({ ...base, latestWotActivityAt: null });
+    expect(score.value).toBeLessThanOrEqual(24);
+    expect(score.level).toBe('inactive');
+  });
 });
 
 describe('clippedVoiceSeconds', () => {

@@ -162,10 +162,13 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 
 export const ACTIVITY_BADGE: Record<
   ActivityLevel,
-  'success' | 'warning' | 'danger' | 'neutral'
+  'success' | 'warning' | 'danger' | 'neutral' | 'gold'
 > = {
+  // Le vert (success) est réservé à « Très actif » (≥ 80). « Actif » (50-79)
+  // passe en doré pour s'aligner sur la barre de score et ne plus afficher en
+  // vert des joueurs au score moyen ou au statut RH inactif.
   very_active: 'success',
-  active: 'success',
+  active: 'gold',
   low: 'warning',
   inactive: 'danger',
 };
@@ -388,9 +391,36 @@ export function computeActivityScore(input: {
         : Math.max(0, W.trend + trendPct / 10);
   if (trendPct == null) missingData.push('Pas de période de comparaison');
 
-  const value = clampScore(
+  const rawValue = clampScore(
     recencyPts + battlesPts + voicePts + regularityPts + trendPts,
   );
+
+  // ── Plafond de récence ──────────────────────────────────────────────────
+  // Un joueur sans activité WoT récente ne peut pas rester « vert » / « doré »
+  // grâce à un volume ancien : la récence gouverne le niveau affiché pour
+  // rester cohérente avec le suivi RH (mêmes seuils que les alertes
+  // d'inactivité, surchargeables par joueur).
+  const warningDays =
+    input.trackingSettings?.inactivity_warning_days ??
+    SCORE_RULES.inactivityWarningDays;
+  const dangerDays =
+    input.trackingSettings?.inactivity_danger_days ??
+    SCORE_RULES.inactivityDangerDays;
+  let value = rawValue;
+  let recencyCap: string | null = null;
+  if (daysSinceGame == null || daysSinceGame > dangerDays) {
+    // Aucune activité connue, ou inactif au-delà du seuil danger → « Inactif ».
+    value = Math.min(value, 24);
+    recencyCap =
+      daysSinceGame == null
+        ? 'Aucune activité WoT connue'
+        : `Inactif depuis ${daysSinceGame} j (> ${dangerDays} j)`;
+  } else if (daysSinceGame > warningDays) {
+    // Inactif au-delà du seuil d'alerte → au mieux « Faible activité ».
+    value = Math.min(value, 49);
+    recencyCap = `Inactif depuis ${daysSinceGame} j (> ${warningDays} j)`;
+  }
+
   const level = getActivityLevel(value);
   const direction: ActivityScore['trend']['direction'] =
     trendPct == null
@@ -456,7 +486,12 @@ export function computeActivityScore(input: {
         ? 'Score basé sur la période actuelle'
         : `Évolution ${trendPct > 0 ? '+' : ''}${Math.round(trendPct)}% vs période précédente`,
     components,
-    reasons: buildScoreReasons(components, trendPct),
+    reasons: recencyCap
+      ? [
+          `Score plafonné — ${recencyCap}`,
+          ...buildScoreReasons(components, trendPct),
+        ]
+      : buildScoreReasons(components, trendPct),
     missingData,
     trend: { pct: trendPct, direction },
   };
