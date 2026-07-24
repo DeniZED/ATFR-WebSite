@@ -160,3 +160,37 @@ nssm start PM2
 → PM2 relance la liste sauvegardée (`pm2 save`) dès le démarrage de Windows,
 même sans session ouverte. Adapte les chemins `node.exe` / `pm2` à ton install
 (`where node`, `where pm2`).
+
+## Monitoring + alerte Discord
+
+La tâche planifiée `monitor-heartbeat` (toutes les 5 min, dans `atfr-api`) couvre
+**deux** types de panne :
+
+**1. Dépendance en panne (Supabase injoignable) — alerte directe Discord.**
+Renseigne dans `deploy\.env` :
+
+```
+DISCORD_MONITOR_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+(ou laisse vide pour réutiliser `DISCORD_RH_ALERTS_WEBHOOK_URL`.) Tu reçois un
+message 🔴 quand Supabase tombe, 🟢 au rétablissement — **au changement d'état
+seulement**, jamais en boucle.
+
+**2. Panne TOTALE du VPS/API (ex. après un reboot) — dead-man externe.**
+Un process mort ne peut pas s'alerter lui-même : il faut un observateur externe.
+
+1. Crée un check gratuit sur <https://healthchecks.io> (période 5 min, grâce 5 min).
+2. Ajoute son **intégration Discord** (Healthchecks → Integrations → Discord).
+3. Copie l'URL de ping du check dans `deploy\.env` :
+   ```
+   MONITOR_HEARTBEAT_URL=https://hc-ping.com/<ton-uuid>
+   ```
+4. `pm2 restart deploy\pm2.config.cjs --update-env`
+
+Tant que l'API tourne, elle ping toutes les 5 min. Si le VPS tombe, les pings
+s'arrêtent → Healthchecks.io t'alerte sur Discord. C'est **le seul moyen** de
+détecter une panne totale (celle qui t'a échappé au dernier reboot).
+
+> Sans ces variables, la tâche tourne mais ne fait rien (aucune alerte) — tout
+> reste optionnel et sans effet de bord.
