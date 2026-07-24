@@ -60,7 +60,7 @@ export function HrStatusBreakdown({
   const alertData = useMemo(() => {
     const counts = new Map<string, number>();
     for (const summary of players) {
-      for (const alert of summary.alerts) {
+      for (const alert of summary.activeAlerts) {
         counts.set(alert.severity, (counts.get(alert.severity) ?? 0) + 1);
       }
     }

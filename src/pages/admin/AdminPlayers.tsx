@@ -99,7 +99,7 @@ const SORT_ACCESSORS: Record<SortKey, (s: PlayerActivitySummary) => string | num
   voice: (s) => s.voiceSeconds,
   days: (s) => s.activeDays,
   score: (s) => s.score.value,
-  alerts: (s) => s.alerts.length,
+  alerts: (s) => s.activeAlerts.length,
 };
 
 export default function AdminPlayers() {
@@ -256,8 +256,8 @@ export default function AdminPlayers() {
       const matchesAlerts =
         alerts === 'all' ||
         (alerts === 'with'
-          ? summary.alerts.length > 0
-          : summary.alerts.length === 0);
+          ? summary.activeAlerts.length > 0
+          : summary.activeAlerts.length === 0);
       const matchesQuick =
         quickView === 'all' || matchesQuickView(summary, quickView);
 
@@ -363,7 +363,7 @@ export default function AdminPlayers() {
           !s.discordLink &&
           discordNameKeys.has(normalizeDiscordName(s.player.nickname)),
       ).length,
-      alerts: rows.reduce((sum, s) => sum + s.alerts.length, 0),
+      alerts: rows.reduce((sum, s) => sum + s.activeAlerts.length, 0),
       voiceSeconds: rows.reduce((sum, s) => sum + s.voiceSeconds, 0),
     };
   }, [scopedRows, scopeCounts, discordNameKeys]);
@@ -997,9 +997,12 @@ function PlayerRow({
   actionPending: boolean;
 }) {
   const player = summary.player;
-  const alertSeverity = summary.alerts.some((alert) => alert.severity === 'danger')
+  // Badge d'alertes : uniquement les alertes encore actives (Phase 6) —
+  // celles en veille / ignorées / résolues ne relancent plus.
+  const activeAlerts = summary.activeAlerts;
+  const alertSeverity = activeAlerts.some((alert) => alert.severity === 'danger')
     ? 'danger'
-    : summary.alerts.length > 0
+    : activeAlerts.length > 0
       ? 'warning'
       : null;
 
@@ -1097,9 +1100,9 @@ function PlayerRow({
         {alertSeverity ? (
           <Badge
             variant={alertSeverity}
-            title={summary.alerts.map((alert) => alert.title).join('\n')}
+            title={activeAlerts.map((alert) => alert.title).join('\n')}
           >
-            {summary.alerts.length}
+            {activeAlerts.length}
           </Badge>
         ) : (
           <span className="text-atfr-fog">—</span>

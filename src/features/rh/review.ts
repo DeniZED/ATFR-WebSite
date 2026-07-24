@@ -118,7 +118,7 @@ export function matchesQuickView(
 ): boolean {
   switch (view) {
     case 'todo':
-      return s.alerts.length > 0;
+      return s.activeAlerts.length > 0;
     case 'inactive': {
       const d = daysSince(s.latestWotActivityAt, now);
       return d != null && d >= INACTIVE_DAYS && s.player.status !== 'former';

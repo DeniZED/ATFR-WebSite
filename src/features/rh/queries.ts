@@ -8,6 +8,10 @@ import type {
   DiscordMemberPayload,
   DiscordVoiceSessionRow,
   PlayerActivitySnapshotRow,
+  PlayerAlertActionInsert,
+  PlayerAlertActionRow,
+  PlayerAlertKind,
+  PlayerAlertStatus,
   PlayerDiscordLinkRow,
   PlayerHrStatus,
   PlayerRow,
@@ -124,6 +128,7 @@ export function useHrPlayers(
         voiceSessions,
         notesResult,
         settingsResult,
+        alertActionsResult,
       ] = await Promise.all([
         supabase.from('players').select('*').order('nickname'),
         supabase.from('player_discord_links').select('*'),
@@ -138,6 +143,9 @@ export function useHrPlayers(
           .order('created_at', { ascending: false })
           .limit(500),
         supabase.from('player_tracking_settings').select('*'),
+        // Overlay du workflow d'alertes (Phase 6). Table jeune ou absente →
+        // on dégrade silencieusement (toutes les alertes restent « à traiter »).
+        supabase.from('player_alert_actions').select('*'),
       ]);
 
       throwIfError(playersResult.error);
@@ -146,12 +154,20 @@ export function useHrPlayers(
       if (settingsResult.error && !isMissingRelationError(settingsResult.error)) {
         throw settingsResult.error;
       }
+      if (
+        alertActionsResult.error &&
+        !isMissingRelationError(alertActionsResult.error)
+      ) {
+        throw alertActionsResult.error;
+      }
 
       const rows = (playersResult.data ?? []) as PlayerRow[];
       const links = (linksResult.data ?? []) as PlayerDiscordLinkRow[];
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
       const settings =
         (settingsResult.data ?? []) as PlayerTrackingSettingsRow[];
+      const alertActions =
+        (alertActionsResult.data ?? []) as PlayerAlertActionRow[];
 
       return {
         period,
@@ -164,6 +180,7 @@ export function useHrPlayers(
             voiceSessions,
             notes,
             trackingSettings: settings,
+            alertActions,
           }),
         ),
       };
@@ -240,6 +257,7 @@ export function useHrPlayerDetail(
         notesResult,
         historyResult,
         alertsResult,
+        alertActionsResult,
       ] = await Promise.all([
         supabase
           .from('player_activity_snapshots')
@@ -270,12 +288,22 @@ export function useHrPlayerDetail(
           .eq('player_id', playerId!)
           .is('resolved_at', null)
           .order('detected_at', { ascending: false }),
+        supabase
+          .from('player_alert_actions')
+          .select('*')
+          .eq('player_id', playerId!),
       ]);
 
       throwIfError(snapshotsResult.error);
       throwIfError(notesResult.error);
       throwIfError(historyResult.error);
       throwIfError(alertsResult.error);
+      if (
+        alertActionsResult.error &&
+        !isMissingRelationError(alertActionsResult.error)
+      ) {
+        throw alertActionsResult.error;
+      }
 
       const player = playerResult.data as PlayerRow;
       const memberHistoryResult = player.account_id
@@ -291,6 +319,8 @@ export function useHrPlayerDetail(
       const notes = (notesResult.data ?? []) as PlayerStaffNoteRow[];
       const trackingSettings =
         (settingsResult.data ?? null) as PlayerTrackingSettingsRow | null;
+      const alertActions =
+        (alertActionsResult.data ?? []) as PlayerAlertActionRow[];
 
       return {
         period,
@@ -302,6 +332,7 @@ export function useHrPlayerDetail(
           voiceSessions,
           notes,
           trackingSettings: trackingSettings ? [trackingSettings] : [],
+          alertActions,
         }),
         trackingSettings,
         statusHistory:
@@ -374,6 +405,46 @@ export function useSavePlayer() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['hr'] });
       qc.invalidateQueries({ queryKey: ['hr', 'player', variables.id] });
+    },
+  });
+}
+
+export interface SaveAlertActionInput {
+  playerId: string;
+  kind: PlayerAlertKind;
+  status: PlayerAlertStatus;
+  snoozeUntil?: string | null;
+  assignedTo?: string | null;
+  resolutionNote?: string | null;
+  actorId?: string | null;
+}
+
+/**
+ * Enregistre la décision de traitement d'une alerte (Phase 6). Upsert par
+ * (player_id, kind) : une seule décision par type d'alerte et par joueur.
+ */
+export function useSaveAlertAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { successToast: 'Alerte mise à jour.', silentError: true },
+    mutationFn: async (input: SaveAlertActionInput) => {
+      const payload: PlayerAlertActionInsert = {
+        player_id: input.playerId,
+        kind: input.kind,
+        status: input.status,
+        snooze_until: input.snoozeUntil ?? null,
+        assigned_to: input.assignedTo ?? null,
+        resolution_note: input.resolutionNote ?? null,
+        updated_by: input.actorId ?? null,
+      };
+      const { error } = await supabase
+        .from('player_alert_actions')
+        .upsert(payload, { onConflict: 'player_id,kind' });
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['hr'] });
+      qc.invalidateQueries({ queryKey: ['hr', 'player', variables.playerId] });
     },
   });
 }
@@ -670,6 +741,7 @@ function buildSummaryForPlayer(input: {
   voiceSessions: DiscordVoiceSessionRow[];
   notes: PlayerStaffNoteRow[];
   trackingSettings: PlayerTrackingSettingsRow[];
+  alertActions?: PlayerAlertActionRow[];
 }): PlayerActivitySummary {
   const link =
     input.links.find((candidate) => candidate.player_id === input.player.id) ??
@@ -717,6 +789,9 @@ function buildSummaryForPlayer(input: {
     previousVoiceSessions: previousVoice,
     notes: input.notes.filter((note) => note.player_id === input.player.id),
     period: input.period,
+    alertActions: (input.alertActions ?? []).filter(
+      (action) => action.player_id === input.player.id,
+    ),
   });
 }
 

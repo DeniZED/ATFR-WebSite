@@ -56,6 +56,12 @@ export type PlayerAlertKind =
   | 'activity_drop'
   | 'watch'
   | 'custom';
+export type PlayerAlertStatus =
+  | 'open'
+  | 'in_progress'
+  | 'snoozed'
+  | 'ignored'
+  | 'resolved';
 export interface DiscordMemberPayload {
   discord_user_id: string;
   username?: string | null;
@@ -946,6 +952,53 @@ export interface Database {
         Relationships: [
           {
             foreignKeyName: 'player_alerts_player_id_fkey';
+            columns: ['player_id'];
+            isOneToOne: false;
+            referencedRelation: 'players';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      player_alert_actions: {
+        Row: {
+          id: string;
+          player_id: string;
+          kind: PlayerAlertKind;
+          status: PlayerAlertStatus;
+          assigned_to: string | null;
+          snooze_until: string | null;
+          resolution_note: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          kind: PlayerAlertKind;
+          status?: PlayerAlertStatus;
+          assigned_to?: string | null;
+          snooze_until?: string | null;
+          resolution_note?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          kind?: PlayerAlertKind;
+          status?: PlayerAlertStatus;
+          assigned_to?: string | null;
+          snooze_until?: string | null;
+          resolution_note?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'player_alert_actions_player_id_fkey';
             columns: ['player_id'];
             isOneToOne: false;
             referencedRelation: 'players';
@@ -2161,6 +2214,10 @@ export type PlayerStaffNoteRow =
   Database['public']['Tables']['player_staff_notes']['Row'];
 export type PlayerStatusHistoryRow =
   Database['public']['Tables']['player_status_history']['Row'];
+export type PlayerAlertActionRow =
+  Database['public']['Tables']['player_alert_actions']['Row'];
+export type PlayerAlertActionInsert =
+  Database['public']['Tables']['player_alert_actions']['Insert'];
 
 export type ClanPageRow = Database['public']['Tables']['clan_pages']['Row'];
 export type ClanPageInsert = Database['public']['Tables']['clan_pages']['Insert'];

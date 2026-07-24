@@ -66,7 +66,7 @@ export default function AdminHome() {
     [hr.data],
   );
   const hrAlerts = rhMembers.reduce(
-    (sum, player) => sum + player.alerts.length,
+    (sum, player) => sum + player.activeAlerts.length,
     0,
   );
 
