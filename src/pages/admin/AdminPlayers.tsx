@@ -60,6 +60,13 @@ import {
   RH_SCOPE_LABELS,
   type RhScope,
 } from '@/features/rh/perimeter';
+import {
+  matchesQuickView,
+  QUICK_VIEWS,
+  QUICK_VIEW_LABELS,
+  type QuickView,
+} from '@/features/rh/review';
+import { playersToCsv } from '@/features/rh/export';
 
 type PeriodPreset = '7' | '14' | '30' | '90' | 'custom';
 type PresenceFilter = 'all' | 'present' | 'missing';
@@ -95,6 +102,7 @@ export default function AdminPlayers() {
   const canManageRh = can('members');
   const [tab, setTab] = useState<'players' | 'movements'>('players');
   const [scope, setScope] = useState<RhScope>('current');
+  const [quickView, setQuickView] = useState<QuickView | 'all'>('all');
   const [search, setSearch] = useState('');
   const [clan, setClan] = useState('all');
   const [status, setStatus] = useState<PlayerHrStatus | 'all'>('all');
@@ -240,6 +248,8 @@ export default function AdminPlayers() {
         (alerts === 'with'
           ? summary.alerts.length > 0
           : summary.alerts.length === 0);
+      const matchesQuick =
+        quickView === 'all' || matchesQuickView(summary, quickView);
 
       return (
         matchesSearch &&
@@ -249,10 +259,12 @@ export default function AdminPlayers() {
         matchesVoice &&
         matchesIngame &&
         matchesDiscord &&
-        matchesAlerts
+        matchesAlerts &&
+        matchesQuick
       );
     });
   }, [
+    quickView,
     activity,
     alerts,
     clan,
@@ -504,6 +516,55 @@ export default function AdminPlayers() {
             {RH_SCOPE_LABELS[s]} ({scopeCounts[s]})
           </button>
         ))}
+      </div>
+
+      {/* ── Vues rapides + export CSV ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setQuickView('all')}
+          className={cn(
+            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+            quickView === 'all'
+              ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-gold'
+              : 'border-atfr-gold/15 text-atfr-fog hover:text-atfr-bone',
+          )}
+        >
+          Tous
+        </button>
+        {QUICK_VIEWS.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setQuickView((q) => (q === v ? 'all' : v))}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              quickView === v
+                ? 'border-atfr-gold/60 bg-atfr-gold/10 text-atfr-gold'
+                : 'border-atfr-gold/15 text-atfr-fog hover:text-atfr-bone',
+            )}
+          >
+            {QUICK_VIEW_LABELS[v]}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            const csv = playersToCsv(sorted);
+            const blob = new Blob(['﻿' + csv], {
+              type: 'text/csv;charset=utf-8;',
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rh-${scope}-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="ml-auto rounded-md border border-atfr-gold/25 px-3 py-1 text-xs font-medium text-atfr-gold transition-colors hover:bg-atfr-gold/10"
+        >
+          Exporter CSV ({sorted.length})
+        </button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">

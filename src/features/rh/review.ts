@@ -78,6 +78,68 @@ export function computeReviewLists(
     .filter((l) => l.rows.length > 0);
 }
 
+/** Vues rapides de la liste RH (chips) — mêmes critères que les listes. */
+export type QuickView =
+  | 'todo'
+  | 'inactive'
+  | 'drop'
+  | 'game_no_voice'
+  | 'no_discord'
+  | 'new'
+  | 'prospects'
+  | 'watch';
+
+export const QUICK_VIEW_LABELS: Record<QuickView, string> = {
+  todo: 'À traiter',
+  inactive: `Inactifs ${INACTIVE_DAYS} j+`,
+  drop: 'Forte baisse',
+  game_no_voice: 'Joue sans vocal',
+  no_discord: 'Discord non lié',
+  new: 'Nouveaux',
+  prospects: 'Prospects',
+  watch: 'À surveiller',
+};
+
+export const QUICK_VIEWS: QuickView[] = [
+  'todo',
+  'inactive',
+  'drop',
+  'game_no_voice',
+  'no_discord',
+  'new',
+  'prospects',
+  'watch',
+];
+
+export function matchesQuickView(
+  s: PlayerActivitySummary,
+  view: QuickView,
+  now: number = Date.now(),
+): boolean {
+  switch (view) {
+    case 'todo':
+      return s.alerts.length > 0;
+    case 'inactive': {
+      const d = daysSince(s.latestWotActivityAt, now);
+      return d != null && d >= INACTIVE_DAYS && s.player.status !== 'former';
+    }
+    case 'drop':
+      return s.score.trend.pct != null && s.score.trend.pct <= STRONG_DROP_PCT;
+    case 'game_no_voice':
+      return Boolean(s.latestWotActivityAt) && s.voiceSeconds === 0;
+    case 'no_discord':
+      return !s.discordLink;
+    case 'new': {
+      const j = daysSince(s.player.joined_at, now);
+      return j != null && j <= NEW_MEMBER_DAYS;
+    }
+    case 'prospects':
+      return s.player.status === 'prospect';
+    case 'watch':
+      return s.player.status === 'watch';
+  }
+}
+
 /** Valeur courte affichée à droite de chaque joueur selon la liste. */
 export function reviewRowValue(
   key: ReviewList['key'],
