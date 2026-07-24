@@ -87,8 +87,110 @@ du VPS (supprime les anciens enregistrements Netlify du site). Voir
 
 ## 8. Repointer le bot + couper Netlify
 
-- `discord-bot\.env` → `SITE_URL=https://atfr-wot.com`, puis
-  `pm2 restart` le bot.
+- `discord-bot\.env` → `SITE_URL=https://atfr-wot.com` (ou, plus robuste,
+  `http://localhost:8080` puisque bot et API vivent sur la même machine),
+  puis `pm2 restart` le bot.
 - Netlify → arrêter le déploiement du site (fin de la facture).
 
 Détails et dépannage : voir `MIGRATION.md`.
+
+---
+
+# Exploitation courante
+
+## Déployer une mise à jour (1 commande)
+
+Après un merge sur `main`, déploie avec le script fourni :
+
+```cmd
+cd "C:\Users\Administrator\Desktop\Bot Discord - Site\ATFR-WebSite"
+deploy\deploy.bat
+```
+
+Il fait tout : `git pull` → `npm install` → `npm run build` → `pm2 restart atfr-api`
+→ `pm2 save`. Puis **hard refresh** (Ctrl+Shift+R) dans le navigateur.
+
+> Caddy n'a **pas** besoin d'être redémarré pour un déploiement de code (il sert
+> `dist\` en direct). Ne relance `atfr-caddy` que si tu changes `deploy\Caddyfile`
+> ou le domaine :
+> `pm2 restart deploy\pm2.config.cjs --update-env`
+
+## Rotation des logs PM2 (à faire une fois)
+
+Sans ça, les logs PM2 grossissent sans limite et finissent par saturer le disque.
+Installe le module de rotation **une seule fois** :
+
+```cmd
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 7
+pm2 set pm2-logrotate:compress true
+```
+
+→ garde 7 fichiers de 10 Mo max par process, compressés. Persistant (survit aux
+redémarrages de PM2).
+
+## Redémarrer le site après un reboot du VPS
+
+Si `atfr-api` / `atfr-caddy` ne sont pas revenus tout seuls :
+
+```cmd
+cd "C:\Users\Administrator\Desktop\Bot Discord - Site\ATFR-WebSite"
+pm2 list
+pm2 start deploy\pm2.config.cjs   REM (s'ils ont disparu de la liste)
+pm2 save                          REM fige les 3 process pour le prochain reboot
+```
+
+`pm2 save` est **essentiel** : le dump restauré au boot ne relancera que ce qui
+était sauvegardé lors du dernier `pm2 save`.
+
+## Option : démarrage au boot SANS ouverture de session (service Windows)
+
+`pm2-windows-startup` relance PM2 à l'**ouverture de session** Administrator. Pour
+un vrai démarrage au boot (avant tout login), utiliser **nssm** :
+
+```cmd
+REM Télécharger nssm (https://nssm.cc/download), puis :
+nssm install PM2 "C:\Program Files\nodejs\node.exe" "C:\Users\Administrator\AppData\Roaming\npm\node_modules\pm2\bin\pm2" resurrect
+nssm set PM2 AppDirectory "C:\Users\Administrator"
+nssm set PM2 Start SERVICE_AUTO_START
+nssm start PM2
+```
+
+→ PM2 relance la liste sauvegardée (`pm2 save`) dès le démarrage de Windows,
+même sans session ouverte. Adapte les chemins `node.exe` / `pm2` à ton install
+(`where node`, `where pm2`).
+
+## Monitoring + alerte Discord
+
+La tâche planifiée `monitor-heartbeat` (toutes les 5 min, dans `atfr-api`) couvre
+**deux** types de panne :
+
+**1. Dépendance en panne (Supabase injoignable) — alerte directe Discord.**
+Renseigne dans `deploy\.env` :
+
+```
+DISCORD_MONITOR_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+(ou laisse vide pour réutiliser `DISCORD_RH_ALERTS_WEBHOOK_URL`.) Tu reçois un
+message 🔴 quand Supabase tombe, 🟢 au rétablissement — **au changement d'état
+seulement**, jamais en boucle.
+
+**2. Panne TOTALE du VPS/API (ex. après un reboot) — dead-man externe.**
+Un process mort ne peut pas s'alerter lui-même : il faut un observateur externe.
+
+1. Crée un check gratuit sur <https://healthchecks.io> (période 5 min, grâce 5 min).
+2. Ajoute son **intégration Discord** (Healthchecks → Integrations → Discord).
+3. Copie l'URL de ping du check dans `deploy\.env` :
+   ```
+   MONITOR_HEARTBEAT_URL=https://hc-ping.com/<ton-uuid>
+   ```
+4. `pm2 restart deploy\pm2.config.cjs --update-env`
+
+Tant que l'API tourne, elle ping toutes les 5 min. Si le VPS tombe, les pings
+s'arrêtent → Healthchecks.io t'alerte sur Discord. C'est **le seul moyen** de
+détecter une panne totale (celle qui t'a échappé au dernier reboot).
+
+> Sans ces variables, la tâche tourne mais ne fait rien (aucune alerte) — tout
+> reste optionnel et sans effet de bord.
