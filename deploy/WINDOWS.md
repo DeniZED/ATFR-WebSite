@@ -163,10 +163,13 @@ même sans session ouverte. Adapte les chemins `node.exe` / `pm2` à ton install
 
 ## Monitoring + alerte Discord
 
-La tâche planifiée `monitor-heartbeat` (toutes les 5 min, dans `atfr-api`) couvre
-**deux** types de panne :
+La tâche planifiée `monitor-heartbeat` (toutes les 5 min, dans `atfr-api`) vérifie
+à chaque tick **Supabase** ET **le site servi par Caddy** (requête locale sur
+`http://localhost` — surchargeable via `MONITOR_SITE_URL`), et couvre **deux**
+types de panne :
 
-**1. Dépendance en panne (Supabase injoignable) — alerte directe Discord.**
+**1. Dépendance ou serveur web en panne (Supabase injoignable OU Caddy à terre)
+— alerte directe Discord.**
 Renseigne dans `deploy\.env` :
 
 ```
