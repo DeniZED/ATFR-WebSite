@@ -11,10 +11,14 @@
 //    BACKUP_RETENTION       nombre de dumps conservés (défaut : 14)
 //    PG_DUMP_BIN            chemin de pg_dump.exe si pas dans le PATH
 //                           (ex. C:\Program Files\PostgreSQL\17\bin\pg_dump.exe)
+//
+//  Copie aussi discord-bot/data/ (scores/réglages du quiz, historique vocal —
+//  données locales au bot, absentes de Supabase) dans bot-data-<date>/, avec
+//  la même rotation.
 // ============================================================================
 import { config as loadEnv } from 'dotenv';
 import { spawnSync } from 'node:child_process';
-import { readdirSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, mkdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -67,6 +71,17 @@ if (size < 1024) {
 }
 console.log(`[backup] OK — ${(size / 1024 / 1024).toFixed(2)} Mo`);
 
+// Données locales du bot Discord (best-effort : un échec ne bloque pas le dump).
+const BOT_DATA_DIR = path.join(ROOT, 'discord-bot', 'data');
+if (existsSync(BOT_DATA_DIR)) {
+  try {
+    cpSync(BOT_DATA_DIR, path.join(BACKUP_DIR, `bot-data-${stamp}`), { recursive: true });
+    console.log('[backup] données du bot copiées');
+  } catch (err) {
+    console.error(`[backup] copie des données du bot échouée : ${err.message}`);
+  }
+}
+
 // Rotation : conserve les RETENTION dumps les plus récents.
 const dumps = readdirSync(BACKUP_DIR)
   .filter((f) => /^atfr-.*\.dump$/.test(f))
@@ -74,6 +89,14 @@ const dumps = readdirSync(BACKUP_DIR)
 const toDelete = dumps.slice(0, Math.max(0, dumps.length - RETENTION));
 for (const f of toDelete) {
   unlinkSync(path.join(BACKUP_DIR, f));
+  console.log(`[backup] rotation — supprimé ${f}`);
+}
+
+const botDataDirs = readdirSync(BACKUP_DIR)
+  .filter((f) => /^bot-data-/.test(f))
+  .sort();
+for (const f of botDataDirs.slice(0, Math.max(0, botDataDirs.length - RETENTION))) {
+  rmSync(path.join(BACKUP_DIR, f), { recursive: true, force: true });
   console.log(`[backup] rotation — supprimé ${f}`);
 }
 console.log(

@@ -81,8 +81,8 @@ nano .env
 Remplir :
 - `DISCORD_BOT_TOKEN` → token copié à l'étape 1
 - `DISCORD_GUILD_ID` → ID du serveur (clic droit sur le serveur → "Copier l'identifiant du serveur")
-- `SITE_URL` → `https://atfrv2.netlify.app` (ou ton domaine Netlify)
-- `DISCORD_SYNC_SECRET` → **même valeur** que `DISCORD_SYNC_SECRET` dans Netlify
+- `SITE_URL` → `https://atfr-wot.com`, ou `http://localhost:8080` si le bot tourne sur la même machine que l'API (`atfr-api`)
+- `DISCORD_SYNC_SECRET` → **même valeur** que `DISCORD_SYNC_SECRET` dans `deploy/.env` (API du site)
 - `WOT_APPLICATION_ID` → ID d'application Wargaming (nécessaire pour le suivi de clans, voir https://developers.wargaming.net/applications/)
 
 ---
@@ -163,8 +163,8 @@ pm2 restart atfr-discord-bot
 |----------|-------------|-------------|
 | `DISCORD_BOT_TOKEN` | ✅ | Token du bot Discord |
 | `DISCORD_GUILD_ID` | ✅ | ID du serveur Discord |
-| `SITE_URL` | ✅ | URL Netlify (sans slash final) |
-| `DISCORD_SYNC_SECRET` | ✅ | Secret partagé avec Netlify |
+| `SITE_URL` | ✅ | URL du site / de l'API (sans slash final) |
+| `DISCORD_SYNC_SECRET` | ✅ | Secret partagé avec l'API du site |
 | `SYNC_CRON` | ❌ | Cron sync membres + scan clans quotidien (défaut : `0 3 * * *`) |
 | `DEBUG` | ❌ | Logs détaillés — `true`/`false` |
 | `DASHBOARD_PORT` | ❌ | Port du tableau de bord local (défaut : `3000`) |
@@ -203,6 +203,8 @@ Il affiche en temps réel (rafraîchissement toutes les 3 secondes) :
 
 Pratique pour vérifier d'un coup d'œil que le bot tourne correctement, consulter l'activité vocale et gérer le suivi de clans **avant** que la sync quotidienne ne mette le site à jour, sans avoir à lancer `pm2 logs` ni à passer par Discord.
 
+> Les fichiers de `discord-bot/data/` (historique vocal, scores et réglages du quiz) ne sont pas dans Supabase : ils sont copiés à chaque sauvegarde par `deploy/backup-db.mjs` (dossiers `bot-data-<date>/`).
+
 > Cet historique est local au bot — il ne remplace pas les données du site (Supabase reste la source de vérité pour le RH et l'historique des mouvements de clan). Il sert de consultation et de gestion rapide côté VPS.
 
 ### Sécuriser le dashboard
@@ -219,7 +221,7 @@ discord-bot/src/
   config.ts                   ── lecture des variables d'environnement
   logger.ts                   ── logs horodatés (console + dashboard local)
   net.ts                      ── helper HTTP générique (retry, secret partagé)
-  supabaseSync.ts              ── tous les appels aux fonctions Netlify
+  supabaseSync.ts              ── tous les appels aux fonctions du site
   guildConfig.ts               ── cache de config par serveur (+ mutations)
   memberSync.ts                ── déclenche la sync membres (debounce)
   scheduler.ts                  ── tâches planifiées (cron quotidien, scan clans)
@@ -268,7 +270,7 @@ discord-bot/src/
 
 ```
 VoiceStateUpdate ──► voice/tracker.ts ──► supabaseSync.sendVoiceEvent()
-                                              └─► Netlify /discord-voice-event
+                                              └─► API /discord-voice-event
                                                     ├─ record_discord_voice_event() (Supabase)
                                                     └─ Met à jour players.last_discord_voice_at
 ```
@@ -277,7 +279,7 @@ VoiceStateUpdate ──► voice/tracker.ts ──► supabaseSync.sendVoiceEven
 
 ```
 GuildMemberAdd/Remove ──► memberSync.ts (debounce 10s) ──► supabaseSync.triggerMemberSync()
-Cron (SYNC_CRON)       ──► scheduler.ts ────────────────►        └─► Netlify /discord-sync-members
+Cron (SYNC_CRON)       ──► scheduler.ts ────────────────►        └─► API /discord-sync-members
                                                                        ├─ Upsert discord_guild_members
                                                                        ├─ auto_link_discord_members()
                                                                        └─ recompute_player_hr_statuses()
@@ -289,17 +291,17 @@ Cron (SYNC_CRON)       ──► scheduler.ts ───────────�
 scheduler.ts (intervalle par serveur + cron quotidien)
   └─► clan/scanner.ts
         ├─► clan/wgClient.ts ──► API Wargaming (/clans/info/)
-        ├─► supabaseSync.syncClanRoster() ──► Netlify /discord-clan-sync
+        ├─► supabaseSync.syncClanRoster() ──► API /discord-clan-sync
         │                                       └─ sync_clan_roster() : diff atomique + historique (Supabase)
         └─► notifications/clanEmbeds.ts ──► envoi des embeds dans le salon configuré
 
 commands/clanCommands.ts (/clan add|bulk-add|remove|channel)
   ├─► clan/wgClient.ts (resolveClanInput) ──► API Wargaming (/clans/info/ ou /clans/list/)
   ├─► clan/bulkAdd.ts (bulkAddTrackedClans, partagé avec le dashboard)
-  └─► guildConfig.ts ──► Netlify /discord-clan-config (GET/POST, action set_interval incluse)
+  └─► guildConfig.ts ──► API /discord-clan-config (GET/POST, action set_interval incluse)
 
 commands/clanCommands.ts (/clan movements)
-  └─► supabaseSync.getRecentMovements() ──► Netlify /discord-clan-movements (GET)
+  └─► supabaseSync.getRecentMovements() ──► API /discord-clan-movements (GET)
 
 dashboard/clanApi.ts (/api/clan/config|channel|interval|add|bulk-add|remove|scan|movements)
   └─► mêmes modules que les commandes Discord (guildConfig.ts, clan/bulkAdd.ts, scheduler.runGuildScan)

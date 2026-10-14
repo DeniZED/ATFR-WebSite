@@ -149,7 +149,7 @@ cd discord-bot
 git pull
 npm ci
 npm run build
-pm2 restart atfr-bot     # ou le nom de ton process
+pm2 restart atfr-discord-bot
 ```
 
 ---
